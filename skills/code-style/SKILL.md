@@ -1,6 +1,6 @@
 ---
 name: Code Style
-description: This skill should be used when the user asks about "Effect best practices", "Effect code style", "branded types", "dual APIs", "Effect guidelines", "do notation", "Effect.gen", "pipe vs method chaining", "Effect naming conventions", "Effect project structure", or needs to understand idiomatic Effect-TS patterns and conventions.
+description: This skill should be used when the user asks about "Effect best practices", "Effect code style", "idiomatic Effect", "Schema-first", "Match-first", "when to use Schema", "when to use Match", "branded types", "dual APIs", "Effect guidelines", "do notation", "Effect.gen", "pipe vs method chaining", "Effect naming conventions", "Effect project structure", "data modeling in Effect", or needs to understand idiomatic Effect-TS patterns and conventions.
 version: 1.0.0
 ---
 
@@ -8,12 +8,137 @@ version: 1.0.0
 
 ## Overview
 
-Effect has established patterns for:
+Effect's idiomatic style centers on two core principles:
 
-- **Branded types** - Nominal typing for primitives
+1. **Schema-First Data Modeling** - Define ALL data structures as Effect Schemas
+2. **Match-First Control Flow** - Define ALL conditional logic using Effect Match
+
+Additional patterns include:
+
+- **Branded types** - Nominal typing for primitives (built into Schema)
 - **Dual APIs** - Both data-first and data-last
 - **Generator syntax** - Effect.gen for readability
 - **Project organization** - Layers, services, domains
+
+## Core Principles
+
+### 1. Schema-First Data Modeling
+
+**Define ALL data structures as Effect Schemas.** This is the foundation of type-safe Effect code.
+
+```typescript
+import { Schema } from "effect"
+
+// Domain entities - ALWAYS use Schema
+const User = Schema.Struct({
+  id: Schema.String.pipe(Schema.brand("UserId")),
+  email: Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\.[^@]+$/)),
+  name: Schema.String.pipe(Schema.nonEmptyString()),
+  role: Schema.Literal("admin", "user", "guest"),
+  createdAt: Schema.Date
+})
+type User = Schema.Schema.Type<typeof User>
+
+// API request/response - ALWAYS use Schema
+const CreateUserRequest = Schema.Struct({
+  email: Schema.String,
+  name: Schema.String,
+  role: Schema.optional(Schema.Literal("admin", "user", "guest"))
+})
+
+// Configuration - use Schema
+const AppConfig = Schema.Struct({
+  port: Schema.Number.pipe(Schema.between(1, 65535)),
+  host: Schema.String,
+  debug: Schema.Boolean
+})
+
+// Events - use Schema
+const UserCreatedEvent = Schema.Struct({
+  _tag: Schema.Literal("UserCreated"),
+  userId: Schema.String,
+  timestamp: Schema.Date
+})
+```
+
+**Why Schema for everything:**
+- Runtime validation at system boundaries
+- Automatic type inference (no duplicate type definitions)
+- Encode/decode for serialization
+- JSON Schema generation for API docs
+- Branded types built-in
+- Composable transformations
+
+### 2. Match-First Control Flow
+
+**Define ALL conditional logic and algorithms using Effect Match.** Replace if/else chains, switch statements, and ternaries with exhaustive pattern matching.
+
+```typescript
+import { Match } from "effect"
+
+// Process by discriminated union - use Match
+const handleEvent = Match.type<AppEvent>().pipe(
+  Match.tag("UserCreated", (event) => notifyAdmin(event.userId)),
+  Match.tag("UserDeleted", (event) => cleanupData(event.userId)),
+  Match.tag("OrderPlaced", (event) => processOrder(event.orderId)),
+  Match.exhaustive
+)
+
+// Transform values - use Match
+const toHttpStatus = Match.type<AppError>().pipe(
+  Match.tag("NotFound", () => 404),
+  Match.tag("Unauthorized", () => 401),
+  Match.tag("ValidationError", () => 400),
+  Match.tag("InternalError", () => 500),
+  Match.exhaustive
+)
+
+// Handle options/results - use Match
+const displayUser = Match.type<Option<User>>().pipe(
+  Match.tag("Some", ({ value }) => `Welcome, ${value.name}`),
+  Match.tag("None", () => "Guest user"),
+  Match.exhaustive
+)
+
+// Multi-condition logic - use Match.when
+const calculateDiscount = (order: Order) => Match.value(order).pipe(
+  Match.when({ total: (t) => t > 1000, isPremium: true }, () => 0.25),
+  Match.when({ total: (t) => t > 1000 }, () => 0.15),
+  Match.when({ isPremium: true }, () => 0.10),
+  Match.when({ itemCount: (c) => c > 10 }, () => 0.05),
+  Match.orElse(() => 0)
+)
+```
+
+**Why Match for everything:**
+- Exhaustive checking catches missing cases at compile time
+- Self-documenting code structure
+- No forgotten else branches
+- Easy to extend with new cases
+- Works perfectly with Schema discriminated unions
+
+### 3. Schema + Match Together
+
+The most powerful pattern: Schema for data, Match for logic.
+
+```typescript
+// Define all variants with Schema
+const PaymentMethod = Schema.Union(
+  Schema.Struct({ _tag: Schema.Literal("CreditCard"), last4: Schema.String }),
+  Schema.Struct({ _tag: Schema.Literal("BankTransfer"), accountId: Schema.String }),
+  Schema.Struct({ _tag: Schema.Literal("Crypto"), walletAddress: Schema.String })
+)
+type PaymentMethod = Schema.Schema.Type<typeof PaymentMethod>
+
+// Process all variants with Match
+const processPayment = (method: PaymentMethod, amount: number) =>
+  Match.value(method).pipe(
+    Match.tag("CreditCard", (m) => chargeCard(m.last4, amount)),
+    Match.tag("BankTransfer", (m) => initiateBankTransfer(m.accountId, amount)),
+    Match.tag("Crypto", (m) => sendCrypto(m.walletAddress, amount)),
+    Match.exhaustive
+  )
+```
 
 ## Branded Types
 
@@ -324,19 +449,20 @@ const program = getUser(id).pipe(
 
 ### Do
 
+- **Define ALL data structures as Schema** - entities, DTOs, configs, events, errors
+- **Use Match for ALL conditional logic** - replace if/else, switch, ternaries
 - Use Effect.gen for sequential code
 - Define services with Context.Tag
-- Use branded types for IDs
 - Compose layers bottom-up
-- Use Data.TaggedError for domain errors
-- Use Schema for external data validation
+- Use Data.TaggedError for domain errors (which work with Match.tag)
 
 ### Don't
 
+- Use plain TypeScript interfaces/types without Schema
+- Use if/else chains or switch statements (use Match)
 - Mix async/await with Effect (except at boundaries)
 - Use bare try/catch (use Effect.try)
 - Create services without layers
-- Use string/number for IDs without branding
 - Throw exceptions (use Effect.fail)
 
 ## Additional Resources
