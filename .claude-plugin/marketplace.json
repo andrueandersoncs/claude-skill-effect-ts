@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "effect-ts",
-      "source": ".",
+      "source": "./",
       "description": "Comprehensive Effect-TS development assistance with skills for all major Effect domains, commands for common patterns, and agents for code review and migration",
       "version": "1.0.0",
       "category": "development",
