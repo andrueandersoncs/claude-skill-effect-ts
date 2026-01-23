@@ -1,0 +1,41 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "effect-ts",
+  "metadata": {
+    "description": "Effect-TS development tools and skills for Claude Code",
+    "version": "1.0.0"
+  },
+  "owner": {
+    "name": "Claude Code Plugin"
+  },
+  "plugins": [
+    {
+      "name": "effect-ts",
+      "source": ".",
+      "description": "Comprehensive Effect-TS development assistance with skills for all major Effect domains, commands for common patterns, and agents for code review and migration",
+      "version": "1.0.0",
+      "category": "development",
+      "author": {
+        "name": "Claude Code Plugin"
+      },
+      "license": "MIT",
+      "keywords": [
+        "effect",
+        "effect-ts",
+        "typescript",
+        "functional-programming",
+        "error-handling",
+        "concurrency",
+        "schema",
+        "dependency-injection",
+        "streams",
+        "observability"
+      ],
+      "tags": [
+        "typescript",
+        "functional",
+        "effect-system"
+      ]
+    }
+  ]
+}
