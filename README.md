@@ -11,7 +11,7 @@ A comprehensive Claude Code plugin for Effect-TS development. Provides skills, c
 
 ## Features
 
-### Skills (21 domains)
+### Skills (22 domains)
 
 The plugin includes skills covering all major Effect-TS domains:
 
@@ -38,6 +38,7 @@ The plugin includes skills covering all major Effect-TS domains:
 | state-management | Ref, SynchronizedRef, state patterns |
 | traits | Equal, Hash, Order, and other traits |
 | effect-ai | AI/LLM integration with Effect |
+| api-docs | Look up Effect API documentation via WebFetch |
 
 ### Commands
 
@@ -47,6 +48,7 @@ The plugin includes skills covering all major Effect-TS domains:
 | `/add-errors` | Add typed errors to existing code |
 | `/create-schema` | Generate Schema definitions |
 | `/to-match` | Convert conditionals to Match expressions |
+| `/docs` | Look up Effect API documentation |
 
 ### Agents
 
@@ -62,6 +64,8 @@ Once installed, Claude Code will automatically use these skills when working wit
 ```
 /create-service UserService
 /create-schema User
+/docs Effect.retry
+/docs Stream
 ```
 
 ## License
