@@ -6,7 +6,7 @@
     "version": "1.0.0"
   },
   "owner": {
-    "name": "Claude Code Plugin"
+    "name": "Andrue Anderson"
   },
   "plugins": [
     {
@@ -16,8 +16,9 @@
       "version": "1.0.0",
       "category": "development",
       "author": {
-        "name": "Claude Code Plugin"
+        "name": "Andrue Anderson"
       },
+      "repository": "https://github.com/andrueandersoncs/claude-skill-effect-ts",
       "license": "MIT",
       "keywords": [
         "effect",

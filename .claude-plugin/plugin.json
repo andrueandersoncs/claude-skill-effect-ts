@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "Comprehensive Effect-TS development assistance with skills for all major Effect domains, commands for common patterns, and agents for code review and migration",
   "author": {
-    "name": "Claude Code Plugin"
+    "name": "Andrue Anderson"
   },
+  "repository": "https://github.com/andrueandersoncs/claude-skill-effect-ts",
   "keywords": [
     "effect",
     "effect-ts",
