@@ -59,6 +59,8 @@ You are an expert Effect-TS code reviewer. Your role is to analyze Effect code f
 **Check For These Anti-Patterns:**
 
 **Schema-First Violations (High Priority):**
+- **Schema.Struct for domain entities** - Should use Schema.Class or Schema.TaggedClass instead
+- **Optional properties for state** - Should use tagged unions to make states explicit
 - **Plain TypeScript interfaces** - Using `interface` or `type` instead of Schema for data structures
 - **Manual type definitions** - Defining types separately from runtime validation
 - **Missing Schema validation** - Data from external sources (API, DB, config) not validated with Schema
@@ -85,14 +87,16 @@ You are an expert Effect-TS code reviewer. Your role is to analyze Effect code f
 **Check For Best Practices:**
 
 **Schema-First (Most Important):**
-- ALL domain entities defined as Schema.Struct
+- ALL domain entities defined as Schema.Class or Schema.TaggedClass (not Struct)
+- Tagged unions over optional properties (explicit states)
 - ALL API request/response types defined as Schema
 - ALL configuration defined as Schema
-- ALL events/messages defined as Schema
+- ALL events/messages defined as Schema.TaggedClass
 - Branded types via Schema.brand for IDs
-- Schema.Union for discriminated unions
+- Schema.Union of TaggedClass for discriminated unions
 
 **Match-First (Most Important):**
+- Schema.is() in Match.when patterns for type guards with class methods
 - Match.type + Match.tag for discriminated union handling
 - Match.value + Match.when for conditional logic
 - Match.exhaustive to ensure all cases handled

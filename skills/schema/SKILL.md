@@ -16,6 +16,184 @@ Effect Schema provides:
 - **Error messages** - Detailed, customizable validation errors
 - **Interop** - JSON Schema, Pretty Printing, Arbitrary generation
 
+## Schema Best Practices
+
+### 1. Tagged Unions Over Optional Properties
+
+**AVOID optional properties. USE tagged unions instead.** This makes states explicit and enables exhaustive pattern matching.
+
+```typescript
+// ❌ BAD: Optional properties hide state complexity
+const User = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  email: Schema.optional(Schema.String),
+  verifiedAt: Schema.optional(Schema.Date),
+  suspendedReason: Schema.optional(Schema.String)
+})
+// Unclear: Can a user be both verified AND suspended? What if email is missing?
+
+// ✅ GOOD: Tagged union makes states explicit
+const User = Schema.Union(
+  Schema.Struct({
+    _tag: Schema.Literal("Unverified"),
+    id: Schema.String,
+    name: Schema.String
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("Active"),
+    id: Schema.String,
+    name: Schema.String,
+    email: Schema.String,
+    verifiedAt: Schema.Date
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("Suspended"),
+    id: Schema.String,
+    name: Schema.String,
+    email: Schema.String,
+    suspendedReason: Schema.String
+  })
+)
+// Clear: Each state has exactly the fields it needs
+```
+
+**Why tagged unions:**
+- No impossible states (suspended user always has a reason)
+- Exhaustive matching catches missing cases
+- Self-documenting state machine
+- Works perfectly with Match.tag
+
+### 2. Class-Based Schemas Over Struct Schemas
+
+**PREFER Schema.Class over Schema.Struct.** Classes give you methods, instanceof checks, and better ergonomics.
+
+```typescript
+// ❌ AVOID: Plain Struct (no methods, no instanceof)
+const UserStruct = Schema.Struct({
+  id: Schema.String,
+  firstName: Schema.String,
+  lastName: Schema.String,
+  email: Schema.String
+})
+type User = Schema.Schema.Type<typeof UserStruct>
+
+// ✅ PREFER: Class-based Schema
+class User extends Schema.Class<User>("User")({
+  id: Schema.String,
+  firstName: Schema.String,
+  lastName: Schema.String,
+  email: Schema.String
+}) {
+  get fullName() {
+    return `${this.firstName} ${this.lastName}`
+  }
+
+  get emailDomain() {
+    return this.email.split("@")[1]
+  }
+
+  withEmail(email: string) {
+    return new User({ ...this, email })
+  }
+}
+
+// Usage:
+const user = Schema.decodeUnknownSync(User)(data)
+console.log(user.fullName)        // "John Doe"
+console.log(user instanceof User) // true
+```
+
+**For tagged unions with classes:**
+
+```typescript
+class Unverified extends Schema.TaggedClass<Unverified>()("Unverified", {
+  id: Schema.String,
+  name: Schema.String
+}) {}
+
+class Active extends Schema.TaggedClass<Active>()("Active", {
+  id: Schema.String,
+  name: Schema.String,
+  email: Schema.String,
+  verifiedAt: Schema.Date
+}) {
+  get isRecent() {
+    return Date.now() - this.verifiedAt.getTime() < 86400000
+  }
+}
+
+class Suspended extends Schema.TaggedClass<Suspended>()("Suspended", {
+  id: Schema.String,
+  name: Schema.String,
+  suspendedReason: Schema.String
+}) {}
+
+const User = Schema.Union(Unverified, Active, Suspended)
+type User = Schema.Schema.Type<typeof User>
+```
+
+### 3. Schema.is() with Match Patterns
+
+**USE Schema.is() as type guards in Match.when patterns.** This combines Schema validation with Match's exhaustive checking.
+
+```typescript
+import { Schema, Match } from "effect"
+
+// Define schemas
+class Circle extends Schema.TaggedClass<Circle>()("Circle", {
+  radius: Schema.Number
+}) {
+  get area() { return Math.PI * this.radius ** 2 }
+}
+
+class Rectangle extends Schema.TaggedClass<Rectangle>()("Rectangle", {
+  width: Schema.Number,
+  height: Schema.Number
+}) {
+  get area() { return this.width * this.height }
+}
+
+const Shape = Schema.Union(Circle, Rectangle)
+type Shape = Schema.Schema.Type<typeof Shape>
+
+// Use Schema.is() in Match patterns
+const describeShape = (shape: Shape) =>
+  Match.value(shape).pipe(
+    Match.when(Schema.is(Circle), (c) => `Circle with radius ${c.radius}`),
+    Match.when(Schema.is(Rectangle), (r) => `${r.width}x${r.height} rectangle`),
+    Match.exhaustive
+  )
+
+// Schema.is() also works for runtime type checking
+const processUnknown = (input: unknown) => {
+  if (Schema.is(Circle)(input)) {
+    console.log(`Circle area: ${input.area}`)
+  }
+}
+```
+
+**Schema.is() vs Match.tag:**
+
+```typescript
+// Match.tag - when you already know it's the union type
+const handleUser = (user: User) =>
+  Match.value(user).pipe(
+    Match.tag("Active", (u) => sendEmail(u.email)),
+    Match.tag("Suspended", (u) => logSuspension(u.suspendedReason)),
+    Match.tag("Unverified", () => sendVerificationReminder()),
+    Match.exhaustive
+  )
+
+// Schema.is() - when validating unknown data or need class features
+const handleUnknown = (input: unknown) =>
+  Match.value(input).pipe(
+    Match.when(Schema.is(Active), (u) => u.isRecent),  // Can use class methods
+    Match.when(Schema.is(Suspended), () => false),
+    Match.orElse(() => false)
+  )
+```
+
 ## Basic Schemas
 
 ```typescript
@@ -355,13 +533,23 @@ const Category: Schema.Schema<Category> = Schema.Struct({
 })
 ```
 
-## Best Practices
+## Best Practices Summary
 
-1. **Use Schema.Class for domain objects** - Get methods and instanceof
-2. **Brand IDs and sensitive types** - Prevent mixing up IDs
-3. **Annotate for documentation** - Descriptions flow to JSON Schema
-4. **Custom error messages** - User-friendly validation errors
-5. **Transform at boundaries** - Parse external data early
+### Do
+
+1. **Use tagged unions over optional properties** - Make states explicit
+2. **Use Schema.Class/TaggedClass over Struct** - Get methods and instanceof
+3. **Use Schema.is() in Match patterns** - Combine validation with matching
+4. **Brand IDs and sensitive types** - Prevent mixing up values
+5. **Annotate for documentation** - Descriptions flow to JSON Schema
+6. **Transform at boundaries** - Parse external data early
+
+### Don't
+
+1. **Don't use optional properties for state** - Use tagged unions instead
+2. **Don't use plain Struct for domain entities** - Use Schema.Class
+3. **Don't validate manually** - Use Schema.is() with Match
+4. **Don't mix branded types** - Each ID type should be distinct
 
 ## Additional Resources
 

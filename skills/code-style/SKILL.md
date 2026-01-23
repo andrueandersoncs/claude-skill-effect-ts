@@ -26,38 +26,66 @@ Additional patterns include:
 
 **Define ALL data structures as Effect Schemas.** This is the foundation of type-safe Effect code.
 
-```typescript
-import { Schema } from "effect"
+**Key principles:**
+- **Use Schema.Class over Schema.Struct** - Get methods and instanceof
+- **Use tagged unions over optional properties** - Make states explicit
+- **Use Schema.is() in Match patterns** - Combine validation with matching
 
-// Domain entities - ALWAYS use Schema
-const User = Schema.Struct({
+```typescript
+import { Schema, Match } from "effect"
+
+// ✅ GOOD: Class-based schema with methods
+class User extends Schema.Class<User>("User")({
   id: Schema.String.pipe(Schema.brand("UserId")),
   email: Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\.[^@]+$/)),
   name: Schema.String.pipe(Schema.nonEmptyString()),
-  role: Schema.Literal("admin", "user", "guest"),
   createdAt: Schema.Date
-})
-type User = Schema.Schema.Type<typeof User>
+}) {
+  get emailDomain() {
+    return this.email.split("@")[1]
+  }
+}
 
-// API request/response - ALWAYS use Schema
-const CreateUserRequest = Schema.Struct({
-  email: Schema.String,
-  name: Schema.String,
-  role: Schema.optional(Schema.Literal("admin", "user", "guest"))
-})
+// ✅ GOOD: Tagged union over optional properties
+class Pending extends Schema.TaggedClass<Pending>()("Pending", {
+  orderId: Schema.String,
+  items: Schema.Array(Schema.String)
+}) {}
 
-// Configuration - use Schema
-const AppConfig = Schema.Struct({
-  port: Schema.Number.pipe(Schema.between(1, 65535)),
-  host: Schema.String,
-  debug: Schema.Boolean
-})
+class Shipped extends Schema.TaggedClass<Shipped>()("Shipped", {
+  orderId: Schema.String,
+  items: Schema.Array(Schema.String),
+  trackingNumber: Schema.String,
+  shippedAt: Schema.Date
+}) {}
 
-// Events - use Schema
-const UserCreatedEvent = Schema.Struct({
-  _tag: Schema.Literal("UserCreated"),
-  userId: Schema.String,
-  timestamp: Schema.Date
+class Delivered extends Schema.TaggedClass<Delivered>()("Delivered", {
+  orderId: Schema.String,
+  items: Schema.Array(Schema.String),
+  deliveredAt: Schema.Date
+}) {}
+
+const Order = Schema.Union(Pending, Shipped, Delivered)
+type Order = Schema.Schema.Type<typeof Order>
+
+// ✅ GOOD: Schema.is() in Match patterns
+const getOrderStatus = (order: Order) =>
+  Match.value(order).pipe(
+    Match.when(Schema.is(Pending), () => "Awaiting shipment"),
+    Match.when(Schema.is(Shipped), (o) => `Tracking: ${o.trackingNumber}`),
+    Match.when(Schema.is(Delivered), (o) => `Delivered ${o.deliveredAt}`),
+    Match.exhaustive
+  )
+```
+
+```typescript
+// ❌ BAD: Optional properties hide state complexity
+const Order = Schema.Struct({
+  orderId: Schema.String,
+  items: Schema.Array(Schema.String),
+  trackingNumber: Schema.optional(Schema.String),  // When is this set?
+  shippedAt: Schema.optional(Schema.Date),         // Unclear state
+  deliveredAt: Schema.optional(Schema.Date)        // Can be shipped AND delivered?
 })
 ```
 
@@ -119,23 +147,58 @@ const calculateDiscount = (order: Order) => Match.value(order).pipe(
 
 ### 3. Schema + Match Together
 
-The most powerful pattern: Schema for data, Match for logic.
+The most powerful pattern: **TaggedClass for data, Schema.is() in Match for logic.**
 
 ```typescript
-// Define all variants with Schema
-const PaymentMethod = Schema.Union(
-  Schema.Struct({ _tag: Schema.Literal("CreditCard"), last4: Schema.String }),
-  Schema.Struct({ _tag: Schema.Literal("BankTransfer"), accountId: Schema.String }),
-  Schema.Struct({ _tag: Schema.Literal("Crypto"), walletAddress: Schema.String })
-)
+import { Schema, Match } from "effect"
+
+// Define all variants with TaggedClass (not Struct)
+class CreditCard extends Schema.TaggedClass<CreditCard>()("CreditCard", {
+  last4: Schema.String,
+  expiryMonth: Schema.Number,
+  expiryYear: Schema.Number
+}) {
+  get isExpired() {
+    const now = new Date()
+    return this.expiryYear < now.getFullYear() ||
+      (this.expiryYear === now.getFullYear() && this.expiryMonth < now.getMonth() + 1)
+  }
+}
+
+class BankTransfer extends Schema.TaggedClass<BankTransfer>()("BankTransfer", {
+  accountId: Schema.String,
+  routingNumber: Schema.String
+}) {}
+
+class Crypto extends Schema.TaggedClass<Crypto>()("Crypto", {
+  walletAddress: Schema.String,
+  network: Schema.Literal("ethereum", "bitcoin", "solana")
+}) {}
+
+const PaymentMethod = Schema.Union(CreditCard, BankTransfer, Crypto)
 type PaymentMethod = Schema.Schema.Type<typeof PaymentMethod>
 
-// Process all variants with Match
+// Process with Schema.is() to access class methods
 const processPayment = (method: PaymentMethod, amount: number) =>
   Match.value(method).pipe(
-    Match.tag("CreditCard", (m) => chargeCard(m.last4, amount)),
-    Match.tag("BankTransfer", (m) => initiateBankTransfer(m.accountId, amount)),
-    Match.tag("Crypto", (m) => sendCrypto(m.walletAddress, amount)),
+    Match.when(Schema.is(CreditCard), (card) =>
+      card.isExpired ? Effect.fail("Card expired") : chargeCard(card.last4, amount)
+    ),
+    Match.when(Schema.is(BankTransfer), (bank) =>
+      initiateBankTransfer(bank.accountId, bank.routingNumber, amount)
+    ),
+    Match.when(Schema.is(Crypto), (crypto) =>
+      sendCrypto(crypto.walletAddress, crypto.network, amount)
+    ),
+    Match.exhaustive
+  )
+
+// Also works with Match.tag for simple cases
+const getPaymentLabel = (method: PaymentMethod) =>
+  Match.value(method).pipe(
+    Match.tag("CreditCard", (c) => `Card ending ${c.last4}`),
+    Match.tag("BankTransfer", (b) => `Bank ${b.accountId}`),
+    Match.tag("Crypto", (c) => `${c.network}: ${c.walletAddress.slice(0, 8)}...`),
     Match.exhaustive
   )
 ```
@@ -449,7 +512,9 @@ const program = getUser(id).pipe(
 
 ### Do
 
-- **Define ALL data structures as Schema** - entities, DTOs, configs, events, errors
+- **Use Schema.Class/TaggedClass** - not Schema.Struct for domain entities
+- **Use tagged unions over optional properties** - make states explicit
+- **Use Schema.is() in Match.when patterns** - combine validation with matching
 - **Use Match for ALL conditional logic** - replace if/else, switch, ternaries
 - Use Effect.gen for sequential code
 - Define services with Context.Tag
@@ -458,6 +523,8 @@ const program = getUser(id).pipe(
 
 ### Don't
 
+- Use Schema.Struct for domain entities (use Schema.Class)
+- Use optional properties for state (use tagged unions)
 - Use plain TypeScript interfaces/types without Schema
 - Use if/else chains or switch statements (use Match)
 - Mix async/await with Effect (except at boundaries)

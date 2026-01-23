@@ -1,6 +1,6 @@
 ---
 name: Pattern Matching
-description: This skill should be used when the user asks about "Effect Match", "pattern matching", "Match.type", "Match.tag", "Match.when", "exhaustive matching", "discriminated unions", "Match.value", "converting switch to Match", "converting if/else to Match", or needs to understand how Effect provides type-safe exhaustive pattern matching.
+description: This skill should be used when the user asks about "Effect Match", "pattern matching", "Match.type", "Match.tag", "Match.when", "Schema.is()", "Schema.is with Match", "exhaustive matching", "discriminated unions", "Match.value", "converting switch to Match", "converting if/else to Match", "TaggedClass with Match", or needs to understand how Effect provides type-safe exhaustive pattern matching.
 version: 1.0.0
 ---
 
@@ -300,13 +300,139 @@ const handleError = (error: AppError) =>
   )
 ```
 
+## Schema.is() with Match (Recommended)
+
+**Use Schema.is() in Match.when patterns** to combine Schema validation with pattern matching. This is especially powerful with Schema.TaggedClass.
+
+### Schema.is() as Type Guard
+
+```typescript
+import { Schema, Match } from "effect"
+
+// Define schemas with TaggedClass for methods
+class Circle extends Schema.TaggedClass<Circle>()("Circle", {
+  radius: Schema.Number
+}) {
+  get area() { return Math.PI * this.radius ** 2 }
+  get circumference() { return 2 * Math.PI * this.radius }
+}
+
+class Rectangle extends Schema.TaggedClass<Rectangle>()("Rectangle", {
+  width: Schema.Number,
+  height: Schema.Number
+}) {
+  get area() { return this.width * this.height }
+  get perimeter() { return 2 * (this.width + this.height) }
+}
+
+const Shape = Schema.Union(Circle, Rectangle)
+type Shape = Schema.Schema.Type<typeof Shape>
+
+// Schema.is() provides type guard + access to class methods
+const describeShape = (shape: Shape) =>
+  Match.value(shape).pipe(
+    Match.when(Schema.is(Circle), (c) =>
+      `Circle: area=${c.area.toFixed(2)}, circumference=${c.circumference.toFixed(2)}`
+    ),
+    Match.when(Schema.is(Rectangle), (r) =>
+      `Rectangle: area=${r.area}, perimeter=${r.perimeter}`
+    ),
+    Match.exhaustive
+  )
+```
+
+### Schema.is() vs Match.tag
+
+```typescript
+// Match.tag - simpler, when you just need the data
+const getShapeName = (shape: Shape) =>
+  Match.value(shape).pipe(
+    Match.tag("Circle", () => "circle"),
+    Match.tag("Rectangle", () => "rectangle"),
+    Match.exhaustive
+  )
+
+// Schema.is() - when you need class methods or instanceof checks
+const processShape = (shape: Shape) =>
+  Match.value(shape).pipe(
+    Match.when(Schema.is(Circle), (c) => c.area),      // Can use .area method
+    Match.when(Schema.is(Rectangle), (r) => r.area),   // Can use .area method
+    Match.exhaustive
+  )
+```
+
+### Validating Unknown Data with Schema.is()
+
+```typescript
+// Schema.is() also works for runtime validation of unknown data
+const handleUnknown = (input: unknown) =>
+  Match.value(input).pipe(
+    Match.when(Schema.is(Circle), (c) => `Valid circle with radius ${c.radius}`),
+    Match.when(Schema.is(Rectangle), (r) => `Valid rectangle ${r.width}x${r.height}`),
+    Match.orElse(() => "Invalid shape")
+  )
+
+// Or use for type narrowing
+const processInput = (input: unknown) => {
+  if (Schema.is(Circle)(input)) {
+    console.log(`Circle area: ${input.area}`)  // Type is Circle, has methods
+  }
+}
+```
+
+### Complete Example: State Machine
+
+```typescript
+import { Schema, Match, Effect } from "effect"
+
+// Define states with TaggedClass
+class Draft extends Schema.TaggedClass<Draft>()("Draft", {
+  content: Schema.String
+}) {
+  get isEmpty() { return this.content.trim().length === 0 }
+}
+
+class Published extends Schema.TaggedClass<Published>()("Published", {
+  content: Schema.String,
+  publishedAt: Schema.Date
+}) {
+  get daysSincePublish() {
+    return Math.floor((Date.now() - this.publishedAt.getTime()) / 86400000)
+  }
+}
+
+class Archived extends Schema.TaggedClass<Archived>()("Archived", {
+  content: Schema.String,
+  archivedReason: Schema.String
+}) {}
+
+const Article = Schema.Union(Draft, Published, Archived)
+type Article = Schema.Schema.Type<typeof Article>
+
+// Process with Schema.is() to access class methods
+const getArticleStatus = (article: Article) =>
+  Match.value(article).pipe(
+    Match.when(Schema.is(Draft), (d) =>
+      d.isEmpty ? "Empty draft" : "Draft with content"
+    ),
+    Match.when(Schema.is(Published), (p) =>
+      `Published ${p.daysSincePublish} days ago`
+    ),
+    Match.when(Schema.is(Archived), (a) =>
+      `Archived: ${a.archivedReason}`
+    ),
+    Match.exhaustive
+  )
+```
+
 ## Best Practices
 
-1. **Prefer Match.exhaustive** - Catch missing cases at compile time
-2. **Use Match.tag for unions** - Cleaner than manual _tag checks
-3. **Create reusable matchers** - Use Match.type() for repeated patterns
-4. **Handle edge cases with Match.when** - Predicates for complex logic
-5. **Combine with Schema** - Validate then match
+1. **Use Schema.is() in Match.when** - Access class methods and instanceof checks
+2. **Use Schema.TaggedClass with Match** - Define unions with classes, match with Schema.is()
+3. **Prefer Match.exhaustive** - Catch missing cases at compile time
+4. **Use Match.tag for simple cases** - When you don't need class methods
+5. **Create reusable matchers** - Use Match.type() for repeated patterns
+6. **Handle edge cases with Match.when** - Predicates for complex logic
 
 ## Additional Resources
 
