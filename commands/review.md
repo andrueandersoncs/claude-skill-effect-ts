@@ -2,18 +2,32 @@
 name: review
 description: Review Effect-TS code for anti-patterns, best practices violations, and improvement opportunities
 argument-hint: "[file-or-directory]"
-agent: effect-reviewer
+allowed-tools:
+  - Task
 ---
 
 # Review Effect Code
 
-Run a comprehensive review of Effect-TS code to identify:
+Use the Task tool to spawn the `effect-reviewer` agent to perform a comprehensive review of Effect-TS code.
 
-- **Critical Issues** - Anti-patterns that must be fixed immediately
-- **Warnings** - Non-idiomatic patterns that may cause problems
-- **Suggestions** - Improvements that would enhance the code
+## Instructions
 
-## What Gets Checked
+1. **Invoke the effect-reviewer agent** using the Task tool:
+   ```
+   Task(
+     subagent_type: "effect-ts:effect-reviewer",
+     prompt: "Review Effect code in [target path]. Check for anti-patterns, Schema-first compliance, Match-first compliance, and best practices.",
+     description: "Review Effect code"
+   )
+   ```
+
+2. **Pass the target path** from the command arguments:
+   - If a file or directory is specified, include it in the prompt
+   - If no argument provided, review all Effect files in the codebase
+
+3. **Return the agent's findings** to the user
+
+## What Gets Reviewed
 
 ### Critical (FORBIDDEN patterns)
 - Direct `._tag` access (must use Match.tag or Schema.is())
@@ -42,7 +56,7 @@ Run a comprehensive review of Effect-TS code to identify:
 - No bare try/catch (use Effect.try)
 - No Promise mixing (use Effect.promise at boundaries)
 
-## Usage
+## Usage Examples
 
 ```
 /review                    # Review all Effect files in codebase
@@ -50,9 +64,9 @@ Run a comprehensive review of Effect-TS code to identify:
 /review src/UserService.ts # Review a specific file
 ```
 
-## Output
+## Expected Output
 
-The review produces a structured report:
+The effect-reviewer agent produces a structured report:
 
 ```
 ## Effect Code Review
