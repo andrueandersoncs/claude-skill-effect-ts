@@ -194,6 +194,24 @@ const handleUnknown = (input: unknown) =>
   )
 ```
 
+**NEVER access `._tag` directly:**
+
+```typescript
+// ❌ FORBIDDEN - direct ._tag access
+if (user._tag === "Active") { ... }
+const isActive = user._tag === "Active"
+
+// ✅ REQUIRED - use Match.tag or Schema.is()
+const handleUser = Match.type<User>().pipe(
+  Match.tag("Active", (u) => ...),
+  Match.exhaustive
+)
+
+// ✅ REQUIRED - Schema.is() for type guards
+const isActive = Schema.is(Active)
+if (isActive(user)) { ... }
+```
+
 ## Basic Schemas
 
 ```typescript
@@ -550,6 +568,7 @@ const Category: Schema.Schema<Category> = Schema.Struct({
 2. **Don't use plain Struct for domain entities** - Use Schema.Class
 3. **Don't validate manually** - Use Schema.is() with Match
 4. **Don't mix branded types** - Each ID type should be distinct
+5. **NEVER access `._tag` directly** - Use Match.tag or Schema.is() instead
 
 ## Additional Resources
 

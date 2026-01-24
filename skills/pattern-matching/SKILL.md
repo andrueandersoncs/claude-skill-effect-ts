@@ -8,12 +8,27 @@ version: 1.0.0
 
 ## Overview
 
+**Pattern matching replaces ALL imperative control flow in Effect code.** There should be ZERO `if/else` statements, `switch/case` blocks, or ternary operators in idiomatic Effect code.
+
 Effect's `Match` module provides:
 
 - **Exhaustive matching** - Compiler ensures all cases handled
 - **Type narrowing** - Automatic type inference in each branch
 - **Composable matchers** - Build complex patterns from simple ones
 - **Predicate support** - Match on conditions, not just values
+
+### What to Use Instead of Imperative Code
+
+| Imperative Pattern | Effect Replacement |
+|-------------------|-------------------|
+| `if/else` chains | `Match.value` + `Match.when` |
+| `switch/case` statements | `Match.type` + `Match.tag` |
+| Ternary operators (`? :`) | `Match.value` + `Match.when` |
+| Null checks | `Option.match` |
+| Error checks | `Either.match` or `Effect.match` |
+| Type guards | `Match.when` with `Schema.is()` |
+
+**When you encounter imperative control flow, refactor it to pattern matching immediately.**
 
 ## Basic Matching
 
@@ -426,6 +441,18 @@ const getArticleStatus = (article: Article) =>
 ```
 
 ## Best Practices
+
+### CRITICAL: No Imperative Code
+
+1. **NEVER use if/else** - Replace with Match.value + Match.when
+2. **NEVER use switch/case** - Replace with Match.type + Match.tag
+3. **NEVER use ternary operators** - Replace with Match.value + Match.when
+4. **NEVER use `if (x != null)`** - Replace with Option.match
+5. **NEVER check error flags** - Replace with Either.match or Effect.match
+6. **NEVER access `._tag` directly** - Replace with Match.tag or Schema.is()
+7. **Refactor imperative code immediately** - This is mandatory, not optional
+
+### General Best Practices
 
 1. **Use Schema.is() in Match.when** - Access class methods and instanceof checks
 2. **Use Schema.TaggedClass with Match** - Define unions with classes, match with Schema.is()

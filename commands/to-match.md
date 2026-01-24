@@ -1,6 +1,6 @@
 ---
 name: to-match
-description: Convert if/else chains or switch statements to Effect Match pattern matching
+description: Refactor FORBIDDEN imperative code (if/else, switch/case, ternaries) to Effect Match pattern matching - this is mandatory, not optional
 allowed-tools:
   - Read
   - Write
@@ -12,7 +12,9 @@ argument-hint: "<file-path> [function-name]"
 
 # Convert to Effect Match
 
-Transform if/else chains or switch statements into type-safe Effect Match expressions.
+**Imperative control flow (if/else, switch/case, ternaries) is FORBIDDEN in Effect code.** This command refactors imperative code into type-safe Effect Match expressions.
+
+This is not optional - ALL imperative conditionals must be eliminated. Use this command to systematically convert legacy or non-idiomatic code.
 
 ## Process
 
@@ -26,7 +28,7 @@ Transform if/else chains or switch statements into type-safe Effect Match expres
    - Property checks (`x.type === "foo"`)
    - Value comparisons (`x === "value"`)
    - Type guards (`typeof x === "string"`)
-   - Discriminated unions (`x._tag`)
+   - Direct `._tag` access (FORBIDDEN - convert to Match.tag or Schema.is())
 5. Generate equivalent Match expression
 6. Replace the original code
 
@@ -96,9 +98,9 @@ const handleStatus = (status: Status): void =>
   )
 ```
 
-### Discriminated Union to Match.tag
+### Direct ._tag Access to Match.tag (FORBIDDEN pattern)
 
-**Before:**
+**Before (FORBIDDEN - direct ._tag access):**
 ```typescript
 function getArea(shape: Shape): number {
   if (shape._tag === "Circle") {
@@ -109,9 +111,12 @@ function getArea(shape: Shape): number {
     return (shape.base * shape.height) / 2
   }
 }
+
+// Also FORBIDDEN:
+const isCircle = shape._tag === "Circle"
 ```
 
-**After:**
+**After (REQUIRED):**
 ```typescript
 import { Match } from "effect"
 
@@ -121,15 +126,20 @@ const getArea = Match.type<Shape>().pipe(
   Match.tag("Triangle", ({ base, height }) => (base * height) / 2),
   Match.exhaustive
 )
+
+// For type guards, use Schema.is():
+import { Schema } from "effect"
+const isCircle = Schema.is(Circle)
 ```
 
 ## Match Selection Rules
 
 - Use `Match.exhaustive` when all cases of a union are handled
 - Use `Match.orElse` when there's a default case
-- Use `Match.tag` for discriminated unions with `_tag`
+- Use `Match.tag` for discriminated unions with `_tag` (NEVER access `._tag` directly)
 - Use `Match.when` for value comparisons
 - Use `Match.type<T>()` for reusable matchers
+- Use `Schema.is()` for type guards (NEVER check `._tag === "..."` directly)
 
 ## Output
 

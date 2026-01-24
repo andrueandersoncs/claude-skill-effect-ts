@@ -22,6 +22,82 @@ Additional patterns include:
 
 ## Core Principles
 
+### 0. No Imperative Control Flow
+
+**NEVER use `if/else`, `switch/case`, or ternary operators.** These imperative constructs must be replaced with pattern matching in ALL cases:
+
+- **`if/else` chains** → `Match.value` + `Match.when`
+- **`switch/case` statements** → `Match.type` + `Match.tag` or `Match.when`
+- **Ternary operators (`? :`)** → `Match.value` + `Match.when`
+- **Optional chaining conditionals** → `Option.match`
+- **Result/error conditionals** → `Either.match` or `Effect.match`
+
+```typescript
+// ❌ FORBIDDEN: if/else
+if (user.role === "admin") {
+  return "full access"
+} else if (user.role === "user") {
+  return "limited access"
+} else {
+  return "no access"
+}
+
+// ❌ FORBIDDEN: switch/case
+switch (status) {
+  case "pending": return "waiting"
+  case "active": return "running"
+  default: return "unknown"
+}
+
+// ❌ FORBIDDEN: ternary
+const message = isError ? "Failed" : "Success"
+
+// ❌ FORBIDDEN: direct ._tag access
+if (event._tag === "UserCreated") { ... }
+const isCreated = event._tag === "UserCreated"
+
+// ✅ REQUIRED: Match.value
+const getAccess = (user: User) =>
+  Match.value(user.role).pipe(
+    Match.when("admin", () => "full access"),
+    Match.when("user", () => "limited access"),
+    Match.orElse(() => "no access")
+  )
+
+// ✅ REQUIRED: Match.type
+const getStatusMessage = Match.type<Status>().pipe(
+  Match.when("pending", () => "waiting"),
+  Match.when("active", () => "running"),
+  Match.exhaustive
+)
+
+// ✅ REQUIRED: Option.match for nullable/optional
+const displayName = Option.match(maybeUser, {
+  onNone: () => "Guest",
+  onSome: (user) => user.name
+})
+
+// ✅ REQUIRED: Either.match for results
+const result = Either.match(parseResult, {
+  onLeft: (error) => `Error: ${error}`,
+  onRight: (value) => `Success: ${value}`
+})
+
+// ✅ REQUIRED: Match.tag for discriminated unions (not ._tag access)
+const handleEvent = Match.type<AppEvent>().pipe(
+  Match.tag("UserCreated", (e) => notifyAdmin(e.userId)),
+  Match.tag("UserDeleted", (e) => cleanupData(e.userId)),
+  Match.exhaustive
+)
+
+// ✅ REQUIRED: Schema.is() for type guards (not ._tag checks)
+if (Schema.is(UserCreated)(event)) {
+  // event is narrowed to UserCreated
+}
+```
+
+**When you encounter imperative control flow in existing code, refactor it immediately.** This is not optional - imperative conditionals are code smells that must be eliminated.
+
 ### 1. Schema-First Data Modeling
 
 **Define ALL data structures as Effect Schemas.** This is the foundation of type-safe Effect code.
@@ -512,6 +588,8 @@ const program = getUser(id).pipe(
 
 ### Do
 
+- **ELIMINATE all if/else, switch/case, and ternaries** - use Match, Option.match, Either.match instead
+- **Refactor imperative code on sight** - this is mandatory, not optional
 - **Use Schema.Class/TaggedClass** - not Schema.Struct for domain entities
 - **Use tagged unions over optional properties** - make states explicit
 - **Use Schema.is() in Match.when patterns** - combine validation with matching
@@ -521,12 +599,17 @@ const program = getUser(id).pipe(
 - Compose layers bottom-up
 - Use Data.TaggedError for domain errors (which work with Match.tag)
 
-### Don't
+### Don't - FORBIDDEN Patterns
 
+- **NEVER use if/else** - always use Match.value + Match.when
+- **NEVER use switch/case** - always use Match.type + Match.tag
+- **NEVER use ternary operators** - always use Match.value + Match.when
+- **NEVER use `if (x != null)`** - always use Option.match
+- **NEVER check `.success` or similar** - always use Either.match or Effect.match
+- **NEVER access `._tag` directly** - always use Match.tag or Schema.is()
 - Use Schema.Struct for domain entities (use Schema.Class)
 - Use optional properties for state (use tagged unions)
 - Use plain TypeScript interfaces/types without Schema
-- Use if/else chains or switch statements (use Match)
 - Mix async/await with Effect (except at boundaries)
 - Use bare try/catch (use Effect.try)
 - Create services without layers
