@@ -354,6 +354,91 @@ const jsonData = Schema.parseJson(Schema.Struct({
 }))
 ```
 
+## JSON Parsing with Schema.parseJson
+
+**NEVER use `JSON.parse()` directly.** Always use `Schema.parseJson` to combine JSON parsing with schema validation in one step.
+
+### Why Schema.parseJson over JSON.parse
+
+```typescript
+// ❌ BAD: JSON.parse gives you `any` and can throw
+const data = JSON.parse(jsonString)  // type: any, throws on invalid JSON
+
+// ❌ BAD: Even with Schema, this is two separate failure points
+const parsed = JSON.parse(jsonString)  // Can throw!
+const validated = Schema.decodeUnknownSync(MySchema)(parsed)
+
+// ✅ GOOD: Schema.parseJson handles both in one type-safe step
+const MyData = Schema.parseJson(Schema.Struct({
+  name: Schema.String,
+  count: Schema.Number
+}))
+
+// Sync version - throws ParseError (not generic Error)
+const data = Schema.decodeUnknownSync(MyData)('{"name": "test", "count": 42}')
+
+// Effect version - typed error handling
+const program = Schema.decodeUnknown(MyData)(jsonString)
+// Effect<{ name: string, count: number }, ParseError, never>
+```
+
+### Schema.parseJson Benefits
+
+1. **Single failure point** - Invalid JSON or invalid structure both produce ParseError
+2. **Type safety** - Result is fully typed, never `any`
+3. **Effect integration** - Works seamlessly with Effect error handling
+4. **Detailed errors** - ParseError includes path and validation details
+
+### Common Patterns
+
+```typescript
+// API response parsing
+const ApiResponse = Schema.parseJson(Schema.Struct({
+  success: Schema.Boolean,
+  data: Schema.Struct({
+    id: Schema.String,
+    name: Schema.String
+  })
+}))
+
+// With optional reviver schema for complex decoding
+const WithDate = Schema.parseJson(Schema.Struct({
+  createdAt: Schema.Date  // Automatically handles ISO date strings
+}))
+
+// Nested JSON (JSON string containing JSON string)
+const NestedConfig = Schema.parseJson(Schema.Struct({
+  settings: Schema.parseJson(Schema.Struct({
+    theme: Schema.String
+  }))
+}))
+```
+
+### In Effect Programs
+
+```typescript
+import { Effect, Schema } from "effect"
+
+const ConfigSchema = Schema.parseJson(Schema.Struct({
+  apiKey: Schema.String,
+  endpoint: Schema.String,
+  retries: Schema.Number
+}))
+
+const loadConfig = (jsonString: string) =>
+  Effect.gen(function* () {
+    const config = yield* Schema.decodeUnknown(ConfigSchema)(jsonString)
+    return config
+  })
+
+// Errors are typed and can be handled with Effect.catchTag
+const program = loadConfig(rawJson).pipe(
+  Effect.catchTag("ParseError", (e) =>
+    Effect.fail(new ConfigurationError({ cause: e }))
+  )
+)
+```
+
 ## Filters (Validation)
 
 ```typescript

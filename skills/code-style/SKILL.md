@@ -607,6 +607,7 @@ const program = getUser(id).pipe(
 - **NEVER use `if (x != null)`** - always use Option.match
 - **NEVER check `.success` or similar** - always use Either.match or Effect.match
 - **NEVER access `._tag` directly** - always use Match.tag or Schema.is()
+- **NEVER use JSON.parse()** - always use Schema.parseJson with a schema
 - Use Schema.Struct for domain entities (use Schema.Class)
 - Use optional properties for state (use tagged unions)
 - Use plain TypeScript interfaces/types without Schema
