@@ -1,14 +1,14 @@
 ---
 name: effect-review
-description: Review ALL TypeScript code for Effect adoption opportunities and anti-patterns - converts regular code to Effect
+description: Review ALL TypeScript code and flag violations - all non-Effect patterns MUST be converted
 argument-hint: "[file-or-directory]"
 allowed-tools:
   - Task
 ---
 
-# Review Code for Effect Adoption
+# Review Code for Effect Compliance
 
-Use the Task tool to spawn the `effect-reviewer` agent to perform a comprehensive review of ALL TypeScript code - both existing Effect code and regular TypeScript that should be converted to Effect.
+Use the Task tool to spawn the `effect-reviewer` agent to perform a strict review of ALL TypeScript code. All non-Effect code is a violation that MUST be fixed.
 
 ## Instructions
 
@@ -16,8 +16,8 @@ Use the Task tool to spawn the `effect-reviewer` agent to perform a comprehensiv
    ```
    Task(
      subagent_type: "effect-ts:effect-reviewer",
-     prompt: "Review ALL TypeScript code in [target path]. Identify non-Effect code that should be converted, and check existing Effect code for anti-patterns and best practices.",
-     description: "Review code for Effect adoption"
+     prompt: "Review ALL TypeScript code in [target path]. Flag all non-Effect code as violations requiring conversion. This is not optional.",
+     description: "Review code for Effect compliance"
    )
    ```
 
@@ -27,38 +27,38 @@ Use the Task tool to spawn the `effect-reviewer` agent to perform a comprehensiv
 
 3. **Return the agent's findings** to the user
 
-## What Gets Reviewed
+## Violations That MUST Be Fixed
 
-### Code That Should Be Converted to Effect
+### Non-Effect Code (MUST CONVERT)
 
-- **Plain TypeScript interfaces/types** → Convert to Schema.Class or Schema.TaggedClass
-- **try/catch blocks** → Convert to Effect.try or Effect.tryPromise
-- **async/await functions** → Convert to Effect.gen with yield*
-- **Promise-based code** → Convert to Effect with proper error typing
-- **throw statements** → Convert to Effect.fail with typed errors
-- **null/undefined checks** → Convert to Option with Option.match
-- **Manual error handling** → Convert to Either or Effect error channel
-- **JSON.parse()** → Convert to Schema.parseJson
+- **Plain TypeScript interfaces/types** → MUST use Schema.Class or Schema.TaggedClass
+- **try/catch blocks** → MUST use Effect.try or Effect.tryPromise
+- **async/await functions** → MUST use Effect.gen with yield*
+- **Promise-based code** → MUST use Effect with proper error typing
+- **throw statements** → MUST use Effect.fail with typed errors
+- **null/undefined checks** → MUST use Option with Option.match
+- **if/else/switch/ternary** → MUST use Match
+- **JSON.parse()** → MUST use Schema.parseJson
 
-### Effect Code Anti-Patterns (FORBIDDEN)
+### Effect Anti-Patterns (FORBIDDEN)
 
-- Direct `._tag` access (must use Match.tag or Schema.is())
+- Direct `._tag` access (MUST use Match.tag or Schema.is())
 - `._tag` in type definitions (e.g., `type Tag = Foo["_tag"]`)
 - `._tag` in array predicates (.some/.filter)
-- `if/else` chains (must use Match)
-- `switch/case` statements (must use Match)
-- Ternary operators for conditionals (must use Match)
+- `if/else` chains (MUST use Match)
+- `switch/case` statements (MUST use Match)
+- Ternary operators for conditionals (MUST use Match)
 
-### Schema-First Compliance
+### Schema-First Compliance (REQUIRED)
 
-- All data structures should use Effect Schema
+- All data structures MUST use Effect Schema
 - Schema.Class/TaggedClass over Schema.Struct for domain entities
 - Tagged unions over optional properties
 - Branded types for IDs
 
-### Match-First Compliance
+### Match-First Compliance (REQUIRED)
 
-- All conditional logic should use Effect Match
+- All conditional logic MUST use Effect Match
 - Match.exhaustive for complete case coverage
 - Schema.is() in Match.when patterns
 
@@ -72,32 +72,27 @@ Use the Task tool to spawn the `effect-reviewer` agent to perform a comprehensiv
 
 ## Expected Output
 
-The effect-reviewer agent produces a structured report:
-
 ```
 ## Effect Code Review
 
-### Conversion Opportunities
-[Regular TypeScript code that should be converted to Effect]
+### Required Conversions
+[Non-Effect code that MUST be converted - these are violations, not suggestions]
 
-### Critical Issues
-[Effect anti-patterns that must be fixed]
+### Critical Violations
+[Effect anti-patterns that MUST be fixed immediately]
 
 ### Warnings
 [Non-idiomatic patterns that should be addressed]
 
-### Suggestions
-[Improvements that would enhance the code]
-
 ### Summary
 - Files reviewed: X
-- Conversion opportunities: X
-- Critical issues: X
+- Required conversions: X
+- Critical violations: X
 - Warnings: X
-- Overall assessment: [Needs Effect Adoption/Needs Work/Good]
+- Overall assessment: [Non-Compliant/Needs Work/Compliant]
 
-### Recommended Actions
-1. [Most important conversion or fix]
+### Required Actions
+1. [Most critical violation to fix]
 2. [Second priority]
 ...
 ```
