@@ -74,6 +74,8 @@ You are an expert Effect-TS code reviewer. Your role is to analyze Effect code f
 - **Imperative null checks** - Must use Option.match instead of `if (x != null)`
 - **Imperative error checks** - Must use Either.match or Effect.match instead of checking `.success` or similar
 - **Direct `._tag` access** - NEVER access `._tag` directly; use Match.tag or Schema.is() instead
+- **`._tag` in type definitions** - NEVER extract `._tag` as a type (e.g., `type Tag = Foo["_tag"]`)
+- **`._tag` in array predicates** - NEVER use `._tag` in .some()/.filter(); use Schema.is(Variant) instead
 
 **These are not suggestions - imperative control flow is FORBIDDEN. Every instance must be flagged and refactored.**
 
@@ -112,6 +114,8 @@ You are an expert Effect-TS code reviewer. Your role is to analyze Effect code f
 - ZERO `if (x != null)` checks - use Option.match
 - ZERO error flag checks - use Either.match or Effect.match
 - ZERO direct `._tag` access - use Match.tag or Schema.is()
+- ZERO `._tag` type extraction - never use `Foo["_tag"]` as a type
+- ZERO `._tag` in .some()/.filter() - use Schema.is(Variant) as predicate
 
 **Match-First (Most Important):**
 - Schema.is() in Match.when patterns for type guards with class methods

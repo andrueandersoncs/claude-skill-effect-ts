@@ -56,6 +56,19 @@ const message = isError ? "Failed" : "Success"
 if (event._tag === "UserCreated") { ... }
 const isCreated = event._tag === "UserCreated"
 
+// ❌ FORBIDDEN: ._tag in type definitions
+type ConflictTag = Conflict["_tag"]  // Never extract _tag as a type
+
+// ❌ FORBIDDEN: ._tag in array predicates
+const hasConflict = conflicts.some((c) => c._tag === "MergeConflict")
+const mergeConflicts = conflicts.filter((c) => c._tag === "MergeConflict")
+const countMerge = conflicts.filter((c) => c._tag === "MergeConflict").length
+
+// ✅ REQUIRED: Schema.is() as predicate
+const hasConflict = conflicts.some(Schema.is(MergeConflict))
+const mergeConflicts = conflicts.filter(Schema.is(MergeConflict))
+const countMerge = conflicts.filter(Schema.is(MergeConflict)).length
+
 // ✅ REQUIRED: Match.value
 const getAccess = (user: User) =>
   Match.value(user.role).pipe(
@@ -607,6 +620,8 @@ const program = getUser(id).pipe(
 - **NEVER use `if (x != null)`** - always use Option.match
 - **NEVER check `.success` or similar** - always use Either.match or Effect.match
 - **NEVER access `._tag` directly** - always use Match.tag or Schema.is()
+- **NEVER extract `._tag` as a type** - e.g., `type Tag = Foo["_tag"]` is forbidden
+- **NEVER use `._tag` in predicates** - use Schema.is(Variant) with .some()/.filter()
 - **NEVER use JSON.parse()** - always use Schema.parseJson with a schema
 - Use Schema.Struct for domain entities (use Schema.Class)
 - Use optional properties for state (use tagged unions)

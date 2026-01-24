@@ -201,6 +201,19 @@ const handleUnknown = (input: unknown) =>
 if (user._tag === "Active") { ... }
 const isActive = user._tag === "Active"
 
+// ❌ FORBIDDEN - ._tag in type definitions
+type UserTag = User["_tag"]  // Never extract _tag as a type
+
+// ❌ FORBIDDEN - ._tag in array predicates
+const hasActive = users.some((u) => u._tag === "Active")
+const activeUsers = users.filter((u) => u._tag === "Active")
+const activeCount = users.filter((u) => u._tag === "Active").length
+
+// ✅ REQUIRED - Schema.is() as array predicate
+const hasActive = users.some(Schema.is(Active))
+const activeUsers = users.filter(Schema.is(Active))
+const activeCount = users.filter(Schema.is(Active)).length
+
 // ✅ REQUIRED - use Match.tag or Schema.is()
 const handleUser = Match.type<User>().pipe(
   Match.tag("Active", (u) => ...),
@@ -654,6 +667,8 @@ const Category: Schema.Schema<Category> = Schema.Struct({
 3. **Don't validate manually** - Use Schema.is() with Match
 4. **Don't mix branded types** - Each ID type should be distinct
 5. **NEVER access `._tag` directly** - Use Match.tag or Schema.is() instead
+6. **NEVER extract `._tag` as a type** - e.g., `type Tag = Foo["_tag"]` is forbidden
+7. **NEVER use `._tag` in predicates** - Use Schema.is(Variant) with .some()/.filter()
 
 ## Additional Resources
 
