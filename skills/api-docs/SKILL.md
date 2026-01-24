@@ -206,3 +206,14 @@ https://effect-ts.github.io/effect/
 ```
 
 Use this to discover available packages and modules if unsure which module contains a specific API.
+
+## Best Practices
+
+1. **Start with the right module** - Identify which module contains the API before fetching
+2. **Use targeted prompts** - Ask for specific information (signature, examples, parameters)
+3. **Check for overloads** - Many Effect functions have multiple signatures
+4. **Look for "Since" annotations** - Verify the API is available in your Effect version
+
+## Additional Resources
+
+For comprehensive Effect documentation beyond API signatures, consult `${CLAUDE_PLUGIN_ROOT}/references/llms-full.txt` which contains tutorials, guides, and in-depth explanations.

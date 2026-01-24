@@ -163,10 +163,11 @@ const resetting = Schedule.exponential("1 second").pipe(
 ### Retry While Condition
 
 ```typescript
+// Use Schema.is() for type-safe error checking
 const retryTransient = effect.pipe(
   Effect.retry({
     schedule: Schedule.exponential("1 second"),
-    while: (error) => error._tag === "TransientError"
+    while: Schema.is(TransientError)
   })
 )
 ```
@@ -174,10 +175,11 @@ const retryTransient = effect.pipe(
 ### Retry Until Condition
 
 ```typescript
+// Stop retrying when a fatal error occurs
 const retryUntilFatal = effect.pipe(
   Effect.retry({
     schedule: Schedule.recurs(10),
-    until: (error) => error._tag === "FatalError"
+    until: Schema.is(FatalError)
   })
 )
 ```

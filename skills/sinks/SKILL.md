@@ -160,17 +160,16 @@ For more control over the sink lifecycle:
 
 ```typescript
 const customSink = Sink.fromPush<number, number, never, never>((input) =>
-  Effect.sync(() => {
-    if (Option.isNone(input)) {
-      // Stream ended
-      return Either.left(finalResult)
-    } else {
-      // Process chunk
-      const chunk = input.value
-      // Return Either.right to continue, Either.left to finish
-      return Either.right(undefined)
-    }
-  })
+  Effect.sync(() =>
+    Option.match(input, {
+      onNone: () => Either.left(finalResult),  // Stream ended
+      onSome: (chunk) => {
+        // Process chunk
+        // Return Either.right to continue, Either.left to finish
+        return Either.right(undefined)
+      }
+    })
+  )
 )
 ```
 

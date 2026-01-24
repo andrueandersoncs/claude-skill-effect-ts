@@ -38,9 +38,16 @@ const lazy = Effect.sync(() => {
 
 // Sync that may throw (converts exception to typed error)
 const mayThrow = Effect.try({
-  try: () => JSON.parse(userInput),
-  catch: (error) => new ParseError({ cause: error })
+  try: () => someLegacyFunction(),
+  catch: (error) => new LegacyError({ cause: error })
 })
+
+// For JSON parsing, prefer Schema.parseJson (type-safe and validated)
+const UserInput = Schema.parseJson(Schema.Struct({
+  name: Schema.String,
+  value: Schema.Number
+}))
+const parsed = Schema.decodeUnknown(UserInput)(userInput)
 ```
 
 ### From Asynchronous Values
@@ -196,6 +203,22 @@ Effect.succeed(1).pipe(Effect.map((n) => n + 1))
 // Data-first
 Effect.map(Effect.succeed(1), (n) => n + 1)
 ```
+
+## Best Practices
+
+### Do
+
+1. **Use Effect.gen for sequential code** - More readable than nested flatMaps
+2. **Use typed errors** - Always define error types with Data.TaggedError
+3. **Use Schema.parseJson for JSON** - Never use raw JSON.parse()
+4. **Prefer data-last (pipeable)** - Consistent with Effect ecosystem
+
+### Don't
+
+1. **Don't mix async/await with Effect** - Use Effect.promise at boundaries only
+2. **Don't use try/catch** - Use Effect.try or Effect.tryPromise
+3. **Don't throw exceptions** - Use Effect.fail with typed errors
+4. **Don't use JSON.parse** - Use Schema.parseJson with a schema
 
 ## Additional Resources
 

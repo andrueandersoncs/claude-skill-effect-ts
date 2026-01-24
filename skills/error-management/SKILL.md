@@ -177,22 +177,27 @@ const sandboxed = Effect.sandbox(program)
 The `Cause` type contains complete failure information:
 
 ```typescript
-import { Cause } from "effect"
+import { Cause, Match } from "effect"
 
-// In sandbox, you get full Cause
+// In sandbox, you get full Cause - use Match for handling
 const handled = Effect.sandbox(program).pipe(
-  Effect.catchAll((cause) => {
-    if (Cause.isFailure(cause)) {
-      // Expected error
-    }
-    if (Cause.isDie(cause)) {
-      // Defect
-    }
-    if (Cause.isInterrupt(cause)) {
-      // Interruption
-    }
-    return Effect.succeed(fallback)
-  })
+  Effect.catchAll((cause) =>
+    Match.value(cause).pipe(
+      Match.when(Cause.isFailure, () => {
+        // Expected error
+        return Effect.succeed(fallback)
+      }),
+      Match.when(Cause.isDie, () => {
+        // Defect - log and recover
+        return Effect.succeed(fallback)
+      }),
+      Match.when(Cause.isInterrupt, () => {
+        // Interruption
+        return Effect.succeed(fallback)
+      }),
+      Match.orElse(() => Effect.succeed(fallback))
+    )
+  )
 )
 ```
 
@@ -210,11 +215,11 @@ const resilient = effect.pipe(
   )
 )
 
-// Retry with condition
+// Retry with condition - use Schema.is() for type checking
 const conditional = effect.pipe(
   Effect.retry({
     schedule: Schedule.recurs(3),
-    while: (error) => error._tag === "NetworkError"
+    while: Schema.is(NetworkError)
   })
 )
 ```
