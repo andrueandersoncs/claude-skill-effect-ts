@@ -1,5 +1,5 @@
 ---
-name: review
+name: effect-review
 description: Review Effect-TS code for anti-patterns, best practices violations, and improvement opportunities
 argument-hint: "[file-or-directory]"
 allowed-tools:
@@ -59,9 +59,9 @@ Use the Task tool to spawn the `effect-reviewer` agent to perform a comprehensiv
 ## Usage Examples
 
 ```
-/review                    # Review all Effect files in codebase
-/review src/services       # Review files in a directory
-/review src/UserService.ts # Review a specific file
+/effect-review                    # Review all Effect files in codebase
+/effect-review src/services       # Review files in a directory
+/effect-review src/UserService.ts # Review a specific file
 ```
 
 ## Expected Output
