@@ -274,11 +274,17 @@ const handleEvent = Match.type<AppEvent>().pipe(
   Match.exhaustive
 )
 
-// After (REQUIRED) - Schema.is() for type guards
+// After (REQUIRED) - Schema.is() for type guards on Schema types
 import { Schema } from "effect"
 
+// Only use Schema.is() if UserCreated is a Schema.TaggedClass:
 const isUserCreated = Schema.is(UserCreated)
 // Usage: if (isUserCreated(event)) { ... } - but prefer Match.tag for control flow
+
+// NOTE: Schema.is() does NOT work with Data.TaggedError.
+// For errors, use Effect.catchTag or Match.tag:
+// - Effect.catchTag("NetworkError", ...)
+// - Match.tag("NetworkError", ...) (including for predicates in retry while/until)
 ```
 
 **Migration Checklist:**
@@ -288,7 +294,7 @@ For each file/module:
 - [ ] **ELIMINATE all switch/case** - Convert to Match.type + Match.tag
 - [ ] **ELIMINATE all ternaries** - Convert to Match.value + Match.when
 - [ ] **ELIMINATE all null checks** - Convert to Option.match
-- [ ] **ELIMINATE all direct `._tag` access** - Convert to Match.tag or Schema.is()
+- [ ] **ELIMINATE all direct `._tag` access** - Convert to Match.tag or Schema.is() (for Schema types only)
 - [ ] Identify all async functions
 - [ ] Create error types (Data.TaggedError)
 - [ ] Convert functions to Effect

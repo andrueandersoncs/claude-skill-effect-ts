@@ -188,6 +188,8 @@ alice1 === alice2  // false (reference)
 Equal.equals(alice1, alice2)  // true (structural)
 
 // Tagged errors (used with Effect.fail)
+// NOTE: Data.TaggedError is NOT a Schema - Schema.is() does NOT work on these.
+// Use Effect.catchTag or Match.tag for error handling.
 class UserNotFound extends Data.TaggedError("UserNotFound")<{
   readonly userId: string
 }> {}

@@ -66,10 +66,10 @@ const User = Schema.Union(
 
 ### 2. Class-Based Schemas Over Struct Schemas
 
-**PREFER Schema.Class over Schema.Struct.** Classes give you methods, instanceof checks, and better ergonomics.
+**PREFER Schema.Class over Schema.Struct.** Classes give you methods, Schema.is() type guards, and better ergonomics.
 
 ```typescript
-// ❌ AVOID: Plain Struct (no methods, no instanceof)
+// ❌ AVOID: Plain Struct (no methods, no Schema.is() support)
 const UserStruct = Schema.Struct({
   id: Schema.String,
   firstName: Schema.String,
@@ -101,7 +101,7 @@ class User extends Schema.Class<User>("User")({
 // Usage:
 const user = Schema.decodeUnknownSync(User)(data)
 console.log(user.fullName)        // "John Doe"
-console.log(user instanceof User) // true
+console.log(Schema.is(User)(user)) // true - use Schema.is() for type checks
 ```
 
 **For tagged unions with classes:**
@@ -654,7 +654,7 @@ const Category: Schema.Schema<Category> = Schema.Struct({
 ### Do
 
 1. **Use tagged unions over optional properties** - Make states explicit
-2. **Use Schema.Class/TaggedClass over Struct** - Get methods and instanceof
+2. **Use Schema.Class/TaggedClass over Struct** - Get methods and Schema.is() type guards
 3. **Use Schema.is() in Match patterns** - Combine validation with matching
 4. **Brand IDs and sensitive types** - Prevent mixing up values
 5. **Annotate for documentation** - Descriptions flow to JSON Schema

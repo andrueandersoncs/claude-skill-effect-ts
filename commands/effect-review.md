@@ -42,9 +42,9 @@ Use the Task tool to spawn the `effect-reviewer` agent to perform a strict revie
 
 ### Effect Anti-Patterns (FORBIDDEN)
 
-- Direct `._tag` access (MUST use Match.tag or Schema.is())
+- Direct `._tag` access (MUST use Match.tag or Schema.is() for Schema types)
 - `._tag` in type definitions (e.g., `type Tag = Foo["_tag"]`)
-- `._tag` in array predicates (.some/.filter)
+- `._tag` in array predicates (.some/.filter) (MUST use Schema.is() for Schema types, Match.tag predicate for errors)
 - `if/else` chains (MUST use Match)
 - `switch/case` statements (MUST use Match)
 - Ternary operators for conditionals (MUST use Match)

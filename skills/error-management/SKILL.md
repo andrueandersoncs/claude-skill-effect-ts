@@ -215,11 +215,15 @@ const resilient = effect.pipe(
   )
 )
 
-// Retry with condition - use Schema.is() for type checking
+// Retry with condition - use Match.tag for error type checking
 const conditional = effect.pipe(
   Effect.retry({
     schedule: Schedule.recurs(3),
-    while: Schema.is(NetworkError)
+    while: (error) =>
+      Match.value(error).pipe(
+        Match.tag("NetworkError", () => true),
+        Match.orElse(() => false)
+      )
   })
 )
 ```

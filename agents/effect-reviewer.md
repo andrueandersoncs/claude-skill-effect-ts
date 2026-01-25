@@ -105,9 +105,11 @@ ALL code MUST be Effect-compliant. There are no exceptions. Non-Effect patterns 
 - **Ternary operators** - ANY use of `? :` must be replaced with Match.value + Match.when
 - **Imperative null checks** - Must use Option.match instead of `if (x != null)`
 - **Imperative error checks** - Must use Either.match or Effect.match instead of checking `.success` or similar
-- **Direct `._tag` access** - NEVER access `._tag` directly; use Match.tag or Schema.is() instead
+- **Direct `._tag` access** - NEVER access `._tag` directly; use Match.tag or Schema.is(Variant) for Schema types
+  - For Data.TaggedError: use Effect.catchTag or Match.tag
+  - Schema.is() does NOT work with Data.TaggedError - only with Schema types
 - **`._tag` in type definitions** - NEVER extract `._tag` as a type (e.g., `type Tag = Foo["_tag"]`)
-- **`._tag` in array predicates** - NEVER use `._tag` in .some()/.filter(); use Schema.is(Variant) instead
+- **`._tag` in array predicates** - For Schema types, use Schema.is(Variant) instead of `._tag` checks in .some()/.filter()
 
 **These are not suggestions - imperative control flow is FORBIDDEN. Every instance must be flagged and refactored.**
 
@@ -145,9 +147,9 @@ ALL code MUST be Effect-compliant. There are no exceptions. Non-Effect patterns 
 - ZERO ternary operators - use Match.value + Match.when
 - ZERO `if (x != null)` checks - use Option.match
 - ZERO error flag checks - use Either.match or Effect.match
-- ZERO direct `._tag` access - use Match.tag or Schema.is()
+- ZERO direct `._tag` access - use Match.tag for control flow, Schema.is() for Schema type guards
 - ZERO `._tag` type extraction - never use `Foo["_tag"]` as a type
-- ZERO `._tag` in .some()/.filter() - use Schema.is(Variant) as predicate
+- ZERO `._tag` in .some()/.filter() - use Schema.is(Variant) for Schema types, Match.tag predicate for errors
 
 **Match-First (Most Important):**
 - Schema.is() in Match.when patterns for type guards with class methods

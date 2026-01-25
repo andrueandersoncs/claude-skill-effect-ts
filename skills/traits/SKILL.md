@@ -42,29 +42,34 @@ Equal.equals(p1, p2) // true (structural equality)
 p1 === p2 // false (reference equality)
 ```
 
-### Implementing Equal
+### Implementing Equal (Recommended: Use Data.Class)
+
+**PREFER Data.Class** which provides Equal and Hash automatically:
 
 ```typescript
-import { Equal, Hash } from "effect"
+import { Data, Equal } from "effect"
 
-class Point implements Equal.Equal {
-  constructor(readonly x: number, readonly y: number) {}
+// Data.Class provides Equal and Hash automatically
+class Point extends Data.Class<{ readonly x: number; readonly y: number }> {}
 
-  [Equal.symbol](that: unknown): boolean {
-    return (
-      that instanceof Point &&
-      this.x === that.x &&
-      this.y === that.y
-    )
-  }
+const p1 = new Point({ x: 1, y: 2 })
+const p2 = new Point({ x: 1, y: 2 })
 
-  [Hash.symbol](): number {
-    return Hash.combine(Hash.number(this.x))(Hash.number(this.y))
-  }
-}
+Equal.equals(p1, p2) // true - automatic structural equality!
+```
 
-const p1 = new Point(1, 2)
-const p2 = new Point(1, 2)
+For Schema types, use Schema.Class which also provides Equal:
+
+```typescript
+import { Schema, Equal } from "effect"
+
+class Point extends Schema.Class<Point>("Point")({
+  x: Schema.Number,
+  y: Schema.Number
+}) {}
+
+const p1 = new Point({ x: 1, y: 2 })
+const p2 = new Point({ x: 1, y: 2 })
 
 Equal.equals(p1, p2) // true
 ```
@@ -116,31 +121,23 @@ Objects that are Equal MUST have the same hash:
 // Same hash does NOT mean equal (hash collisions are allowed)
 ```
 
-### Implementing Hash with Equal
+### Hash with Data.Class (Recommended)
+
+**Data.Class provides both Equal and Hash automatically:**
 
 ```typescript
-class Rectangle implements Equal.Equal {
-  constructor(
-    readonly width: number,
-    readonly height: number
-  ) {}
+import { Data, Hash, Equal } from "effect"
 
-  [Equal.symbol](that: unknown): boolean {
-    return (
-      that instanceof Rectangle &&
-      this.width === that.width &&
-      this.height === that.height
-    )
-  }
+class Rectangle extends Data.Class<{
+  readonly width: number
+  readonly height: number
+}> {}
 
-  [Hash.symbol](): number {
-    return Hash.combine(
-      Hash.number(this.width)
-    )(
-      Hash.number(this.height)
-    )
-  }
-}
+const r1 = new Rectangle({ width: 10, height: 5 })
+const r2 = new Rectangle({ width: 10, height: 5 })
+
+Equal.equals(r1, r2)        // true - automatic
+Hash.hash(r1) === Hash.hash(r2)  // true - automatic
 ```
 
 ## Equivalence - Custom Equality Relations

@@ -103,10 +103,13 @@ const handleEvent = Match.type<AppEvent>().pipe(
   Match.exhaustive
 )
 
-// ✅ REQUIRED: Schema.is() for type guards (not ._tag checks)
+// ✅ REQUIRED: Schema.is() for type guards on Schema types (Schema.TaggedClass)
 if (Schema.is(UserCreated)(event)) {
   // event is narrowed to UserCreated
 }
+
+// NOTE: Schema.is() does NOT work with Data.TaggedError.
+// For errors, use Effect.catchTag or Match.tag.
 ```
 
 **When you encounter imperative control flow in existing code, refactor it immediately.** This is not optional - imperative conditionals are code smells that must be eliminated.
@@ -116,7 +119,7 @@ if (Schema.is(UserCreated)(event)) {
 **Define ALL data structures as Effect Schemas.** This is the foundation of type-safe Effect code.
 
 **Key principles:**
-- **Use Schema.Class over Schema.Struct** - Get methods and instanceof
+- **Use Schema.Class over Schema.Struct** - Get methods and Schema.is() type guards
 - **Use tagged unions over optional properties** - Make states explicit
 - **Use Schema.is() in Match patterns** - Combine validation with matching
 
@@ -619,7 +622,7 @@ const program = getUser(id).pipe(
 - **NEVER use ternary operators** - always use Match.value + Match.when
 - **NEVER use `if (x != null)`** - always use Option.match
 - **NEVER check `.success` or similar** - always use Either.match or Effect.match
-- **NEVER access `._tag` directly** - always use Match.tag or Schema.is()
+- **NEVER access `._tag` directly** - always use Match.tag or Schema.is() (for Schema types only)
 - **NEVER extract `._tag` as a type** - e.g., `type Tag = Foo["_tag"]` is forbidden
 - **NEVER use `._tag` in predicates** - use Schema.is(Variant) with .some()/.filter()
 - **NEVER use JSON.parse()** - always use Schema.parseJson with a schema

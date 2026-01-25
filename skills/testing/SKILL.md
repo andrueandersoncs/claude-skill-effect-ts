@@ -562,7 +562,7 @@ it("should use test configuration", async () => {
 
 1. **Don't hard-code test data** - Use Arbitrary.make(YourSchema)
 2. **Don't test just "happy path"** - Generate edge cases automatically
-3. **Don't use `._tag` in tests** - Use Schema.is() or Match.tag
+3. **Don't use `._tag` directly** - Use Match.tag or Schema.is() (for Schema types only)
 4. **Don't skip round-trip tests** - They catch serialization bugs
 
 ## Additional Resources

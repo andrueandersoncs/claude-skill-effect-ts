@@ -315,9 +315,13 @@ const handleError = (error: AppError) =>
   )
 ```
 
-## Schema.is() with Match (Recommended)
+## Schema.is() with Match (For Schema Types Only)
 
-**Use Schema.is() in Match.when patterns** to combine Schema validation with pattern matching. This is especially powerful with Schema.TaggedClass.
+**Use Schema.is() in Match.when patterns** to combine Schema validation with pattern matching. This works with `Schema.TaggedClass` and other Schema types.
+
+**IMPORTANT:** `Schema.is()` does NOT work with `Data.TaggedError`. For errors:
+- Use `Effect.catchTag("ErrorName", ...)` for error handling
+- Use `Match.tag("ErrorName", ...)` when matching on errors (including predicates)
 
 ### Schema.is() as Type Guard
 
@@ -367,7 +371,7 @@ const getShapeName = (shape: Shape) =>
     Match.exhaustive
   )
 
-// Schema.is() - when you need class methods or instanceof checks
+// Schema.is() - when you need class methods or type narrowing
 const processShape = (shape: Shape) =>
   Match.value(shape).pipe(
     Match.when(Schema.is(Circle), (c) => c.area),      // Can use .area method
@@ -454,7 +458,7 @@ const getArticleStatus = (article: Article) =>
 
 ### General Best Practices
 
-1. **Use Schema.is() in Match.when** - Access class methods and instanceof checks
+1. **Use Schema.is() in Match.when** - Access class methods with proper type narrowing
 2. **Use Schema.TaggedClass with Match** - Define unions with classes, match with Schema.is()
 3. **Prefer Match.exhaustive** - Catch missing cases at compile time
 4. **Use Match.tag for simple cases** - When you don't need class methods
