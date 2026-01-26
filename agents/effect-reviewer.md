@@ -106,8 +106,8 @@ ALL code MUST be Effect-compliant. There are no exceptions. Non-Effect patterns 
 - **Imperative null checks** - Must use Option.match instead of `if (x != null)`
 - **Imperative error checks** - Must use Either.match or Effect.match instead of checking `.success` or similar
 - **Direct `._tag` access** - NEVER access `._tag` directly; use Match.tag or Schema.is(Variant) for Schema types
-  - For Data.TaggedError: use Effect.catchTag or Match.tag
-  - Schema.is() does NOT work with Data.TaggedError - only with Schema types
+  - For Schema.TaggedError: use Schema.is(), Effect.catchTag, or Match.tag
+  - Always use Schema.TaggedError (not Data.TaggedError) for domain errors - works with Schema.is()
 - **`._tag` in type definitions** - NEVER extract `._tag` as a type (e.g., `type Tag = Foo["_tag"]`)
 - **`._tag` in array predicates** - For Schema types, use Schema.is(Variant) instead of `._tag` checks in .some()/.filter()
 
@@ -163,7 +163,7 @@ ALL code MUST be Effect-compliant. There are no exceptions. Non-Effect patterns 
 
 **General:**
 - Use of Effect.gen for sequential code
-- Data.TaggedError for domain errors (works with Match.tag)
+- Schema.TaggedError for domain errors (works with Schema.is(), Match.tag, and catchTag)
 - Context.Tag for service definitions
 - Layer composition (bottom-up)
 - Appropriate use of concurrency options

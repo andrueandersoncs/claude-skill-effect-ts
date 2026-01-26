@@ -319,7 +319,8 @@ const handleError = (error: AppError) =>
 
 **Use Schema.is() in Match.when patterns** to combine Schema validation with pattern matching. This works with `Schema.TaggedClass` and other Schema types.
 
-**IMPORTANT:** `Schema.is()` does NOT work with `Data.TaggedError`. For errors:
+**Use `Schema.TaggedError` for domain errors** - they work with `Schema.is()`, `Effect.catchTag`, and `Match.tag`:
+- Use `Schema.is(ErrorClass)` for type guards on errors
 - Use `Effect.catchTag("ErrorName", ...)` for error handling
 - Use `Match.tag("ErrorName", ...)` when matching on errors (including predicates)
 

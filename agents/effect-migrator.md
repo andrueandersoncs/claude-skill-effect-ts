@@ -281,10 +281,10 @@ import { Schema } from "effect"
 const isUserCreated = Schema.is(UserCreated)
 // Usage: if (isUserCreated(event)) { ... } - but prefer Match.tag for control flow
 
-// NOTE: Schema.is() does NOT work with Data.TaggedError.
-// For errors, use Effect.catchTag or Match.tag:
-// - Effect.catchTag("NetworkError", ...)
-// - Match.tag("NetworkError", ...) (including for predicates in retry while/until)
+// Schema.TaggedError works with Schema.is(), Effect.catchTag, and Match.tag:
+// - Schema.is(NetworkError) for type guards
+// - Effect.catchTag("NetworkError", ...) for error recovery
+// - Match.tag("NetworkError", ...) for pattern matching (including predicates in retry while/until)
 ```
 
 **Migration Checklist:**
@@ -296,7 +296,7 @@ For each file/module:
 - [ ] **ELIMINATE all null checks** - Convert to Option.match
 - [ ] **ELIMINATE all direct `._tag` access** - Convert to Match.tag or Schema.is() (for Schema types only)
 - [ ] Identify all async functions
-- [ ] Create error types (Data.TaggedError)
+- [ ] Create error types (Schema.TaggedError)
 - [ ] Convert functions to Effect
 - [ ] Update function signatures with typed errors
 - [ ] Wrap external dependencies in services

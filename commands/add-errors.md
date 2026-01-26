@@ -1,6 +1,6 @@
 ---
 name: add-errors
-description: Add typed error handling to existing Effect code using Data.TaggedError
+description: Add typed error handling to existing Effect code using Schema.TaggedError
 allowed-tools:
   - Read
   - Write
@@ -13,7 +13,7 @@ argument-hint: "<file-path> [error-names...]"
 # Add Typed Errors to Effect Code
 
 Add typed error handling to existing Effect code by:
-1. Creating Data.TaggedError classes
+1. Creating Schema.TaggedError classes
 2. Updating function signatures with error types
 3. Adding proper error handling with catchTag/catchTags
 
@@ -35,12 +35,15 @@ Add typed error handling to existing Effect code by:
 ## Error Template
 
 ```typescript
-import { Data } from "effect"
+import { Schema } from "effect"
 
-export class {ErrorName} extends Data.TaggedError("{ErrorName}")<{
-  readonly message: string
-  readonly cause?: unknown
-}> {}
+export class {ErrorName} extends Schema.TaggedError<{ErrorName}>()(
+  "{ErrorName}",
+  {
+    message: Schema.String,
+    cause: Schema.optional(Schema.Unknown)
+  }
+) {}
 ```
 
 ## Transformation Examples
@@ -53,16 +56,17 @@ const getUser = (id: string) =>
 
 ### After
 ```typescript
-import { Data, Effect } from "effect"
+import { Schema, Effect } from "effect"
 
-export class UserNotFound extends Data.TaggedError("UserNotFound")<{
-  readonly userId: string
-}> {}
+export class UserNotFound extends Schema.TaggedError<UserNotFound>()(
+  "UserNotFound",
+  { userId: Schema.String }
+) {}
 
-export class NetworkError extends Data.TaggedError("NetworkError")<{
-  readonly url: string
-  readonly cause: unknown
-}> {}
+export class NetworkError extends Schema.TaggedError<NetworkError>()(
+  "NetworkError",
+  { url: Schema.String, cause: Schema.Unknown }
+) {}
 
 const getUser = (id: string): Effect.Effect<User, UserNotFound | NetworkError> =>
   Effect.tryPromise({

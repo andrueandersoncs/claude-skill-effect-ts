@@ -131,10 +131,10 @@ const getArea = Match.type<Shape>().pipe(
 import { Schema } from "effect"
 const isCircle = Schema.is(Circle)  // Only works if Circle is a Schema type
 
-// NOTE: Schema.is() does NOT work with Data.TaggedError.
-// For errors, use Effect.catchTag or Match.tag:
-// - Effect.catchTag("NetworkError", ...)
-// - Match.tag("NetworkError", ...)
+// Schema.TaggedError works with Schema.is(), Effect.catchTag, and Match.tag:
+// - Schema.is(NetworkError) for type guards
+// - Effect.catchTag("NetworkError", ...) for error recovery
+// - Match.tag("NetworkError", ...) for pattern matching
 ```
 
 ## Match Selection Rules

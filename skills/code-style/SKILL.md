@@ -108,8 +108,8 @@ if (Schema.is(UserCreated)(event)) {
   // event is narrowed to UserCreated
 }
 
-// NOTE: Schema.is() does NOT work with Data.TaggedError.
-// For errors, use Effect.catchTag or Match.tag.
+// Schema.TaggedError works with Schema.is(), Effect.catchTag, and Match.tag.
+// Always use Schema.TaggedError for domain errors.
 ```
 
 **When you encounter imperative control flow in existing code, refactor it immediately.** This is not optional - imperative conditionals are code smells that must be eliminated.
@@ -529,8 +529,8 @@ type UserId = string & Brand.Brand<"UserId">
 type Email = string & Brand.Brand<"Email">
 
 // Error types - PascalCase with descriptive suffix
-class UserNotFound extends Data.TaggedError("UserNotFound")<{...}> {}
-class ValidationError extends Data.TaggedError("ValidationError")<{...}> {}
+class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", {...}) {}
+class ValidationError extends Schema.TaggedError<ValidationError>()("ValidationError", {...}) {}
 ```
 
 ### Services
@@ -561,17 +561,18 @@ const User = (data: UserData): User => ...
 ### Tagged Errors
 
 ```typescript
-import { Data } from "effect"
+import { Schema } from "effect"
 
-// Always use Data.TaggedError for domain errors
-class UserNotFound extends Data.TaggedError("UserNotFound")<{
-  readonly userId: string
-}> {}
+// Always use Schema.TaggedError for domain errors
+class UserNotFound extends Schema.TaggedError<UserNotFound>()(
+  "UserNotFound",
+  { userId: Schema.String }
+) {}
 
-class ValidationError extends Data.TaggedError("ValidationError")<{
-  readonly field: string
-  readonly message: string
-}> {}
+class ValidationError extends Schema.TaggedError<ValidationError>()(
+  "ValidationError",
+  { field: Schema.String, message: Schema.String }
+) {}
 
 // Use in services
 const getUser = (id: string): Effect.Effect<User, UserNotFound> =>
@@ -613,7 +614,7 @@ const program = getUser(id).pipe(
 - Use Effect.gen for sequential code
 - Define services with Context.Tag
 - Compose layers bottom-up
-- Use Data.TaggedError for domain errors (which work with Match.tag)
+- Use Schema.TaggedError for domain errors (works with Match.tag and Schema.is())
 
 ### Don't - FORBIDDEN Patterns
 

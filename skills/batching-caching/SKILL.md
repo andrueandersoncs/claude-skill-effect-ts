@@ -39,7 +39,7 @@ Effect's batching transforms this into optimized batch calls.
 ### Step 1: Define Request Types
 
 ```typescript
-import { Request, Data } from "effect"
+import { Request } from "effect"
 
 // Define request shape
 interface GetUserById extends Request.Request<User, UserNotFound> {
@@ -272,12 +272,13 @@ const noBatching = program.pipe(
 ## Complete Example
 
 ```typescript
-import { Effect, Request, RequestResolver, Data } from "effect"
+import { Effect, Request, RequestResolver, Schema } from "effect"
 
 // Error types
-class UserNotFound extends Data.TaggedError("UserNotFound")<{
-  id: number
-}> {}
+class UserNotFound extends Schema.TaggedError<UserNotFound>()(
+  "UserNotFound",
+  { id: Schema.Number }
+) {}
 
 // Request type
 interface GetUserById extends Request.Request<User, UserNotFound> {

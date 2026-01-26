@@ -209,7 +209,7 @@ Effect.map(Effect.succeed(1), (n) => n + 1)
 ### Do
 
 1. **Use Effect.gen for sequential code** - More readable than nested flatMaps
-2. **Use typed errors** - Always define error types with Data.TaggedError
+2. **Use typed errors** - Always define error types with Schema.TaggedError
 3. **Use Schema.parseJson for JSON** - Never use raw JSON.parse()
 4. **Prefer data-last (pipeable)** - Consistent with Effect ecosystem
 

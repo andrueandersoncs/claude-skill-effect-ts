@@ -1,6 +1,6 @@
 ---
 name: Error Management
-description: This skill should be used when the user asks about "Effect errors", "typed errors", "error handling", "Effect.catchAll", "Effect.catchTag", "Effect.mapError", "Effect.orElse", "error accumulation", "defects vs errors", "expected errors", "unexpected errors", "sandboxing", "retrying", "timeout", "Effect.cause", "TaggedError", "Data.TaggedError", or needs to understand how Effect handles failures in the error channel.
+description: This skill should be used when the user asks about "Effect errors", "typed errors", "error handling", "Effect.catchAll", "Effect.catchTag", "Effect.mapError", "Effect.orElse", "error accumulation", "defects vs errors", "expected errors", "unexpected errors", "sandboxing", "retrying", "timeout", "Effect.cause", "TaggedError", "Schema.TaggedError", or needs to understand how Effect handles failures in the error channel.
 version: 1.0.0
 ---
 
@@ -20,18 +20,20 @@ Effect<Success, Error, Requirements>
 
 ## Creating Typed Errors
 
-### Using Data.TaggedError (Recommended)
+### Using Schema.TaggedError (Recommended)
 
 ```typescript
-import { Data, Effect } from "effect"
+import { Schema, Effect } from "effect"
 
-class UserNotFound extends Data.TaggedError("UserNotFound")<{
-  readonly userId: string
-}> {}
+class UserNotFound extends Schema.TaggedError<UserNotFound>()(
+  "UserNotFound",
+  { userId: Schema.String }
+) {}
 
-class NetworkError extends Data.TaggedError("NetworkError")<{
-  readonly cause: unknown
-}> {}
+class NetworkError extends Schema.TaggedError<NetworkError>()(
+  "NetworkError",
+  { cause: Schema.Unknown }
+) {}
 
 const getUser = (id: string): Effect.Effect<User, UserNotFound | NetworkError> =>
   Effect.gen(function* () {

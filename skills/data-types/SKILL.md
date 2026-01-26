@@ -173,7 +173,7 @@ const mapped = Exit.map(exit, (a) => a * 2)
 Create classes with structural equality:
 
 ```typescript
-import { Data } from "effect"
+import { Data, Schema } from "effect"
 
 // Tagged class
 class Person extends Data.Class<{
@@ -188,11 +188,11 @@ alice1 === alice2  // false (reference)
 Equal.equals(alice1, alice2)  // true (structural)
 
 // Tagged errors (used with Effect.fail)
-// NOTE: Data.TaggedError is NOT a Schema - Schema.is() does NOT work on these.
-// Use Effect.catchTag or Match.tag for error handling.
-class UserNotFound extends Data.TaggedError("UserNotFound")<{
-  readonly userId: string
-}> {}
+// Use Schema.TaggedError for domain errors - works with Schema.is(), catchTag, and Match.tag
+class UserNotFound extends Schema.TaggedError<UserNotFound>()(
+  "UserNotFound",
+  { userId: Schema.String }
+) {}
 
 // Tagged enum
 type Shape = Data.TaggedEnum<{
@@ -347,7 +347,7 @@ const actual = Redacted.value(apiKey)  // "sk-secret-key-123"
 
 1. **Use Option for nullable values** - Explicit handling required
 2. **Use Either for validation** - Accumulate errors
-3. **Use Data.TaggedError for Effect errors** - Enables catchTag
+3. **Use Schema.TaggedError for Effect errors** - Enables catchTag and Schema.is()
 4. **Use Chunk in streaming** - Optimized for Effect operations
 5. **Use Redacted for secrets** - Prevents accidental exposure
 6. **Use Duration for time** - Type-safe time operations
