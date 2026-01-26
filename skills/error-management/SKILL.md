@@ -30,6 +30,9 @@ class UserNotFound extends Schema.TaggedError<UserNotFound>()(
   { userId: Schema.String }
 ) {}
 
+// Note: Schema.Unknown is semantically correct here because `cause` captures
+// arbitrary caught exceptions whose type is genuinely unknown at the domain level.
+// This is NOT type weakening - JavaScript exceptions can be any value.
 class NetworkError extends Schema.TaggedError<NetworkError>()(
   "NetworkError",
   { cause: Schema.Unknown }
@@ -277,6 +280,7 @@ const result = yield* effect.pipe(
 3. **Transform errors at boundaries** - Map low-level errors to domain errors
 4. **Use typed errors generously** - The compiler tracks them for free
 5. **Accumulate validation errors** - Don't fail fast when validating
+6. **Only use Schema.Unknown for genuinely untyped values** - The `cause` field on error types is the canonical example (caught JS exceptions can be any value). Never use Schema.Unknown or Schema.Any for fields whose shape you can describe - define proper schemas instead.
 
 ## Additional Resources
 

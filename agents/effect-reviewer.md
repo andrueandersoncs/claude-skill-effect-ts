@@ -117,6 +117,24 @@ ALL code MUST be Effect-compliant. There are no exceptions. Non-Effect patterns 
 - **Non-exhaustive handling** - Missing cases in conditional logic (Match.exhaustive catches these)
 - **Match.orElse overuse** - Using orElse when exhaustive matching is possible
 
+**Schema.Any / Schema.Unknown Type Weakening - VIOLATION:**
+- **Schema.Any or Schema.Unknown used where data shape is known** - VIOLATION: MUST define a proper schema
+  - ❌ `data: Schema.Unknown` when you know the response shape → MUST define the struct/class
+  - ❌ `settings: Schema.Any` when configuration has known fields → MUST define the schema
+  - ❌ `payload: Schema.Unknown` as a shortcut to avoid schema definition → MUST model the actual type
+  - ✅ `cause: Schema.Unknown` on error types (caught exceptions are genuinely untyped) - ALLOWED
+  - ✅ `value: Schema.Unknown` on a generic cache/store that truly holds arbitrary data - ALLOWED
+  - ✅ `metadata: Schema.Unknown` for opaque pass-through payloads from external plugins - ALLOWED
+- **Rule:** If the developer can describe what shape the data takes, `Schema.Any`/`Schema.Unknown` is a violation. These are ONLY permitted when the value is genuinely unconstrained at the domain level.
+
+**Testing Anti-Patterns - VIOLATION:**
+- **`import { it } from "vitest"` in Effect test files** - VIOLATION: MUST import from `@effect/vitest`
+- **`Effect.runPromise` in test blocks** - VIOLATION: MUST use `it.effect` from `@effect/vitest` instead of `async () => { await Effect.runPromise(...) }`
+- **`Effect.runPromiseExit` in test blocks** - VIOLATION: MUST use `it.effect` with `Effect.exit` inside the Effect
+- **Manual `Effect.provide(TestClock.layer)` in tests** - VIOLATION: `it.effect` provides TestClock automatically
+- **Hand-crafted test data when Schema exists** - VIOLATION: MUST use `Arbitrary.make(Schema)` or `it.prop`
+- **Manual `fc.assert(fc.property(...))` patterns** - PREFER `it.prop` or `it.effect.prop` from `@effect/vitest`
+
 **Other Anti-Patterns:**
 - **Raw JSON.parse()** - Using JSON.parse() instead of Schema.parseJson with proper validation
 - **Missing error types** - Functions returning `Effect<A, unknown>` instead of typed errors
@@ -140,6 +158,7 @@ ALL code MUST be Effect-compliant. There are no exceptions. Non-Effect patterns 
 - ALL events/messages defined as Schema.TaggedClass
 - Branded types via Schema.brand for IDs
 - Schema.Union of TaggedClass for discriminated unions
+- ZERO instances of Schema.Any or Schema.Unknown used as type weakening (only allowed when value is genuinely unconstrained)
 
 **No Imperative Control Flow (CRITICAL):**
 - ZERO if/else statements - use Match.value + Match.when
@@ -160,6 +179,14 @@ ALL code MUST be Effect-compliant. There are no exceptions. Non-Effect patterns 
 - Effect.match for effect results
 - Match.exhaustive to ensure all cases handled
 - Match.orElse only when truly needed for catch-all
+
+**Testing (Required):**
+- ALL Effect tests MUST use `@effect/vitest` (`it.effect`, `it.scoped`, `it.live`, `it.layer`)
+- ZERO `Effect.runPromise` in test blocks - use `it.effect` instead
+- ZERO `import { it } from "vitest"` in Effect test files - import from `@effect/vitest`
+- Test data MUST use `Arbitrary.make(Schema)` or `it.prop` - never hand-crafted objects
+- Property tests SHOULD use `it.prop` or `it.effect.prop` over manual `fc.assert`/`fc.property`
+- `addEqualityTesters()` SHOULD be called for proper Effect type equality
 
 **General:**
 - Use of Effect.gen for sequential code

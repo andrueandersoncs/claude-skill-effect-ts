@@ -287,6 +287,14 @@ const isUserCreated = Schema.is(UserCreated)
 // - Match.tag("NetworkError", ...) for pattern matching (including predicates in retry while/until)
 ```
 
+**Schema.Any / Schema.Unknown Policy (CRITICAL):**
+
+When migrating code, NEVER use `Schema.Any` or `Schema.Unknown` as a shortcut to avoid defining proper schemas. These are a form of type weakening that defeats the purpose of Schema-first modeling.
+
+- **FORBIDDEN:** Using `Schema.Unknown` for API response bodies, configuration objects, function parameters, or any value whose shape you can describe
+- **ALLOWED:** Using `Schema.Unknown` for error `cause` fields (caught exceptions are genuinely untyped), opaque pass-through payloads from external plugins, or generic cache values that truly hold arbitrary data
+- **Rule:** If the original code had a TypeScript type/interface describing the shape, migrate it to a proper Schema - do NOT collapse it to `Schema.Unknown`
+
 **Migration Checklist:**
 
 For each file/module:
@@ -295,13 +303,14 @@ For each file/module:
 - [ ] **ELIMINATE all ternaries** - Convert to Match.value + Match.when
 - [ ] **ELIMINATE all null checks** - Convert to Option.match
 - [ ] **ELIMINATE all direct `._tag` access** - Convert to Match.tag or Schema.is() (for Schema types only)
+- [ ] **ELIMINATE all Schema.Any/Schema.Unknown type weakening** - Define proper schemas for all known data shapes
 - [ ] Identify all async functions
 - [ ] Create error types (Schema.TaggedError)
 - [ ] Convert functions to Effect
 - [ ] Update function signatures with typed errors
 - [ ] Wrap external dependencies in services
 - [ ] Create layers for services
-- [ ] Update tests to use Effect.runPromise
+- [ ] **Migrate tests to `@effect/vitest`** - Replace `Effect.runPromise` with `it.effect`, use `it.layer` for service tests
 - [ ] Remove old Promise-based implementations
 
 **Output Format:**
@@ -333,6 +342,53 @@ After migration, provide:
 Run: npm test
 Expected: All tests pass with new Effect-based implementations
 ```
+
+### Tests to @effect/vitest (MANDATORY)
+
+```typescript
+// Before (FORBIDDEN) - plain vitest with Effect.runPromise
+import { describe, it, expect } from "vitest"
+import { Effect } from "effect"
+
+describe("UserService", () => {
+  it("should return user", async () => {
+    const result = await Effect.runPromise(getUser("123"))
+    expect(result.name).toBe("Alice")
+  })
+
+  it("should fail for missing", async () => {
+    await expect(Effect.runPromise(getUser("bad"))).rejects.toThrow()
+  })
+})
+
+// After (REQUIRED) - @effect/vitest with it.effect
+import { it, expect, layer } from "@effect/vitest"
+import { Effect } from "effect"
+
+layer(TestUserRepo)("UserService", (it) => {
+  it.effect("should return user", () =>
+    Effect.gen(function* () {
+      const user = yield* getUser("123")
+      expect(user.name).toBe("Alice")
+    })
+  )
+
+  it.effect("should fail for missing", () =>
+    Effect.gen(function* () {
+      const exit = yield* Effect.exit(getUser("bad"))
+      expect(exit._tag).toBe("Failure")
+    })
+  )
+})
+```
+
+**Test migration rules:**
+- Replace `import { it } from "vitest"` → `import { it } from "@effect/vitest"`
+- Replace `async () => { await Effect.runPromise(...) }` → `() => Effect.gen(function* () { ... })`
+- Replace `Effect.runPromiseExit` → `Effect.exit` inside `it.effect`
+- Replace manual `Effect.provide(TestClock.layer)` → `it.effect` provides TestClock automatically
+- Replace `fc.assert(fc.property(...))` → `it.prop` or `it.effect.prop`
+- Replace `Layer.succeed` in each test → `layer(TestLayer)("suite", (it) => { ... })`
 
 **Important Notes:**
 

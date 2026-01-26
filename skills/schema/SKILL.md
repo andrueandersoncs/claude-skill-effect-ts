@@ -225,6 +225,79 @@ const isActive = Schema.is(Active)
 if (isActive(user)) { ... }
 ```
 
+### 4. Never Use Schema.Any or Schema.Unknown for Type Weakening
+
+**`Schema.Any` and `Schema.Unknown` are ONLY permitted when the value is genuinely unconstrained at the domain level.** Using them to avoid writing a proper schema is type weakening and defeats the purpose of Schema-first modeling.
+
+**Semantically correct uses (ALLOWED):**
+
+```typescript
+// ✅ Error `cause` capturing arbitrary caught exceptions - the value is genuinely unknown
+class NetworkError extends Schema.TaggedError<NetworkError>()(
+  "NetworkError",
+  { url: Schema.String, cause: Schema.Unknown }
+) {}
+
+// ✅ A generic container that truly accepts any value (e.g., a cache, event metadata)
+class CacheEntry extends Schema.Class<CacheEntry>("CacheEntry")({
+  key: Schema.String,
+  value: Schema.Unknown,   // Cache genuinely stores arbitrary data
+  ttl: Schema.Number
+}) {}
+
+// ✅ Schema.parseJson without a target schema to get raw parsed JSON
+const RawJson = Schema.parseJson()  // Produces Schema<unknown>
+// This is fine as an intermediate step before further validation
+```
+
+**Type weakening (FORBIDDEN):**
+
+```typescript
+// ❌ FORBIDDEN: Lazy schema definition - write the actual shape
+const UserResponse = Schema.Struct({
+  data: Schema.Unknown  // What is "data"? Define it!
+})
+
+// ❌ FORBIDDEN: Avoiding nested schema definition
+const ApiResponse = Schema.Struct({
+  body: Schema.Any  // Write the actual body schema
+})
+
+// ❌ FORBIDDEN: Using Schema.Unknown for "I'll validate later"
+const input: Schema.Schema<unknown> = Schema.Unknown
+// Define the correct schema upfront
+
+// ❌ FORBIDDEN: Using Schema.Any to bypass type checking
+const config = Schema.Struct({
+  settings: Schema.Any  // Define the settings shape!
+})
+```
+
+**How to fix type-weakened schemas:**
+
+```typescript
+// ❌ Before: type-weakened
+const ApiResponse = Schema.Struct({
+  data: Schema.Unknown,
+  meta: Schema.Any
+})
+
+// ✅ After: properly typed
+class ApiResponse extends Schema.Class<ApiResponse>("ApiResponse")({
+  data: Schema.Struct({
+    users: Schema.Array(User),
+    total: Schema.Number
+  }),
+  meta: Schema.Struct({
+    page: Schema.Number,
+    perPage: Schema.Number,
+    requestId: Schema.String
+  })
+}) {}
+```
+
+**Rule of thumb:** If you can describe the shape of the data, you MUST define a proper schema. `Schema.Unknown` is only for values that are genuinely opaque (caught exceptions, plugin payloads from unknown sources, serialized blobs you pass through without inspecting). `Schema.Any` should almost never appear in application code.
+
 ## Basic Schemas
 
 ```typescript
@@ -669,6 +742,7 @@ const Category: Schema.Schema<Category> = Schema.Struct({
 5. **NEVER access `._tag` directly** - Use Match.tag or Schema.is() instead
 6. **NEVER extract `._tag` as a type** - e.g., `type Tag = Foo["_tag"]` is forbidden
 7. **NEVER use `._tag` in predicates** - Use Schema.is(Variant) with .some()/.filter()
+8. **NEVER use Schema.Any or Schema.Unknown to avoid writing a proper schema** - These are only permitted when the value is genuinely unconstrained (e.g., caught exception causes, opaque plugin payloads). If you can describe the data shape, define a real schema.
 
 ## Additional Resources
 

@@ -37,6 +37,10 @@ Add typed error handling to existing Effect code by:
 ```typescript
 import { Schema } from "effect"
 
+// Schema.Unknown is semantically correct for `cause` because caught JavaScript
+// exceptions can be any value (string, Error, object, undefined, etc.).
+// This is NOT type weakening - the value is genuinely unconstrained.
+// Do NOT use Schema.Unknown or Schema.Any for other fields where the shape is known.
 export class {ErrorName} extends Schema.TaggedError<{ErrorName}>()(
   "{ErrorName}",
   {

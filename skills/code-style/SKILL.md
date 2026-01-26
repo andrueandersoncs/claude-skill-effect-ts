@@ -611,6 +611,7 @@ const program = getUser(id).pipe(
 - **Use tagged unions over optional properties** - make states explicit
 - **Use Schema.is() in Match.when patterns** - combine validation with matching
 - **Use Match for ALL conditional logic** - replace if/else, switch, ternaries
+- **Use `@effect/vitest` for ALL tests** - `it.effect`, `it.scoped`, `it.live`, `it.layer`, `it.prop`
 - Use Effect.gen for sequential code
 - Define services with Context.Tag
 - Compose layers bottom-up
@@ -627,6 +628,7 @@ const program = getUser(id).pipe(
 - **NEVER extract `._tag` as a type** - e.g., `type Tag = Foo["_tag"]` is forbidden
 - **NEVER use `._tag` in predicates** - use Schema.is(Variant) with .some()/.filter()
 - **NEVER use JSON.parse()** - always use Schema.parseJson with a schema
+- **NEVER use Schema.Any or Schema.Unknown as type weakening** - these are only permitted when the value is genuinely unconstrained at the domain level (e.g., `cause` field on error types capturing arbitrary caught exceptions, opaque pass-through payloads). If you can describe the data shape, define a proper schema instead.
 - Use Schema.Struct for domain entities (use Schema.Class)
 - Use optional properties for state (use tagged unions)
 - Use plain TypeScript interfaces/types without Schema
@@ -634,6 +636,8 @@ const program = getUser(id).pipe(
 - Use bare try/catch (use Effect.try)
 - Create services without layers
 - Throw exceptions (use Effect.fail)
+- **NEVER use `Effect.runPromise` in tests** - use `it.effect` from `@effect/vitest`
+- **NEVER import `it` from `vitest`** in Effect test files - import from `@effect/vitest`
 
 ## Additional Resources
 

@@ -48,6 +48,7 @@ Use the Task tool to spawn the `effect-reviewer` agent to perform a strict revie
 - `if/else` chains (MUST use Match)
 - `switch/case` statements (MUST use Match)
 - Ternary operators for conditionals (MUST use Match)
+- Schema.Any or Schema.Unknown used as type weakening (MUST define proper schemas when data shape is known; only allowed for genuinely unconstrained values like caught exception causes)
 
 ### Schema-First Compliance (REQUIRED)
 
@@ -61,6 +62,14 @@ Use the Task tool to spawn the `effect-reviewer` agent to perform a strict revie
 - All conditional logic MUST use Effect Match
 - Match.exhaustive for complete case coverage
 - Schema.is() in Match.when patterns
+
+### Testing Compliance (REQUIRED)
+
+- All Effect tests MUST use `@effect/vitest` (`it.effect`, `it.scoped`, `it.live`, `it.layer`)
+- MUST import `it` from `@effect/vitest`, NOT from `vitest`
+- MUST NOT use `Effect.runPromise` in test blocks (use `it.effect` instead)
+- Test data MUST use `Arbitrary.make(Schema)` or `it.prop`, not hand-crafted objects
+- Property tests SHOULD use `it.prop` or `it.effect.prop` over manual `fc.assert`/`fc.property`
 
 ## Usage Examples
 

@@ -54,13 +54,33 @@ export const {ServiceName}Live = Layer.succeed(
   }
 )
 
-// Optional: Test implementation
+// Test implementation (use with @effect/vitest it.layer)
 export const {ServiceName}Test = Layer.succeed(
   {ServiceName},
   {
     methodName: (param) => Effect.succeed(mockResult)
   }
 )
+```
+
+## Test Usage with @effect/vitest
+
+When generating a test layer, also show how to use it with `@effect/vitest`:
+
+```typescript
+import { it, expect, layer } from "@effect/vitest"
+import { Effect } from "effect"
+import { {ServiceName}, {ServiceName}Test } from "./{ServiceName}"
+
+layer({ServiceName}Test)("{ServiceName}", (it) => {
+  it.effect("should execute method", () =>
+    Effect.gen(function* () {
+      const service = yield* {ServiceName}
+      const result = yield* service.methodName(param)
+      expect(result).toBeDefined()
+    })
+  )
+})
 ```
 
 ## Infer Methods from Service Name

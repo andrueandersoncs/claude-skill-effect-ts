@@ -87,6 +87,18 @@ export const decode{SchemaName} = Schema.decodeUnknown({SchemaName})
 export const encode{SchemaName} = Schema.encode({SchemaName})
 ```
 
+## Schema.Any and Schema.Unknown Policy
+
+**NEVER generate schemas that use `Schema.Any` or `Schema.Unknown` as a shortcut.** These are only permitted when the value is genuinely unconstrained at the domain level:
+
+- ✅ `cause: Schema.Unknown` on error types (caught exceptions are genuinely untyped)
+- ✅ `value: Schema.Unknown` on a generic cache that truly holds arbitrary data
+- ❌ `data: Schema.Unknown` for API response bodies - define the actual shape
+- ❌ `settings: Schema.Any` for configuration - define the fields
+- ❌ `payload: Schema.Unknown` when you know what the payload contains
+
+If the user provides a field without a clear type, ask them to clarify the shape rather than defaulting to `Schema.Unknown`.
+
 ## Advanced Features
 
 Add validation when field names suggest it:
