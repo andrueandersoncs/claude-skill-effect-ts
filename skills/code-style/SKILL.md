@@ -611,7 +611,11 @@ const program = getUser(id).pipe(
 - **Use tagged unions over optional properties** - make states explicit
 - **Use Schema.is() in Match.when patterns** - combine validation with matching
 - **Use Match for ALL conditional logic** - replace if/else, switch, ternaries
+- **Wrap ALL external dependencies in Services** - API calls, databases, file I/O, third-party SDKs, email, caches, queues MUST go through `Context.Tag` services
+- **Create Test Layers for every Service** - `*Live` for production, `*Test` for testing. This is required for 100% test coverage.
 - **Use `@effect/vitest` for ALL tests** - `it.effect`, `it.scoped`, `it.live`, `it.layer`, `it.prop`
+- **Use `Arbitrary.make(Schema)` for ALL test data** - Never hand-craft test objects
+- **Combine service test layers + Arbitrary** - Services control I/O, Arbitrary generates data — together they enable 100% coverage
 - Use Effect.gen for sequential code
 - Define services with Context.Tag
 - Compose layers bottom-up
@@ -619,6 +623,8 @@ const program = getUser(id).pipe(
 
 ### Don't - FORBIDDEN Patterns
 
+- **NEVER call external APIs/databases/file systems directly in business logic** - always go through a `Context.Tag` service. Direct external calls make code untestable.
+- **NEVER skip writing test Layers** - every service MUST have a test layer. Without test layers, coverage is incomplete.
 - **NEVER use if/else** - always use Match.value + Match.when
 - **NEVER use switch/case** - always use Match.type + Match.tag
 - **NEVER use ternary operators** - always use Match.value + Match.when
@@ -638,6 +644,7 @@ const program = getUser(id).pipe(
 - Throw exceptions (use Effect.fail)
 - **NEVER use `Effect.runPromise` in tests** - use `it.effect` from `@effect/vitest`
 - **NEVER import `it` from `vitest`** in Effect test files - import from `@effect/vitest`
+- **NEVER hand-craft test data** - use `Arbitrary.make(Schema)` or `it.prop`
 
 ## Additional Resources
 

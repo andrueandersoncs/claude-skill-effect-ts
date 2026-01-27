@@ -135,6 +135,15 @@ ALL code MUST be Effect-compliant. There are no exceptions. Non-Effect patterns 
 - **Hand-crafted test data when Schema exists** - VIOLATION: MUST use `Arbitrary.make(Schema)` or `it.prop`
 - **Manual `fc.assert(fc.property(...))` patterns** - PREFER `it.prop` or `it.effect.prop` from `@effect/vitest`
 
+**Service & Testability Violations - VIOLATION (CRITICAL):**
+- **Direct API/HTTP calls in business logic** - VIOLATION: ALL external API calls MUST go through a Service (`Context.Tag`). Direct `fetch()`, `axios`, or HTTP client calls in business logic make code untestable. MUST define a service interface and use `yield* MyService` instead.
+- **Direct database queries in business logic** - VIOLATION: ALL database operations MUST go through a Repository service. Direct SQL queries, ORM calls, or database client usage in business logic MUST be wrapped in a `Context.Tag` service.
+- **Direct file system access in business logic** - VIOLATION: ALL file I/O MUST go through a FileStorage or similar service. Direct `fs.readFile`, `fs.writeFile`, or file system calls MUST be wrapped in a service.
+- **Direct third-party SDK calls in business logic** - VIOLATION: ALL third-party service calls (Stripe, SendGrid, AWS, etc.) MUST go through a service interface. Direct SDK usage couples business logic to external dependencies.
+- **Service without a Test Layer** - VIOLATION: Every `Context.Tag` service MUST have a corresponding test layer implementation. If a service exists without a `*Test` layer, test coverage is incomplete.
+- **Tests that use live/real services** - VIOLATION: Tests MUST NOT make real API calls, database queries, or file system operations. All services MUST be replaced with test layers using `it.layer` or `layer()`.
+- **Missing service for effectful operations** - VIOLATION: Any function performing I/O (network, disk, database, external service) without going through a `Context.Tag` service is untestable and MUST be refactored.
+
 **Other Anti-Patterns:**
 - **Raw JSON.parse()** - Using JSON.parse() instead of Schema.parseJson with proper validation
 - **Missing error types** - Functions returning `Effect<A, unknown>` instead of typed errors
@@ -180,6 +189,15 @@ ALL code MUST be Effect-compliant. There are no exceptions. Non-Effect patterns 
 - Match.exhaustive to ensure all cases handled
 - Match.orElse only when truly needed for catch-all
 
+**Service-Oriented Testability (CRITICAL - Required for 100% Coverage):**
+- ALL external/effectful dependencies MUST be behind a `Context.Tag` service (APIs, databases, file systems, third-party SDKs, email, queues, caches)
+- EVERY service MUST have a test Layer (named `*Test` by convention, e.g., `UserRepositoryTest`, `PaymentGatewayTest`)
+- Direct `fetch()`, database queries, `fs.*` calls, or third-party SDK usage in business logic is a VIOLATION — MUST go through a service
+- Tests MUST provide test layers via `it.layer` or `layer()` — NEVER hit real external services
+- Stateful test layers SHOULD use `Layer.effect` with `Ref` for repository-style services
+- Simple mock layers SHOULD use `Layer.succeed` for stateless services
+- Multiple test layers MUST be composed with `Layer.merge` or `Layer.mergeAll`
+
 **Testing (Required):**
 - ALL Effect tests MUST use `@effect/vitest` (`it.effect`, `it.scoped`, `it.live`, `it.layer`)
 - ZERO `Effect.runPromise` in test blocks - use `it.effect` instead
@@ -187,6 +205,7 @@ ALL code MUST be Effect-compliant. There are no exceptions. Non-Effect patterns 
 - Test data MUST use `Arbitrary.make(Schema)` or `it.prop` - never hand-crafted objects
 - Property tests SHOULD use `it.prop` or `it.effect.prop` over manual `fc.assert`/`fc.property`
 - `addEqualityTesters()` SHOULD be called for proper Effect type equality
+- Combine service test layers with `it.effect.prop` for maximum coverage: services control I/O, Arbitrary generates data
 
 **General:**
 - Use of Effect.gen for sequential code

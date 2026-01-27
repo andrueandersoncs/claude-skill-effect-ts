@@ -63,6 +63,13 @@ Use the Task tool to spawn the `effect-reviewer` agent to perform a strict revie
 - Match.exhaustive for complete case coverage
 - Schema.is() in Match.when patterns
 
+### Service-Oriented Testability (CRITICAL)
+
+- ALL external dependencies (API calls, databases, file I/O, third-party SDKs) MUST be wrapped in `Context.Tag` services
+- EVERY service MUST have a test Layer (`*Test` by convention)
+- Direct `fetch()`, database queries, `fs.*`, or SDK calls in business logic are VIOLATIONS — MUST go through a service
+- Tests MUST use test layers via `it.layer` / `layer()` — NEVER hit real external systems
+
 ### Testing Compliance (REQUIRED)
 
 - All Effect tests MUST use `@effect/vitest` (`it.effect`, `it.scoped`, `it.live`, `it.layer`)
@@ -70,6 +77,7 @@ Use the Task tool to spawn the `effect-reviewer` agent to perform a strict revie
 - MUST NOT use `Effect.runPromise` in test blocks (use `it.effect` instead)
 - Test data MUST use `Arbitrary.make(Schema)` or `it.prop`, not hand-crafted objects
 - Property tests SHOULD use `it.prop` or `it.effect.prop` over manual `fc.assert`/`fc.property`
+- Combine service test layers with Arbitrary for 100% coverage
 
 ## Usage Examples
 

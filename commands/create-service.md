@@ -13,8 +13,10 @@ argument-hint: "<ServiceName> [description]"
 
 Generate a complete Effect service with:
 1. Service interface definition using Context.Tag
-2. Layer implementation (Live)
-3. Optional test layer
+2. Live Layer implementation (production)
+3. **Test Layer implementation (REQUIRED — not optional)**
+
+Every external dependency (API calls, databases, file systems, third-party SDKs, email, caches, queues) MUST be wrapped in a Service. The Test Layer is REQUIRED because it is the foundation of testable Effect code — without it, tests cannot avoid hitting real external systems, and 100% coverage is impossible.
 
 ## Process
 
@@ -28,6 +30,7 @@ Generate a complete Effect service with:
    - Service interface using Context.Tag pattern
    - Placeholder methods based on service name
    - Live layer implementation
+   - **Test layer implementation (ALWAYS generated)**
    - Export statements
 
 ## Service Template
@@ -54,7 +57,7 @@ export const {ServiceName}Live = Layer.succeed(
   }
 )
 
-// Test implementation (use with @effect/vitest it.layer)
+// Test implementation (REQUIRED — use with @effect/vitest it.layer)
 export const {ServiceName}Test = Layer.succeed(
   {ServiceName},
   {
@@ -63,13 +66,39 @@ export const {ServiceName}Test = Layer.succeed(
 )
 ```
 
+**For stateful services (repositories, caches),** use `Layer.effect` with `Ref`:
+
+```typescript
+import { Context, Effect, Layer, Ref, Option } from "effect"
+
+export const {ServiceName}Test = Layer.effect(
+  {ServiceName},
+  Effect.gen(function* () {
+    const store = yield* Ref.make<Map<string, Entity>>(new Map())
+
+    return {
+      save: (entity: Entity) =>
+        Ref.update(store, (m) => new Map(m).set(entity.id, entity)),
+      findById: (id: string) =>
+        Effect.gen(function* () {
+          const items = yield* Ref.get(store)
+          return yield* Option.match(Option.fromNullable(items.get(id)), {
+            onNone: () => Effect.fail(new NotFoundError({ id })),
+            onSome: Effect.succeed
+          }).pipe(Effect.flatten)
+        })
+    }
+  })
+)
+```
+
 ## Test Usage with @effect/vitest
 
-When generating a test layer, also show how to use it with `@effect/vitest`:
+**ALWAYS show test layer usage.** The test layer is the primary reason the service exists — it enables 100% test coverage without external dependencies.
 
 ```typescript
 import { it, expect, layer } from "@effect/vitest"
-import { Effect } from "effect"
+import { Effect, Schema, Arbitrary } from "effect"
 import { {ServiceName}, {ServiceName}Test } from "./{ServiceName}"
 
 layer({ServiceName}Test)("{ServiceName}", (it) => {
@@ -79,6 +108,18 @@ layer({ServiceName}Test)("{ServiceName}", (it) => {
       const result = yield* service.methodName(param)
       expect(result).toBeDefined()
     })
+  )
+
+  // Property-based test with Arbitrary — combine services + generated data
+  it.effect.prop(
+    "should handle any valid input",
+    [Arbitrary.make(InputSchema)],
+    ([input]) =>
+      Effect.gen(function* () {
+        const service = yield* {ServiceName}
+        const result = yield* service.methodName(input)
+        expect(result).toBeDefined()
+      })
   )
 })
 ```

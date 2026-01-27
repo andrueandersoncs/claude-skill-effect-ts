@@ -1,7 +1,7 @@
 ---
 name: Testing
-description: This skill should be used when the user asks about "Effect testing", "@effect/vitest", "it.effect", "it.live", "it.scoped", "it.layer", "it.prop", "Schema Arbitrary", "property-based testing", "fast-check", "TestClock", "testing effects", "mocking services", "test layers", "TestContext", "Effect.provide test", "time testing", "Effect test utilities", "unit testing Effect", "generating test data", "flakyTest", or needs to understand how to test Effect-based code.
-version: 1.1.0
+description: This skill should be used when the user asks about "Effect testing", "@effect/vitest", "it.effect", "it.live", "it.scoped", "it.layer", "it.prop", "Schema Arbitrary", "property-based testing", "fast-check", "TestClock", "testing effects", "mocking services", "test layers", "TestContext", "Effect.provide test", "time testing", "Effect test utilities", "unit testing Effect", "generating test data", "flakyTest", "test coverage", "100% coverage", "service testing", "test doubles", "mock services", or needs to understand how to test Effect-based code.
+version: 1.2.0
 ---
 
 # Testing in Effect
@@ -10,15 +10,255 @@ version: 1.1.0
 
 Effect testing uses **`@effect/vitest`** as the standard test runner integration. This package provides Effect-aware test functions that handle Effect execution, scoped resources, layer composition, and TestClock injection automatically.
 
-Since every data type should have a Schema, every data type can generate test data via `Arbitrary`. This makes **property-based testing the primary testing approach** in Effect.
+**The two pillars of Effect testing that enable 100% test coverage:**
+
+1. **Service-Oriented Architecture** — Every external/effectful dependency (API calls, databases, file systems, third-party services, clocks, random number generators) MUST be wrapped in an Effect Service using `Context.Tag`. Tests provide test implementations via Layers, giving you complete control over all I/O and side effects.
+
+2. **Schema-Driven Property Testing** — Since every data type has a Schema, every data type can generate test data via `Arbitrary`. This makes property-based testing the primary approach for verifying domain logic across thousands of automatically generated inputs.
+
+Together, these two pillars mean: **services eliminate external dependencies from tests, and Arbitrary eliminates hand-crafted test data.** The result is fast, deterministic, comprehensive tests with 100% coverage.
 
 **Core testing tools:**
 
 - **@effect/vitest** - Effect-native test runner (`it.effect`, `it.scoped`, `it.live`, `it.layer`, `it.prop`)
-- **Schema.Arbitrary** - Generate test data from any Schema (primary approach)
+- **Effect Services + Test Layers** - Replace ALL external dependencies with test doubles via `Context.Tag` and `it.layer`
+- **Schema.Arbitrary** - Generate test data from any Schema (primary approach — never hand-craft test data)
 - **Property Testing** - Test invariants with generated data via `it.prop` or fast-check
-- **Mock Layers** - Replace services with test doubles via `it.layer`
 - **TestClock** - Control time in tests (automatically provided by `it.effect`)
+
+## The Service-Oriented Testing Pattern (CRITICAL)
+
+**This is the most important testing pattern in Effect.** Every external or effectful operation MUST be wrapped in a Service so that tests can provide a test implementation. This is how you achieve 100% test coverage without hitting real APIs, databases, or file systems.
+
+### The Rule
+
+> **If it makes a network call, reads from disk, talks to a database, calls a third-party API, generates random values, or performs any I/O — it MUST be behind an Effect Service.**
+
+### Why Services Are Required for Testing
+
+Without services, your code is **untestable** because it directly depends on external systems:
+
+```typescript
+// ❌ UNTESTABLE: Direct API call baked into business logic
+const getUser = (id: string) =>
+  Effect.tryPromise({
+    try: () => fetch(`/api/users/${id}`).then((r) => r.json()),
+    catch: (error) => new NetworkError({ cause: error })
+  })
+
+// ❌ UNTESTABLE: Direct database access
+const saveOrder = (order: Order) =>
+  Effect.tryPromise({
+    try: () => db.query("INSERT INTO orders ...", order),
+    catch: (error) => new DatabaseError({ cause: error })
+  })
+```
+
+With services, your business logic is **pure and fully testable**:
+
+```typescript
+// ✅ TESTABLE: Service abstraction for API calls
+class UserApi extends Context.Tag("UserApi")<
+  UserApi,
+  {
+    readonly getUser: (id: string) => Effect.Effect<User, UserNotFound | NetworkError>
+    readonly saveUser: (user: User) => Effect.Effect<void, NetworkError>
+  }
+>() {}
+
+// ✅ TESTABLE: Service abstraction for database
+class OrderRepository extends Context.Tag("OrderRepository")<
+  OrderRepository,
+  {
+    readonly save: (order: Order) => Effect.Effect<void, DatabaseError>
+    readonly findById: (id: string) => Effect.Effect<Order, OrderNotFound>
+  }
+>() {}
+
+// ✅ Business logic is pure — depends only on service interfaces
+const processOrder = (orderId: string) =>
+  Effect.gen(function* () {
+    const userApi = yield* UserApi
+    const orderRepo = yield* OrderRepository
+
+    const order = yield* orderRepo.findById(orderId)
+    const user = yield* userApi.getUser(order.userId)
+    // ... pure business logic using service abstractions
+  })
+```
+
+### What MUST Be a Service
+
+Every one of these MUST be wrapped in a `Context.Tag` service:
+
+| External Dependency | Service Example |
+|---|---|
+| REST/GraphQL API calls | `UserApi`, `PaymentGateway`, `NotificationService` |
+| Database operations | `UserRepository`, `OrderRepository` |
+| File system access | `FileStorage`, `ConfigReader` |
+| Third-party SDKs | `StripeClient`, `SendGridClient`, `AwsS3Client` |
+| Email/SMS sending | `EmailService`, `SmsService` |
+| Message queues | `EventPublisher`, `QueueConsumer` |
+| Caching systems | `CacheService`, `RedisClient` |
+| Authentication providers | `AuthProvider`, `TokenService` |
+| External clock/time | Use Effect's built-in `Clock` service |
+| Random values | Use Effect's built-in `Random` service |
+
+### Complete Service + Test Layer Pattern
+
+```typescript
+import { Context, Effect, Layer, Schema } from "effect"
+
+// 1. Define the service interface
+class PaymentGateway extends Context.Tag("PaymentGateway")<
+  PaymentGateway,
+  {
+    readonly charge: (amount: number, currency: string) => Effect.Effect<PaymentResult, PaymentError>
+    readonly refund: (transactionId: string) => Effect.Effect<void, RefundError>
+  }
+>() {}
+
+// 2. Live implementation (used in production)
+const PaymentGatewayLive = Layer.succeed(PaymentGateway, {
+  charge: (amount, currency) =>
+    Effect.tryPromise({
+      try: () => stripe.charges.create({ amount, currency }),
+      catch: (error) => new PaymentError({ cause: error })
+    }),
+  refund: (transactionId) =>
+    Effect.tryPromise({
+      try: () => stripe.refunds.create({ charge: transactionId }),
+      catch: (error) => new RefundError({ cause: error })
+    })
+})
+
+// 3. Test implementation (used in tests — NO real API calls)
+const PaymentGatewayTest = Layer.succeed(PaymentGateway, {
+  charge: (amount, currency) =>
+    Effect.succeed(new PaymentResult({
+      transactionId: "test-txn-001",
+      amount,
+      currency,
+      status: "succeeded"
+    })),
+  refund: (_transactionId) => Effect.void
+})
+
+// 4. Test with the test layer — 100% coverage, zero external calls
+import { it, expect, layer } from "@effect/vitest"
+
+layer(PaymentGatewayTest)("PaymentService", (it) => {
+  it.effect("should process payment", () =>
+    Effect.gen(function* () {
+      const gateway = yield* PaymentGateway
+      const result = yield* gateway.charge(1000, "usd")
+      expect(result.status).toBe("succeeded")
+    })
+  )
+
+  it.effect("should handle refund", () =>
+    Effect.gen(function* () {
+      const gateway = yield* PaymentGateway
+      yield* gateway.refund("test-txn-001")
+      // No error = success
+    })
+  )
+})
+```
+
+### Stateful Test Layers (for Repository Testing)
+
+For services that need to maintain state across operations within a test, use `Layer.effect` with `Ref`:
+
+```typescript
+import { Effect, Layer, Ref, Option } from "effect"
+
+const OrderRepositoryTest = Layer.effect(
+  OrderRepository,
+  Effect.gen(function* () {
+    const store = yield* Ref.make<Map<string, Order>>(new Map())
+
+    return {
+      save: (order: Order) =>
+        Ref.update(store, (m) => new Map(m).set(order.id, order)),
+
+      findById: (id: string) =>
+        Effect.gen(function* () {
+          const orders = yield* Ref.get(store)
+          return yield* Option.match(Option.fromNullable(orders.get(id)), {
+            onNone: () => Effect.fail(new OrderNotFound({ orderId: id })),
+            onSome: Effect.succeed
+          }).pipe(Effect.flatten)
+        }),
+
+      findAll: () =>
+        Ref.get(store).pipe(Effect.map((m) => Array.from(m.values())))
+    }
+  })
+)
+```
+
+### Composing Multiple Test Layers
+
+Real tests often need multiple services. Compose test layers with `Layer.merge`:
+
+```typescript
+const TestEnv = Layer.merge(
+  UserApiTest,
+  Layer.merge(OrderRepositoryTest, PaymentGatewayTest)
+)
+
+layer(TestEnv)("Order Processing", (it) => {
+  it.effect("should process complete order flow", () =>
+    Effect.gen(function* () {
+      const userApi = yield* UserApi
+      const orderRepo = yield* OrderRepository
+      const gateway = yield* PaymentGateway
+
+      // Full integration test with ALL services mocked
+      const user = yield* userApi.getUser("user-123")
+      const order = yield* orderRepo.findById("order-456")
+      const payment = yield* gateway.charge(order.total, "usd")
+
+      expect(payment.status).toBe("succeeded")
+    })
+  )
+})
+```
+
+### Combining Services with Property Testing
+
+The ultimate testing pattern: **service test layers + Schema Arbitrary.** This lets you test business logic across thousands of generated inputs with all external dependencies controlled:
+
+```typescript
+import { it, expect, layer } from "@effect/vitest"
+import { Schema, Arbitrary, Effect } from "effect"
+
+layer(TestEnv)("Order Processing Properties", (it) => {
+  it.effect.prop(
+    "should calculate correct total for any valid order",
+    [Arbitrary.make(Order)],
+    ([order]) =>
+      Effect.gen(function* () {
+        const orderRepo = yield* OrderRepository
+        yield* orderRepo.save(order)
+        const saved = yield* orderRepo.findById(order.id)
+        expect(saved.total).toBe(order.items.reduce((sum, i) => sum + i.price, 0))
+      })
+  )
+
+  it.effect.prop(
+    "should never charge negative amounts",
+    [Arbitrary.make(Order)],
+    ([order]) =>
+      Effect.gen(function* () {
+        const gateway = yield* PaymentGateway
+        const result = yield* gateway.charge(order.total, "usd")
+        expect(result.amount).toBeGreaterThanOrEqual(0)
+      })
+  )
+})
+```
 
 ## Setup
 
@@ -677,27 +917,45 @@ it.effect("should use test configuration", () =>
 
 ### Do
 
-1. **Use `@effect/vitest` for ALL Effect tests** - Never use plain vitest `it` with `Effect.runPromise`
-2. **Use `it.effect` as the default** - It provides TestContext automatically
-3. **Use `it.layer` for service tests** - Share layers across test blocks
-4. **Use `it.prop` or `it.effect.prop` for property tests** - Prefer over manual `fc.assert`/`fc.property`
-5. **Use Arbitrary for ALL test data** - Never hand-craft test objects
-6. **Test round-trips for every Schema** - Encode/decode should be lossless
-7. **Test all union variants** - Use Match.exhaustive to ensure coverage
-8. **Test invariants with properties** - Not just specific examples
-9. **Generate errors too** - Use Arbitrary on error schemas
-10. **Use TestClock for time** - Deterministic, fast tests (automatic in `it.effect`)
-11. **Call `addEqualityTesters()`** - For proper Effect type equality in assertions
+1. **Wrap ALL external dependencies in Services** - Every API call, database query, file read, and third-party SDK call MUST go through a `Context.Tag` service. This is the foundation of testable Effect code.
+2. **Create test Layers for every Service** - Every service MUST have a corresponding test implementation. Use `Layer.succeed` for simple mocks, `Layer.effect` with `Ref` for stateful mocks.
+3. **Use `it.layer` to provide test services** - Share test layers across test blocks. Compose multiple test layers with `Layer.merge`.
+4. **Use `@effect/vitest` for ALL Effect tests** - Never use plain vitest `it` with `Effect.runPromise`
+5. **Use `it.effect` as the default** - It provides TestContext automatically
+6. **Use `it.prop` or `it.effect.prop` for property tests** - Prefer over manual `fc.assert`/`fc.property`. Combine with service test layers for full coverage.
+7. **Use Arbitrary for ALL test data** - Never hand-craft test objects. Every Schema generates Arbitrary data.
+8. **Combine services + Arbitrary for 100% coverage** - Service test layers control all I/O; Arbitrary generates all data. Together they eliminate every testing gap.
+9. **Test round-trips for every Schema** - Encode/decode should be lossless
+10. **Test all union variants** - Use Match.exhaustive to ensure coverage
+11. **Test invariants with properties** - Not just specific examples
+12. **Generate errors too** - Use Arbitrary on error schemas
+13. **Use TestClock for time** - Deterministic, fast tests (automatic in `it.effect`)
+14. **Call `addEqualityTesters()`** - For proper Effect type equality in assertions
 
 ### Don't
 
-1. **Don't use `Effect.runPromise` in tests** - Use `it.effect` instead
-2. **Don't import `it` from `vitest`** - Import from `@effect/vitest`
-3. **Don't hard-code test data** - Use Arbitrary.make(YourSchema) or `it.prop`
-4. **Don't test just "happy path"** - Generate edge cases automatically
-5. **Don't use `._tag` directly** - Use Match.tag or Schema.is() (for Schema types only)
-6. **Don't skip round-trip tests** - They catch serialization bugs
-7. **Don't manually provide TestClock** - `it.effect` does this automatically
+1. **Don't call external APIs/databases directly in business logic** - Always go through a Service. Direct calls make code untestable.
+2. **Don't skip writing test Layers** - Every Service needs a test Layer. If a service doesn't have one, your coverage is incomplete.
+3. **Don't use `Effect.runPromise` in tests** - Use `it.effect` instead
+4. **Don't import `it` from `vitest`** - Import from `@effect/vitest`
+5. **Don't hard-code test data** - Use Arbitrary.make(YourSchema) or `it.prop`
+6. **Don't test just "happy path"** - Generate edge cases automatically
+7. **Don't use `._tag` directly** - Use Match.tag or Schema.is() (for Schema types only)
+8. **Don't skip round-trip tests** - They catch serialization bugs
+9. **Don't manually provide TestClock** - `it.effect` does this automatically
+
+### The Path to 100% Test Coverage
+
+```
+1. Define Services (Context.Tag)     → Every external dependency has an interface
+2. Create Test Layers               → Every service has a test implementation
+3. Use it.layer / layer()           → Tests compose all test layers automatically
+4. Use Arbitrary + it.prop          → Test data is generated, not hand-crafted
+5. Test error paths with Arbitrary  → Error schemas generate error cases too
+6. Test unions exhaustively         → Match.exhaustive ensures all variants covered
+```
+
+This combination guarantees full coverage: services control all side effects, Arbitrary covers all data shapes, and Match.exhaustive covers all code paths.
 
 ## Additional Resources
 

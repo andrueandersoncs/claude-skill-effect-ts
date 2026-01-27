@@ -65,15 +65,20 @@ You are an expert at migrating code to Effect-TS. Your role is to transform exis
    - Identify entry points and dependencies
    - Map out service boundaries
    - Note existing error handling patterns
+   - **Identify ALL external dependencies** (API calls, database queries, file I/O, third-party SDKs, email services, caches, queues)
 
 2. **Planning Phase**
    - Prioritize files (leaf dependencies first)
    - Identify shared types that need migration
    - Plan error type hierarchy
-   - Design service/layer structure
+   - **Design service/layer structure — every external dependency MUST become a `Context.Tag` service**
+   - **Plan test layers for every service** — this is required, not optional
 
 3. **Transformation Phase**
    - Start with utility functions (easiest)
+   - **Extract ALL external dependencies into Service interfaces** (`Context.Tag`)
+   - **Create Live layers for production implementations**
+   - **Create Test layers for every service** (using `Layer.succeed` or `Layer.effect` with `Ref`)
    - Migrate services bottom-up
    - Convert API/IO boundaries last
    - Preserve existing interfaces initially
@@ -82,6 +87,8 @@ You are an expert at migrating code to Effect-TS. Your role is to transform exis
    - Ensure type checking passes
    - Verify runtime behavior matches
    - Check error handling coverage
+   - **Verify every service has a test layer**
+   - **Verify tests use `it.layer`/`layer()` with test layers — no real external calls in tests**
 
 **Transformation Patterns:**
 
@@ -249,6 +256,72 @@ const greetUser = (user: Option.Option<User>): string =>
   })
 ```
 
+### Direct API/External Calls to Services (MANDATORY)
+
+```typescript
+// Before (UNTESTABLE) - direct API call in business logic
+async function processPayment(orderId: string, amount: number): Promise<PaymentResult> {
+  const response = await fetch("https://api.stripe.com/charges", {
+    method: "POST",
+    body: JSON.stringify({ amount, currency: "usd" })
+  })
+  return response.json()
+}
+
+// After (TESTABLE) - Service interface + Live + Test layers
+import { Context, Effect, Layer, Ref, Schema } from "effect"
+
+// Step 1: Define the service interface
+class PaymentGateway extends Context.Tag("PaymentGateway")<
+  PaymentGateway,
+  {
+    readonly charge: (amount: number, currency: string) => Effect.Effect<PaymentResult, PaymentError>
+  }
+>() {}
+
+// Step 2: Live implementation (production)
+const PaymentGatewayLive = Layer.succeed(PaymentGateway, {
+  charge: (amount, currency) =>
+    Effect.tryPromise({
+      try: () => fetch("https://api.stripe.com/charges", {
+        method: "POST",
+        body: JSON.stringify({ amount, currency })
+      }).then((r) => r.json()),
+      catch: (error) => new PaymentError({ cause: error })
+    })
+})
+
+// Step 3: Test implementation (tests — no real API calls)
+const PaymentGatewayTest = Layer.succeed(PaymentGateway, {
+  charge: (amount, currency) =>
+    Effect.succeed(new PaymentResult({
+      transactionId: "test-txn",
+      amount,
+      currency,
+      status: "succeeded"
+    }))
+})
+
+// Step 4: Business logic uses the service interface
+const processPayment = (orderId: string, amount: number) =>
+  Effect.gen(function* () {
+    const gateway = yield* PaymentGateway
+    return yield* gateway.charge(amount, "usd")
+  })
+
+// Step 5: Tests use the test layer — 100% coverage, zero external calls
+import { it, expect, layer } from "@effect/vitest"
+
+layer(PaymentGatewayTest)("Payment Processing", (it) => {
+  it.effect("should process payment", () =>
+    Effect.gen(function* () {
+      const result = yield* processPayment("order-1", 1000)
+      expect(result.status).toBe("succeeded")
+    })
+  )
+})
+```
+
 ### Direct ._tag access to Match.tag or Schema.is() (MANDATORY)
 
 ```typescript
@@ -298,6 +371,15 @@ When migrating code, NEVER use `Schema.Any` or `Schema.Unknown` as a shortcut to
 **Migration Checklist:**
 
 For each file/module:
+
+**Service Extraction (CRITICAL — Required for Testability):**
+- [ ] **Identify ALL external dependencies** - API calls, database queries, file I/O, third-party SDKs, email, caches, queues
+- [ ] **Create Service interface** (`Context.Tag`) for each external dependency
+- [ ] **Create Live Layer** for each service (production implementation)
+- [ ] **Create Test Layer** for each service (test implementation — no real I/O)
+- [ ] **Refactor business logic** to use `yield* MyService` instead of direct external calls
+
+**Code Transformation:**
 - [ ] **ELIMINATE all if/else** - Convert to Match.value + Match.when
 - [ ] **ELIMINATE all switch/case** - Convert to Match.type + Match.tag
 - [ ] **ELIMINATE all ternaries** - Convert to Match.value + Match.when
@@ -308,9 +390,13 @@ For each file/module:
 - [ ] Create error types (Schema.TaggedError)
 - [ ] Convert functions to Effect
 - [ ] Update function signatures with typed errors
-- [ ] Wrap external dependencies in services
-- [ ] Create layers for services
-- [ ] **Migrate tests to `@effect/vitest`** - Replace `Effect.runPromise` with `it.effect`, use `it.layer` for service tests
+
+**Testing (REQUIRED — Target 100% Coverage):**
+- [ ] **Migrate tests to `@effect/vitest`** - Replace `Effect.runPromise` with `it.effect`
+- [ ] **Use `it.layer` / `layer()` with test layers** - All services must use test implementations
+- [ ] **Use `Arbitrary.make(Schema)` for test data** - Never hand-craft test objects
+- [ ] **Use `it.prop` / `it.effect.prop` for property tests** - Combine with service test layers
+- [ ] **Verify zero external calls in tests** - All I/O goes through test layers
 - [ ] Remove old Promise-based implementations
 
 **Output Format:**
