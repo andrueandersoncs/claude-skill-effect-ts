@@ -19,11 +19,9 @@ This solves the N+1 query problem automatically.
 ## The Problem: N+1 Queries
 
 ```typescript
-// Naive approach: N+1 API calls
 const program = Effect.gen(function* () {
-  const todos = yield* getTodos()  // 1 call
+  const todos = yield* getTodos()
 
-  // N additional calls (one per todo)
   const owners = yield* Effect.forEach(
     todos,
     (todo) => getUserById(todo.ownerId),
@@ -92,7 +90,6 @@ const getUserById = (id: number) =>
 const program = Effect.gen(function* () {
   const todos = yield* getTodos()
 
-  // These requests are automatically batched!
   const owners = yield* Effect.forEach(
     todos,
     (todo) => getUserById(todo.ownerId),
@@ -159,10 +156,8 @@ const fetchConfig = Effect.promise(() =>
   fetch("/api/config").then((r) => r.json())
 )
 
-// Cached - runs once, reuses result
 const cachedConfig = yield* Effect.cached(fetchConfig)
 
-// Both use cached result
 const config1 = yield* cachedConfig
 const config2 = yield* cachedConfig
 ```
@@ -175,10 +170,9 @@ const cachedUser = yield* Effect.cachedWithTTL(
   "5 minutes"
 )
 
-// Fresh data after TTL expires
-const user1 = yield* cachedUser  // Fetches
+const user1 = yield* cachedUser
 yield* Effect.sleep("6 minutes")
-const user2 = yield* cachedUser  // Fetches again
+const user2 = yield* cachedUser
 ```
 
 ### Effect.cachedInvalidateWithTTL - Manual Invalidation
@@ -190,8 +184,8 @@ const [cachedUser, invalidate] = yield* Effect.cachedInvalidateWithTTL(
 )
 
 const user = yield* cachedUser
-yield* invalidate  // Force refresh on next access
-const freshUser = yield* cachedUser  // Fetches again
+yield* invalidate
+const freshUser = yield* cachedUser
 ```
 
 ## Cache Service
@@ -202,24 +196,19 @@ For more control, use the Cache service:
 import { Cache } from "effect"
 
 const program = Effect.gen(function* () {
-  // Create cache
   const cache = yield* Cache.make({
     capacity: 100,
     timeToLive: "10 minutes",
     lookup: (userId: string) => fetchUser(userId)
   })
 
-  // Use cache
-  const user1 = yield* cache.get("user-1")  // Fetches
-  const user2 = yield* cache.get("user-1")  // Cached
+  const user1 = yield* cache.get("user-1")
+  const user2 = yield* cache.get("user-1")
 
-  // Check if cached
   const isCached = yield* cache.contains("user-1")
 
-  // Invalidate
   yield* cache.invalidate("user-1")
 
-  // Get stats
   const stats = yield* cache.cacheStats
 })
 ```
@@ -230,12 +219,10 @@ Requests are automatically cached within a query context:
 
 ```typescript
 const program = Effect.gen(function* () {
-  // Same request returns cached result
   const user1 = yield* getUserById(1)
-  const user2 = yield* getUserById(1)  // Cached, no request
+  const user2 = yield* getUserById(1)
 
-  // Different request
-  const user3 = yield* getUserById(2)  // New request
+  const user3 = yield* getUserById(2)
 })
 ```
 
@@ -263,7 +250,6 @@ const program = getUserById(1).pipe(
 ## Disabling Batching
 
 ```typescript
-// Disable for specific effect
 const noBatching = program.pipe(
   Effect.withRequestBatching(false)
 )

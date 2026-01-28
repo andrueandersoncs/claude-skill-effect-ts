@@ -191,13 +191,10 @@ import { NodeFileSystem } from "@effect/platform-node"
 const program = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
 
-  // Read as string
   const content = yield* fs.readFileString("./config.json")
 
-  // Read as bytes
   const bytes = yield* fs.readFile("./image.png")
 
-  // Check existence
   const exists = yield* fs.exists("./file.txt")
 }).pipe(
   Effect.provide(NodeFileSystem.layer)
@@ -210,13 +207,10 @@ const program = Effect.gen(function* () {
 const program = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
 
-  // Write string
   yield* fs.writeFileString("./output.txt", "Hello, World!")
 
-  // Write bytes
   yield* fs.writeFile("./data.bin", new Uint8Array([1, 2, 3]))
 
-  // Append
   yield* fs.appendFileString("./log.txt", "New log entry\n")
 })
 ```
@@ -227,19 +221,14 @@ const program = Effect.gen(function* () {
 const program = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
 
-  // Create directory
   yield* fs.makeDirectory("./new-dir", { recursive: true })
 
-  // List directory
   const files = yield* fs.readDirectory("./src")
 
-  // Remove
   yield* fs.remove("./temp", { recursive: true })
 
-  // Copy
   yield* fs.copy("./source.txt", "./dest.txt")
 
-  // Move/rename
   yield* fs.rename("./old.txt", "./new.txt")
 })
 ```
@@ -272,16 +261,12 @@ import { NodeKeyValueStore } from "@effect/platform-node"
 const program = Effect.gen(function* () {
   const store = yield* KeyValueStore.KeyValueStore
 
-  // Set value
   yield* store.set("user:1", JSON.stringify({ name: "Alice" }))
 
-  // Get value
   const value = yield* store.get("user:1")
 
-  // Delete
   yield* store.remove("user:1")
 
-  // Check existence
   const exists = yield* store.has("user:1")
 }).pipe(
   Effect.provide(NodeKeyValueStore.layerFileSystem("./data"))
@@ -299,10 +284,8 @@ import { NodeTerminal } from "@effect/platform-node"
 const program = Effect.gen(function* () {
   const terminal = yield* Terminal.Terminal
 
-  // Read line
   const name = yield* terminal.readLine
 
-  // Display
   yield* terminal.display(`Hello, ${name}!`)
 }).pipe(
   Effect.provide(NodeTerminal.layer)

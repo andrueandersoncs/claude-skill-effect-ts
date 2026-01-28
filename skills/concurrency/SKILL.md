@@ -22,16 +22,13 @@ Effect provides lightweight fiber-based concurrency:
 ```typescript
 import { Effect } from "effect"
 
-// Run in parallel
 const results = yield* Effect.all(
   [fetchUser(1), fetchUser(2), fetchUser(3)],
   { concurrency: "unbounded" }
 )
 
-// Limit concurrency
 const results = yield* Effect.all(tasks, { concurrency: 5 })
 
-// Sequential (default)
 const results = yield* Effect.all(tasks)
 ```
 
@@ -51,13 +48,10 @@ const users = yield* Effect.forEach(
 
 ```typescript
 const program = Effect.gen(function* () {
-  // Fork creates a new fiber
   const fiber = yield* Effect.fork(longRunningTask)
 
-  // Do other work while fiber runs
   yield* doOtherWork()
 
-  // Wait for fiber to complete
   const result = yield* Fiber.join(fiber)
 })
 ```
@@ -65,16 +59,12 @@ const program = Effect.gen(function* () {
 ### Fork Variants
 
 ```typescript
-// Regular fork - child supervised by parent
 const fiber = yield* Effect.fork(task)
 
-// Daemon fork - runs independently
 const fiber = yield* Effect.forkDaemon(task)
 
-// Fork in specific scope
 const fiber = yield* Effect.forkIn(scope)(task)
 
-// Fork to different executor
 const fiber = yield* Effect.forkWithErrorHandler(task, onError)
 ```
 
@@ -83,16 +73,12 @@ const fiber = yield* Effect.forkWithErrorHandler(task, onError)
 ```typescript
 import { Fiber } from "effect"
 
-// Wait for result
 const result = yield* Fiber.join(fiber)
 
-// Wait but don't unwrap (get Exit)
 const exit = yield* Fiber.await(fiber)
 
-// Interrupt fiber
 yield* Fiber.interrupt(fiber)
 
-// Poll without blocking
 const maybeResult = yield* Fiber.poll(fiber)
 ```
 
@@ -101,7 +87,6 @@ const maybeResult = yield* Fiber.poll(fiber)
 ### Effect.race - First to Complete
 
 ```typescript
-// First successful result wins, others interrupted
 const fastest = yield* Effect.race(
   fetchFromServer1(),
   fetchFromServer2()
@@ -121,7 +106,6 @@ const fastest = yield* Effect.raceAll([
 ### Effect.raceFirst - Include Failures
 
 ```typescript
-// First to complete (success OR failure)
 const first = yield* Effect.raceFirst(task1, task2)
 ```
 
@@ -131,10 +115,8 @@ const first = yield* Effect.raceFirst(task1, task2)
 import { Deferred } from "effect"
 
 const program = Effect.gen(function* () {
-  // Create deferred
   const deferred = yield* Deferred.make<string, never>()
 
-  // Fork waiter
   const fiber = yield* Effect.fork(
     Effect.gen(function* () {
       const value = yield* Deferred.await(deferred)
@@ -142,7 +124,6 @@ const program = Effect.gen(function* () {
     })
   )
 
-  // Complete the deferred
   yield* Deferred.succeed(deferred, "Hello!")
 
   yield* Fiber.join(fiber)
@@ -155,10 +136,8 @@ const program = Effect.gen(function* () {
 import { Queue } from "effect"
 
 const program = Effect.gen(function* () {
-  // Bounded queue (backpressure)
   const queue = yield* Queue.bounded<number>(100)
 
-  // Producer
   yield* Effect.fork(
     Effect.forEach(
       [1, 2, 3, 4, 5],
@@ -166,7 +145,6 @@ const program = Effect.gen(function* () {
     )
   )
 
-  // Consumer
   const items = yield* Effect.forEach(
     Array.from({ length: 5 }),
     () => Queue.take(queue)
@@ -177,16 +155,12 @@ const program = Effect.gen(function* () {
 ### Queue Variants
 
 ```typescript
-// Bounded - blocks when full
 const bounded = yield* Queue.bounded<number>(100)
 
-// Unbounded - never blocks producer
 const unbounded = yield* Queue.unbounded<number>()
 
-// Dropping - drops new items when full
 const dropping = yield* Queue.dropping<number>(100)
 
-// Sliding - drops old items when full
 const sliding = yield* Queue.sliding<number>(100)
 ```
 
@@ -198,14 +172,11 @@ import { PubSub } from "effect"
 const program = Effect.gen(function* () {
   const pubsub = yield* PubSub.bounded<string>(100)
 
-  // Subscribe creates a queue
   const sub1 = yield* PubSub.subscribe(pubsub)
   const sub2 = yield* PubSub.subscribe(pubsub)
 
-  // Publish to all subscribers
   yield* PubSub.publish(pubsub, "Hello!")
 
-  // Each subscriber receives message
   const msg1 = yield* Queue.take(sub1)
   const msg2 = yield* Queue.take(sub2)
 })
@@ -217,10 +188,8 @@ const program = Effect.gen(function* () {
 import { Effect } from "effect"
 
 const program = Effect.gen(function* () {
-  // Create semaphore with 3 permits
   const semaphore = yield* Effect.makeSemaphore(3)
 
-  // At most 3 concurrent executions
   yield* Effect.forEach(
     tasks,
     (task) => semaphore.withPermits(1)(task),
@@ -235,10 +204,8 @@ const program = Effect.gen(function* () {
 import { Latch } from "effect"
 
 const program = Effect.gen(function* () {
-  // Create closed latch
   const latch = yield* Latch.make(false)
 
-  // Workers wait at latch
   yield* Effect.fork(
     Effect.forEach(
       workers,
@@ -251,7 +218,6 @@ const program = Effect.gen(function* () {
     )
   )
 
-  // Open latch - all workers proceed
   yield* Latch.open(latch)
 })
 ```
@@ -263,14 +229,12 @@ const program = Effect.gen(function* () {
 ```typescript
 const fiber = yield* Effect.fork(longTask)
 
-// Later...
 yield* Fiber.interrupt(fiber)
 ```
 
 ### Uninterruptible Regions
 
 ```typescript
-// Protect critical section from interruption
 const critical = Effect.uninterruptible(
   Effect.gen(function* () {
     yield* beginTransaction()
@@ -316,7 +280,6 @@ Escape supervision with daemon:
 
 ```typescript
 const daemon = yield* Effect.forkDaemon(backgroundTask)
-// Runs independently of parent
 ```
 
 ## Common Patterns

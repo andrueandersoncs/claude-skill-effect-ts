@@ -24,10 +24,8 @@ These enable consistent behavior across Effect's data structures.
 ```typescript
 import { Equal } from "effect"
 
-// Check equality
-Equal.equals(a, b) // true if structurally equal
+Equal.equals(a, b)
 
-// Values implement Equal automatically with Data
 import { Data } from "effect"
 
 class Person extends Data.Class<{
@@ -38,8 +36,8 @@ class Person extends Data.Class<{
 const p1 = new Person({ name: "Alice", age: 30 })
 const p2 = new Person({ name: "Alice", age: 30 })
 
-Equal.equals(p1, p2) // true (structural equality)
-p1 === p2 // false (reference equality)
+Equal.equals(p1, p2)
+p1 === p2
 ```
 
 ### Implementing Equal (Recommended: Use Data.Class)
@@ -55,7 +53,7 @@ class Point extends Data.Class<{ readonly x: number; readonly y: number }> {}
 const p1 = new Point({ x: 1, y: 2 })
 const p2 = new Point({ x: 1, y: 2 })
 
-Equal.equals(p1, p2) // true - automatic structural equality!
+Equal.equals(p1, p2)
 ```
 
 For Schema types, use Schema.Class which also provides Equal:
@@ -99,14 +97,12 @@ HashMap.get(map, new UserId({ id: "1" })) // Option.some("Alice")
 ```typescript
 import { Hash } from "effect"
 
-// Get hash code
-Hash.hash(value) // number
+Hash.hash(value)
 
-// Built-in hash functions
-Hash.string("hello")     // hash for string
-Hash.number(42)          // hash for number
-Hash.combine(h1)(h2)     // combine two hashes
-Hash.array([1, 2, 3])    // hash for array
+Hash.string("hello")
+Hash.number(42)
+Hash.combine(h1)(h2)
+Hash.array([1, 2, 3])
 ```
 
 ### Hash Contract
@@ -136,8 +132,8 @@ class Rectangle extends Data.Class<{
 const r1 = new Rectangle({ width: 10, height: 5 })
 const r2 = new Rectangle({ width: 10, height: 5 })
 
-Equal.equals(r1, r2)        // true - automatic
-Hash.hash(r1) === Hash.hash(r2)  // true - automatic
+Equal.equals(r1, r2)
+Hash.hash(r1) === Hash.hash(r2)
 ```
 
 ## Equivalence - Custom Equality Relations
@@ -147,19 +143,17 @@ Hash.hash(r1) === Hash.hash(r2)  // true - automatic
 ```typescript
 import { Equivalence } from "effect"
 
-// From equality function
 const caseInsensitive = Equivalence.make<string>(
   (a, b) => a.toLowerCase() === b.toLowerCase()
 )
 
-caseInsensitive("Hello", "hello") // true
-caseInsensitive("Hello", "HELLO") // true
+caseInsensitive("Hello", "hello")
+caseInsensitive("Hello", "HELLO")
 
-// Built-in equivalences
-Equivalence.string       // exact string equality
-Equivalence.number       // number equality
-Equivalence.boolean      // boolean equality
-Equivalence.strict       // reference equality (===)
+Equivalence.string
+Equivalence.number
+Equivalence.boolean
+Equivalence.strict
 ```
 
 ### Transforming Equivalences
@@ -210,44 +204,38 @@ const uniqueByName = Arr.dedupeWith(users, byNameIgnoreCase)
 ```typescript
 import { Order } from "effect"
 
-// Compare two values
-Order.string("a", "b")  // -1 (a < b)
-Order.string("b", "a")  // 1 (a > b)
-Order.string("a", "a")  // 0 (a === b)
+Order.string("a", "b")
+Order.string("b", "a")
+Order.string("a", "a")
 
-// Comparison helpers
-Order.lessThan(Order.number)(5, 10)        // true
-Order.greaterThan(Order.number)(5, 10)     // false
-Order.lessThanOrEqualTo(Order.number)(5, 5) // true
-Order.between(Order.number)({ minimum: 0, maximum: 10 })(5) // true
+Order.lessThan(Order.number)(5, 10)
+Order.greaterThan(Order.number)(5, 10)
+Order.lessThanOrEqualTo(Order.number)(5, 5)
+Order.between(Order.number)({ minimum: 0, maximum: 10 })(5)
 
-// Min/max
-Order.min(Order.number)(3, 7)  // 3
-Order.max(Order.number)(3, 7)  // 7
+Order.min(Order.number)(3, 7)
+Order.max(Order.number)(3, 7)
 
-// Clamp
-Order.clamp(Order.number)({ minimum: 0, maximum: 100 })(150) // 100
+Order.clamp(Order.number)({ minimum: 0, maximum: 100 })(150)
 ```
 
 ### Built-in Orders
 
 ```typescript
-Order.string      // Alphabetical
-Order.number      // Numeric
-Order.boolean     // false < true
-Order.bigint      // BigInt comparison
-Order.Date        // Date comparison
+Order.string
+Order.number
+Order.boolean
+Order.bigint
+Order.Date
 ```
 
 ### Creating Custom Orders
 
 ```typescript
-// From compare function
 const byAge = Order.make<Person>((a, b) =>
   a.age < b.age ? -1 : a.age > b.age ? 1 : 0
 )
 
-// From mapper (compare by derived value)
 const byName = Order.mapInput(Order.string, (p: Person) => p.name)
 const byAge = Order.mapInput(Order.number, (p: Person) => p.age)
 ```
@@ -255,16 +243,13 @@ const byAge = Order.mapInput(Order.number, (p: Person) => p.age)
 ### Combining Orders
 
 ```typescript
-// Combine orders (first by age, then by name)
 const byAgeThenName = Order.combine(
   byAge,
   byName
 )
 
-// Reverse order
 const byAgeDesc = Order.reverse(byAge)
 
-// All combinators
 const sortUsers = Order.combine(
   Order.mapInput(Order.string, (u: User) => u.department),
   Order.combine(
@@ -285,15 +270,12 @@ const people = [
   { name: "Bob", age: 30 }
 ]
 
-// Sort by age
 const byAge = Arr.sort(people, Order.mapInput(Order.number, (p) => p.age))
 
-// Sort by age then name
 const sorted = Arr.sort(people, Order.combine(
   Order.mapInput(Order.number, (p) => p.age),
   Order.mapInput(Order.string, (p) => p.name)
 ))
-// [{ name: "Alice", age: 30 }, { name: "Bob", age: 30 }, { name: "Charlie", age: 35 }]
 ```
 
 ## Data.Class - Automatic Implementation

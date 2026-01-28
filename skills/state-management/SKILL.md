@@ -24,28 +24,21 @@ All are fiber-safe and work correctly with concurrent access.
 import { Effect, Ref } from "effect"
 
 const program = Effect.gen(function* () {
-  // Create a Ref with initial value
   const counter = yield* Ref.make(0)
 
-  // Get current value
   const current = yield* Ref.get(counter)
 
-  // Set new value
   yield* Ref.set(counter, 10)
 
-  // Update with function
   yield* Ref.update(counter, (n) => n + 1)
 
-  // Get and set atomically
   const old = yield* Ref.getAndSet(counter, 0)
 
-  // Update and get new value
   const newValue = yield* Ref.updateAndGet(counter, (n) => n + 5)
 
-  // Modify with return value
   const [oldVal, result] = yield* Ref.modify(counter, (n) => [
-    n,           // Return value
-    n * 2        // New state
+    n,
+    n * 2
   ])
 })
 ```
@@ -56,14 +49,13 @@ const program = Effect.gen(function* () {
 const atomicIncrement = Effect.gen(function* () {
   const counter = yield* Ref.make(0)
 
-  // These are all atomic - safe for concurrent access
   yield* Effect.all([
     Ref.update(counter, (n) => n + 1),
     Ref.update(counter, (n) => n + 1),
     Ref.update(counter, (n) => n + 1)
   ], { concurrency: "unbounded" })
 
-  return yield* Ref.get(counter) // Always 3
+  return yield* Ref.get(counter)
 })
 ```
 
@@ -94,7 +86,6 @@ import { Effect, SynchronizedRef } from "effect"
 const program = Effect.gen(function* () {
   const ref = yield* SynchronizedRef.make({ count: 0, lastUpdated: Date.now() })
 
-  // Update with effect
   yield* SynchronizedRef.updateEffect(ref, (state) =>
     Effect.gen(function* () {
       yield* Effect.log("Updating state")
@@ -105,14 +96,13 @@ const program = Effect.gen(function* () {
     })
   )
 
-  // Modify with effect
   const result = yield* SynchronizedRef.modifyEffect(ref, (state) =>
     Effect.gen(function* () {
       const newCount = state.count + 1
       yield* sendMetric("counter", newCount)
       return [
-        newCount,  // Return value
-        { ...state, count: newCount }  // New state
+        newCount,
+        { ...state, count: newCount }
       ]
     })
   )
@@ -145,17 +135,14 @@ import { Effect, SubscriptionRef, Stream } from "effect"
 const program = Effect.gen(function* () {
   const ref = yield* SubscriptionRef.make(0)
 
-  // Subscribe to changes (returns Stream)
   const changes = yield* SubscriptionRef.changes(ref)
 
-  // Fork subscriber
   yield* Effect.fork(
     Stream.runForEach(changes, (value) =>
       Effect.log(`Value changed to: ${value}`)
     )
   )
 
-  // Updates trigger notifications
   yield* SubscriptionRef.set(ref, 1)
   yield* SubscriptionRef.update(ref, (n) => n + 1)
   yield* SubscriptionRef.set(ref, 10)
@@ -165,10 +152,8 @@ const program = Effect.gen(function* () {
 ### Reactive Patterns
 
 ```typescript
-// Configuration that notifies on change
 const configRef = yield* SubscriptionRef.make(initialConfig)
 
-// Multiple subscribers
 const subscriber1 = Effect.fork(
   Stream.runForEach(
     SubscriptionRef.changes(configRef),
@@ -183,7 +168,6 @@ const subscriber2 = Effect.fork(
   )
 )
 
-// Update notifies all subscribers
 yield* SubscriptionRef.set(configRef, newConfig)
 ```
 

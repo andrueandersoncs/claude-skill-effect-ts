@@ -110,19 +110,15 @@ const program = Effect.gen(function* () {
 ```typescript
 import { Metric } from "effect"
 
-// Define counter
 const requestCount = Metric.counter("http_requests_total", {
   description: "Total HTTP requests"
 })
 
-// Increment
 const program = Effect.gen(function* () {
   yield* Metric.increment(requestCount)
-  // or increment by value
   yield* Metric.incrementBy(requestCount, 5)
 })
 
-// Track effect executions
 const tracked = handleRequest.pipe(
   Metric.trackAll(requestCount)
 )
@@ -150,10 +146,8 @@ const requestDuration = Metric.histogram("http_request_duration_ms", {
   boundaries: [10, 50, 100, 250, 500, 1000]
 })
 
-// Record values
 yield* Metric.observe(requestDuration, 125)
 
-// Track effect duration automatically
 const tracked = handleRequest.pipe(
   Metric.trackDuration(requestDuration)
 )
@@ -219,12 +213,10 @@ const program = Effect.gen(function* () {
 ```typescript
 import { Effect } from "effect"
 
-// Wrap effect in span
 const traced = handleRequest.pipe(
   Effect.withSpan("handle-request")
 )
 
-// With attributes
 const traced = handleRequest.pipe(
   Effect.withSpan("handle-request", {
     attributes: {
@@ -257,10 +249,8 @@ const program = Effect.gen(function* () {
 import { Tracer } from "effect"
 
 const program = Effect.gen(function* () {
-  // Add attribute to current span
   yield* Effect.annotateCurrentSpan("user.id", userId)
 
-  // Add event
   yield* Effect.annotateCurrentSpan("event", "user_validated")
 
   const result = yield* processUser(userId)

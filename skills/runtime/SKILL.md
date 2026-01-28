@@ -23,13 +23,10 @@ import { Effect } from "effect"
 
 const program = Effect.succeed(42)
 
-// Async execution
 const result = await Effect.runPromise(program)
 
-// Sync execution
 const syncResult = Effect.runSync(program)
 
-// With full Exit information
 const exit = await Effect.runPromiseExit(program)
 ```
 
@@ -54,7 +51,6 @@ const program = Effect.gen(function* () {
   yield* Effect.logDebug("This may not appear")
 })
 
-// Set log level for this effect only
 const withDebug = program.pipe(
   Logger.withMinimumLogLevel(LogLevel.Debug)
 )
@@ -67,7 +63,6 @@ Create typed service tags for dependency injection:
 ```typescript
 import { Effect, Context } from "effect"
 
-// Define service with Effect.Tag (newer API)
 class Database extends Context.Tag("Database")<
   Database,
   {
@@ -76,7 +71,6 @@ class Database extends Context.Tag("Database")<
   }
 >() {}
 
-// Use the service
 const program = Effect.gen(function* () {
   const db = yield* Database
   const users = yield* db.query("SELECT * FROM users")
@@ -91,22 +85,18 @@ For applications needing custom runtime configuration:
 ```typescript
 import { ManagedRuntime, Layer } from "effect"
 
-// Define your application layer
 const AppLive = Layer.mergeAll(
   DatabaseLive,
   LoggerLive,
   ConfigLive
 )
 
-// Create managed runtime
 const runtime = ManagedRuntime.make(AppLive)
 
-// Use the runtime
 const main = async () => {
   const result = await runtime.runPromise(program)
   console.log(result)
 
-  // Cleanup
   await runtime.dispose()
 }
 ```
@@ -223,16 +213,12 @@ Effect provides these services automatically:
 import { Clock, Random, Tracer, Console } from "effect"
 
 const program = Effect.gen(function* () {
-  // Clock - time operations
   const now = yield* Clock.currentTimeMillis
 
-  // Random - random number generation
   const rand = yield* Random.next
 
-  // Console - console output
   yield* Console.log("Hello")
 })
-// No requirements - defaults provided
 ```
 
 ### Overriding Default Services
@@ -240,12 +226,10 @@ const program = Effect.gen(function* () {
 ```typescript
 import { TestClock } from "effect"
 
-// For testing - control time
 const testProgram = program.pipe(
   Effect.provide(TestClock.layer)
 )
 
-// Advance time manually
 const testWithTime = Effect.gen(function* () {
   const fiber = yield* Effect.fork(Effect.sleep("1 hour"))
   yield* TestClock.adjust("1 hour")
@@ -256,15 +240,12 @@ const testWithTime = Effect.gen(function* () {
 ## Interruption Handling
 
 ```typescript
-// Fork with interruption
 const program = Effect.gen(function* () {
   const fiber = yield* Effect.fork(longRunningTask)
 
-  // Later...
   yield* Fiber.interrupt(fiber)
 })
 
-// Uninterruptible region
 const critical = Effect.uninterruptible(
   Effect.gen(function* () {
     yield* startTransaction()

@@ -27,38 +27,30 @@ Schedule<Out, In, Requirements>
 ```typescript
 import { Schedule } from "effect"
 
-// Every 1 second
 const everySecond = Schedule.spaced("1 second")
 
-// Fixed delay between end and start
 const fixed = Schedule.fixed("500 millis")
 ```
 
 ### Recurrence Limits
 
 ```typescript
-// Exactly 5 times
 const fiveTimes = Schedule.recurs(5)
 
-// Once
 const once = Schedule.once
 
-// Forever
 const forever = Schedule.forever
 ```
 
 ### Exponential Backoff
 
 ```typescript
-// Exponential: 100ms, 200ms, 400ms, 800ms...
 const exponential = Schedule.exponential("100 millis")
 
-// With max delay cap
 const capped = Schedule.exponential("100 millis").pipe(
   Schedule.upTo("30 seconds")
 )
 
-// With jitter (randomization)
 const jittered = Schedule.exponential("100 millis").pipe(
   Schedule.jittered
 )
@@ -67,12 +59,10 @@ const jittered = Schedule.exponential("100 millis").pipe(
 ### Time-Based Limits
 
 ```typescript
-// Run for 1 minute
 const forOneMinute = Schedule.spaced("1 second").pipe(
   Schedule.upTo("1 minute")
 )
 
-// Until specific condition
 const untilSuccess = Schedule.recurWhile(
   (result) => result.status === "pending"
 )
@@ -95,7 +85,6 @@ const resilientFetch = fetchData().pipe(
 ### Effect.repeat - Repeat on Success
 
 ```typescript
-// Poll every 5 seconds
 const polling = checkStatus().pipe(
   Effect.repeat(Schedule.spaced("5 seconds"))
 )
@@ -114,12 +103,10 @@ const scheduled = effect.pipe(
 ### Composing Schedules
 
 ```typescript
-// Both must allow (intersection)
 const exponentialWithLimit = Schedule.exponential("1 second").pipe(
   Schedule.compose(Schedule.recurs(10))
 )
 
-// Either allows (union)
 const eitherSchedule = Schedule.union(
   Schedule.spaced("1 second"),
   Schedule.recurs(5)
@@ -129,12 +116,10 @@ const eitherSchedule = Schedule.union(
 ### Adding Jitter
 
 ```typescript
-// Random jitter ±20%
 const jittered = Schedule.exponential("1 second").pipe(
   Schedule.jittered
 )
 
-// Custom jitter
 const customJitter = Schedule.exponential("1 second").pipe(
   Schedule.jittered({ min: 0.8, max: 1.2 })
 )
@@ -143,7 +128,6 @@ const customJitter = Schedule.exponential("1 second").pipe(
 ### Delaying First Execution
 
 ```typescript
-// Wait before first attempt
 const delayed = Schedule.spaced("1 second").pipe(
   Schedule.delayed(() => "5 seconds")
 )
@@ -152,7 +136,6 @@ const delayed = Schedule.spaced("1 second").pipe(
 ### Resetting Schedule
 
 ```typescript
-// Reset after 1 minute of no calls
 const resetting = Schedule.exponential("1 second").pipe(
   Schedule.resetAfter("1 minute")
 )
@@ -179,7 +162,6 @@ const retryTransient = effect.pipe(
 ### Retry Until Condition
 
 ```typescript
-// Stop retrying when a fatal error occurs
 const retryUntilFatal = effect.pipe(
   Effect.retry({
     schedule: Schedule.recurs(10),
@@ -197,13 +179,10 @@ const retryUntilFatal = effect.pipe(
 ```typescript
 import { Cron } from "effect"
 
-// Every day at midnight
 const daily = Cron.parse("0 0 * * *")
 
-// Every hour
 const hourly = Cron.parse("0 * * * *")
 
-// Use with schedule
 const cronSchedule = Schedule.cron(daily)
 ```
 
@@ -212,13 +191,10 @@ const cronSchedule = Schedule.cron(daily)
 Schedules can produce values:
 
 ```typescript
-// Track elapsed time
 const withElapsed = Schedule.elapsed
 
-// Count iterations
 const withCount = Schedule.count
 
-// Collect inputs
 const collecting = Schedule.collectAll<number>()
 ```
 

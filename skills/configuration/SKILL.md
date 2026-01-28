@@ -21,16 +21,12 @@ Effect provides type-safe configuration loading with:
 ```typescript
 import { Config, Effect } from "effect"
 
-// String configuration
 const host = Config.string("HOST")
 
-// Number configuration
 const port = Config.number("PORT")
 
-// Boolean configuration
 const debug = Config.boolean("DEBUG")
 
-// Integer configuration
 const maxConnections = Config.integer("MAX_CONNECTIONS")
 ```
 
@@ -160,12 +156,10 @@ const program = Effect.gen(function* () {
 ### Transforming Values
 
 ```typescript
-// Map to transform
 const upperHost = Config.string("HOST").pipe(
   Config.map((s) => s.toUpperCase())
 )
 
-// MapOrFail for validation
 const port = Config.string("PORT").pipe(
   Config.mapOrFail((s) => {
     const n = parseInt(s)
@@ -179,7 +173,6 @@ const port = Config.string("PORT").pipe(
 ### Fallback Values
 
 ```typescript
-// Use environment or fallback
 const host = Config.string("PRIMARY_HOST").pipe(
   Config.orElse(() => Config.string("SECONDARY_HOST")),
   Config.orElse(() => Config.succeed("localhost"))
@@ -191,7 +184,6 @@ const host = Config.string("PRIMARY_HOST").pipe(
 ### From Environment (Default)
 
 ```typescript
-// This is the default behavior
 const program = Effect.gen(function* () {
   const host = yield* Config.string("HOST")
 })
@@ -237,7 +229,6 @@ const MapProvider = ConfigProvider.fromMap(
 ### Combining Providers
 
 ```typescript
-// Try env first, then fall back to JSON
 const CombinedProvider = ConfigProvider.orElse(
   ConfigProvider.fromEnv(),
   () => ConfigProvider.fromJson(defaultConfig)

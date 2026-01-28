@@ -32,13 +32,11 @@ import { AiChat } from "@effect/ai"
 import { OpenAiChat } from "@effect/ai-openai"
 import { Effect, Layer } from "effect"
 
-// Configure OpenAI provider
 const OpenAiLive = OpenAiChat.layer({
   apiKey: Config.redacted("OPENAI_API_KEY"),
   model: "gpt-4"
 })
 
-// Or Anthropic
 import { AnthropicChat } from "@effect/ai-anthropic"
 
 const AnthropicLive = AnthropicChat.layer({
@@ -92,13 +90,11 @@ Define tools that AI can call:
 import { AiTool } from "@effect/ai"
 import { Schema } from "effect"
 
-// Define tool input schema
 const WeatherInput = Schema.Struct({
   city: Schema.String,
   unit: Schema.optional(Schema.Literal("celsius", "fahrenheit"))
 })
 
-// Create tool
 const getWeather = AiTool.make({
   name: "get_weather",
   description: "Get current weather for a city",
@@ -173,7 +169,6 @@ const analyzeReview = Effect.gen(function* () {
     schema: ProductReview
   })
 
-  // review is typed as Schema.Type<typeof ProductReview>
   return review
 })
 ```
@@ -294,7 +289,6 @@ const safeChat = program.pipe(
 ## Testing
 
 ```typescript
-// Mock AI provider for testing
 const MockAiLive = Layer.succeed(
   AiChat.AiChat,
   {

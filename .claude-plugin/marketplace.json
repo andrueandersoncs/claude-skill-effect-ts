@@ -3,7 +3,7 @@
   "name": "effect-ts",
   "metadata": {
     "description": "Effect-TS development tools and skills for Claude Code",
-    "version": "1.6.0"
+    "version": "1.7.0"
   },
   "owner": {
     "name": "Andrue Anderson"
@@ -13,7 +13,7 @@
       "name": "effect-ts",
       "source": "./",
       "description": "Comprehensive Effect-TS development assistance with skills for all major Effect domains, commands for common patterns, and agents for code review and migration",
-      "version": "1.6.0",
+      "version": "1.7.0",
       "category": "development",
       "author": {
         "name": "Andrue Anderson"

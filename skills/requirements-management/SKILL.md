@@ -58,7 +58,6 @@ const UserRepository = Context.Tag<UserRepository>("UserRepository")
 
 ```typescript
 const program = Effect.gen(function* () {
-  // Access service from context
   const userRepo = yield* UserRepository
   const emailService = yield* EmailService
 
@@ -132,12 +131,10 @@ const HttpClientLive = Layer.function(
 ```typescript
 const program = getUserById("123")
 
-// Provide all dependencies
 const runnable = program.pipe(
   Effect.provide(AppLive)
 )
 
-// Type: Effect<User, UserNotFound, never>
 await Effect.runPromise(runnable)
 ```
 
@@ -161,13 +158,11 @@ const InfraLive = Layer.merge(
   DatabaseLive,
   LoggerLive
 )
-// Provides: Database | Logger
 ```
 
 ### Layer.provide - Layer Dependencies
 
 ```typescript
-// UserRepositoryLive depends on Database
 const UserRepositoryLive = Layer.effect(
   UserRepository,
   Effect.gen(function* () {
@@ -178,7 +173,6 @@ const UserRepositoryLive = Layer.effect(
   })
 )
 
-// Satisfy the dependency
 const FullUserRepo = UserRepositoryLive.pipe(
   Layer.provide(DatabaseLive)
 )
@@ -187,7 +181,6 @@ const FullUserRepo = UserRepositoryLive.pipe(
 ### Layer.provideMerge - Provide and Keep
 
 ```typescript
-// Provides UserRepository AND keeps Database available
 const Combined = UserRepositoryLive.pipe(
   Layer.provideMerge(DatabaseLive)
 )
@@ -198,26 +191,22 @@ const Combined = UserRepositoryLive.pipe(
 ### Typical Pattern
 
 ```typescript
-// Infrastructure layer
 const InfraLive = Layer.mergeAll(
   DatabaseLive,
   LoggerLive,
   HttpClientLive
 )
 
-// Repository layer (depends on infra)
 const RepositoryLive = Layer.mergeAll(
   UserRepositoryLive,
   OrderRepositoryLive
 ).pipe(Layer.provide(InfraLive))
 
-// Service layer (depends on repositories)
 const ServiceLive = Layer.mergeAll(
   UserServiceLive,
   OrderServiceLive
 ).pipe(Layer.provide(RepositoryLive))
 
-// Full application layer
 const AppLive = ServiceLive.pipe(
   Layer.provide(InfraLive)
 )
@@ -228,10 +217,9 @@ const AppLive = ServiceLive.pipe(
 Layers are memoized by default - each service is created once:
 
 ```typescript
-// Both UserService and OrderService share the same Database instance
 const AppLive = Layer.mergeAll(
-  UserServiceLive,   // uses Database
-  OrderServiceLive   // uses same Database
+  UserServiceLive,
+  OrderServiceLive
 ).pipe(Layer.provide(DatabaseLive))
 ```
 
@@ -239,7 +227,6 @@ const AppLive = Layer.mergeAll(
 
 ```typescript
 const FreshDatabase = Layer.fresh(DatabaseLive)
-// Creates new Database for each dependent
 ```
 
 ## Default Services
@@ -247,17 +234,10 @@ const FreshDatabase = Layer.fresh(DatabaseLive)
 Effect provides default implementations for common services:
 
 ```typescript
-// These are provided automatically:
-// - Clock
-// - Random
-// - Tracer
-// - Console
-
 const program = Effect.gen(function* () {
   const now = yield* Clock.currentTimeMillis
   const random = yield* Random.next
 })
-// No requirements needed - defaults provided
 ```
 
 ### Overriding Defaults

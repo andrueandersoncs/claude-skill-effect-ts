@@ -28,13 +28,10 @@ The key insight: Effects are **descriptions** of programs, not executed code. Th
 ```typescript
 import { Effect } from "effect";
 
-// Success value
 const success = Effect.succeed(42);
 
-// Failure
 const failure = Effect.fail(new Error("Something went wrong"));
 
-// Lazy synchronous computation
 const lazy = Effect.sync(() => {
   console.log("Computing...");
   return Math.random();
@@ -78,17 +75,9 @@ import { Effect, pipe } from "effect";
 
 const program = pipe(
   Effect.succeed(1),
-  Effect.map((n) => n + 1), // Transform success value
-  Effect.flatMap(
-    (
-      n, // Chain to another Effect
-    ) => Effect.succeed(n * 2),
-  ),
-  Effect.andThen(
-    (
-      n, // Shorthand for flatMap
-    ) => Effect.succeed(`Result: ${n}`),
-  ),
+  Effect.map((n) => n + 1),
+  Effect.flatMap((n) => Effect.succeed(n * 2)),
+  Effect.andThen((n) => Effect.succeed(`Result: ${n}`)),
 );
 ```
 
@@ -122,13 +111,10 @@ import { Effect } from "effect";
 
 const program = Effect.succeed(42);
 
-// Run and get Promise
 const result = await Effect.runPromise(program);
 
-// Run synchronous effect
 const syncResult = Effect.runSync(Effect.succeed(42));
 
-// Run with full Exit information
 const exit = await Effect.runPromiseExit(program);
 ```
 
@@ -146,9 +132,7 @@ const exit = await Effect.runPromiseExit(program);
 ### map - Transform Success Value
 
 ```typescript
-Effect.succeed(5).pipe(
-  Effect.map((n) => n * 2), // Effect<number, never, never>
-); // Result: 10
+Effect.succeed(5).pipe(Effect.map((n) => n * 2));
 ```
 
 ### flatMap / andThen - Chain Effects

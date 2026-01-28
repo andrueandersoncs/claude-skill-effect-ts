@@ -35,12 +35,9 @@ The fundamental pattern for safe resource management:
 import { Effect } from "effect"
 
 const managedFile = Effect.acquireRelease(
-  // Acquire
   Effect.sync(() => fs.openSync("file.txt", "r")),
-  // Release (always runs)
   (fd) => Effect.sync(() => fs.closeSync(fd))
 )
-// Type: Effect<number, never, Scope>
 ```
 
 ### Using the Resource
@@ -61,9 +58,6 @@ const result = yield* Effect.scoped(program)
 Converts a scoped effect into a regular effect by managing the scope:
 
 ```typescript
-// Before: Effect<A, E, R | Scope>
-// After:  Effect<A, E, R>
-
 const runnable = Effect.scoped(program)
 ```
 
@@ -76,14 +70,10 @@ For simpler cases, combine acquire/use/release in one call:
 ```typescript
 const readFile = (path: string) =>
   Effect.acquireUseRelease(
-    // Acquire
     Effect.sync(() => fs.openSync(path, "r")),
-    // Use
     (fd) => Effect.sync(() => fs.readFileSync(fd, "utf-8")),
-    // Release
     (fd) => Effect.sync(() => fs.closeSync(fd))
   )
-// Type: Effect<string, never, never> - no Scope required
 ```
 
 ## Finalizers
@@ -138,9 +128,6 @@ const withExitHandler = someEffect.pipe(
 const program = Effect.gen(function* () {
   const db = yield* acquireDbConnection
   const cache = yield* acquireRedisConnection
-
-  // Use both resources
-  // Both cleaned up when scope closes (in reverse order)
 })
 
 const result = yield* Effect.scoped(program)
@@ -154,8 +141,6 @@ const program = Effect.gen(function* () {
     acquireDbConnection,
     acquireRedisConnection
   ])
-
-  // Use resources
 })
 ```
 
@@ -254,13 +239,9 @@ Resources are cleaned up even on interruption:
 const program = Effect.gen(function* () {
   const resource = yield* acquireResource
 
-  // Even if interrupted here...
   yield* Effect.sleep("1 hour")
-
-  // ...resource will be cleaned up
 })
 
-// Interrupt after 1 second - cleanup still runs
 const result = yield* program.pipe(
   Effect.scoped,
   Effect.timeout("1 second")

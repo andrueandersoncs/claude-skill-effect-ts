@@ -30,32 +30,24 @@ Stream<A, E, R>
 ```typescript
 import { Stream } from "effect"
 
-// From known values
 const numbers = Stream.make(1, 2, 3, 4, 5)
 
-// From iterable
 const fromArray = Stream.fromIterable([1, 2, 3])
 
-// Empty stream
 const empty = Stream.empty
 
-// Single value
 const single = Stream.succeed(42)
 
-// Infinite stream
 const infinite = Stream.iterate(1, (n) => n + 1)
 ```
 
 ### From Effects
 
 ```typescript
-// Single effect as stream
 const fromEffect = Stream.fromEffect(fetchData())
 
-// Repeat effect
 const polling = Stream.repeatEffect(checkStatus())
 
-// Repeat with schedule
 const scheduled = Stream.repeatEffectWithSchedule(
   checkStatus(),
   Schedule.spaced("5 seconds")
@@ -85,13 +77,10 @@ const fromQueue = Stream.fromQueue(queue)
 ### Generating Streams
 
 ```typescript
-// Unfold from seed
 const naturals = Stream.unfold(1, (n) => Option.some([n, n + 1]))
 
-// Range
 const range = Stream.range(1, 100)
 
-// Repeat value
 const repeated = Stream.repeat(Stream.succeed("ping")).pipe(
   Stream.take(5)
 )
@@ -106,12 +95,10 @@ const doubled = numbers.pipe(
   Stream.map((n) => n * 2)
 )
 
-// With Effect
 const enriched = users.pipe(
   Stream.mapEffect((user) => fetchProfile(user.id))
 )
 
-// Parallel mapping
 const parallel = items.pipe(
   Stream.mapEffect(process, { concurrency: 10 })
 )
@@ -124,7 +111,6 @@ const evens = numbers.pipe(
   Stream.filter((n) => n % 2 === 0)
 )
 
-// With Effect
 const valid = items.pipe(
   Stream.filterEffect((item) => validate(item))
 )
@@ -194,15 +180,10 @@ const interleaved = Stream.interleave(stream1, stream2)
 ### Running to Collection
 
 ```typescript
-// To array
 const array = yield* Stream.runCollect(numbers)
-// Returns Chunk<number>
 
-// To single value (first)
 const first = yield* Stream.runHead(numbers)
-// Returns Option<number>
 
-// Fold/reduce
 const sum = yield* Stream.runFold(
   numbers,
   0,
@@ -213,12 +194,10 @@ const sum = yield* Stream.runFold(
 ### Running for Effects
 
 ```typescript
-// Execute effect for each element
 yield* numbers.pipe(
   Stream.runForEach((n) => Effect.log(`Got: ${n}`))
 )
 
-// Drain (consume, ignore values)
 yield* numbers.pipe(Stream.runDrain)
 ```
 
@@ -227,12 +206,10 @@ yield* numbers.pipe(Stream.runDrain)
 ```typescript
 import { Sink } from "effect"
 
-// Custom sink
 const sum = yield* numbers.pipe(
   Stream.run(Sink.sum)
 )
 
-// Collect to array
 const array = yield* numbers.pipe(
   Stream.run(Sink.collectAll())
 )
@@ -243,17 +220,14 @@ const array = yield* numbers.pipe(
 Streams process elements in chunks for efficiency:
 
 ```typescript
-// Chunk elements
 const chunked = numbers.pipe(
-  Stream.grouped(10)  // Stream of 10-element chunks
+  Stream.grouped(10)
 )
 
-// Process by chunk
 const processed = numbers.pipe(
   Stream.mapChunks((chunk) => Chunk.map(chunk, (n) => n * 2))
 )
 
-// Re-chunk
 const rechunked = numbers.pipe(
   Stream.rechunk(100)
 )
@@ -262,24 +236,20 @@ const rechunked = numbers.pipe(
 ## Error Handling
 
 ```typescript
-// Catch errors
 const safe = stream.pipe(
   Stream.catchAll((error) => Stream.succeed(fallbackValue))
 )
 
-// Catch specific error
 const handled = stream.pipe(
   Stream.catchTag("NetworkError", (error) =>
     Stream.succeed(cachedValue)
   )
 )
 
-// Retry on failure
 const resilient = stream.pipe(
   Stream.retry(Schedule.exponential("1 second"))
 )
 
-// On error, switch to fallback stream
 const withFallback = stream.pipe(
   Stream.orElse(() => fallbackStream)
 )
@@ -317,15 +287,13 @@ Sinks consume stream elements:
 ```typescript
 import { Sink } from "effect"
 
-// Built-in sinks
-Sink.sum          // Sum numbers
-Sink.count        // Count elements
-Sink.head         // First element
-Sink.last         // Last element
-Sink.collectAll() // Collect to Chunk
-Sink.forEach(f)   // Run effect for each
+Sink.sum
+Sink.count
+Sink.head
+Sink.last
+Sink.collectAll()
+Sink.forEach(f)
 
-// Custom sink
 const maxSink = Sink.foldLeft(
   Number.NEGATIVE_INFINITY,
   (max, n: number) => Math.max(max, n)

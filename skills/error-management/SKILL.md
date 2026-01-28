@@ -140,7 +140,7 @@ When running multiple effects, collect all errors instead of failing fast:
 const results = yield* Effect.all(
   [effect1, effect2, effect3],
   { mode: "either" }
-) // Array<Either<Success, Error>>
+)
 ```
 
 ### Using Effect.partition
@@ -158,7 +158,7 @@ const [failures, successes] = yield* Effect.partition(
 const result = yield* Effect.validate(
   [check1, check2, check3],
   { concurrency: "unbounded" }
-) // Accumulates all errors
+)
 ```
 
 ## Defects (Unexpected Errors)
@@ -166,15 +166,11 @@ const result = yield* Effect.validate(
 Defects are bugs/unexpected failures not tracked in types:
 
 ```typescript
-// Creating a defect
 const defect = Effect.die(new Error("Unexpected!"))
 
-// Converting expected error to defect
 const program = effect.pipe(Effect.orDie)
 
-// Converting defect to expected error (sandboxing)
 const sandboxed = Effect.sandbox(program)
-// Type: Effect<A, Cause<E>, R>
 ```
 
 ### Cause - Full Error Information
@@ -238,9 +234,8 @@ const conditional = effect.pipe(
 ```typescript
 const withTimeout = effect.pipe(
   Effect.timeout("5 seconds")
-) // Effect<Option<A>, E, R>
+)
 
-// Fail on timeout
 const failOnTimeout = effect.pipe(
   Effect.timeoutFail({
     duration: "5 seconds",
