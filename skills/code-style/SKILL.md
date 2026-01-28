@@ -562,7 +562,167 @@ const calculateDiscount = (order: Order) =>
 - Easy to extend with new cases
 - Works perfectly with Schema discriminated unions
 
-### 3. Schema + Match Together
+### 3. Property-Based Testing with Schema Arbitrary
+
+**Every Schema generates test data via `Arbitrary.make()`.** This is the foundation of Effect testing — never hand-craft test objects.
+
+> **CRITICAL: See the [Testing Skill](../testing/SKILL.md) for comprehensive testing guidance.** This section covers Schema-driven Arbitrary patterns; the Testing skill covers `@effect/vitest`, `it.effect`, `it.prop`, test layers, and the full service-oriented testing pattern.
+
+**Key principles:**
+
+- **Schema constraints generate constrained Arbitraries** — Filters are built into Schema, not fast-check
+- **NEVER use fast-check `.filter()`** — Use properly-constrained Schemas instead
+- **Use `it.prop` from `@effect/vitest`** — Integrates Schema Arbitrary directly
+- **Test round-trips for every Schema** — Encode/decode must be lossless
+
+#### Why Schema Constraints Over Fast-Check Filters
+
+Fast-check filters (`.filter()`) discard generated values that don't match the predicate. This is:
+- **Inefficient** — Generates and throws away invalid values
+- **Fragile** — Can fail to find valid values if filter is too restrictive
+- **Duplicative** — Your Schema already defines the constraints
+
+The correct approach: **define constraints in your Schema**, then `Arbitrary.make()` generates valid values directly.
+
+```typescript
+import { Schema, Arbitrary } from "effect"
+import * as fc from "fast-check"
+
+// ❌ FORBIDDEN: Using fast-check filter
+const badArbitrary = fc.integer().filter((n) => n >= 18 && n <= 100)
+// Problem: Generates integers, throws away 99% of them
+
+// ❌ FORBIDDEN: Filter on Schema Arbitrary
+const UserArbitrary = Arbitrary.make(User)
+const badFiltered = UserArbitrary(fc).filter((u) => u.age >= 18)
+// Problem: Duplicates constraint logic, wasteful generation
+
+// ✅ REQUIRED: Constraints in Schema definition
+const Age = Schema.Number.pipe(
+  Schema.int(),
+  Schema.between(18, 100)  // Constraint built into Schema
+)
+
+class User extends Schema.Class<User>("User")({
+  id: Schema.String.pipe(Schema.minLength(1)),
+  name: Schema.String.pipe(Schema.nonEmptyString()),
+  age: Age  // Uses constrained Age schema
+}) {}
+
+// ✅ REQUIRED: Arbitrary generates ONLY valid values
+const UserArbitrary = Arbitrary.make(User)
+fc.sample(UserArbitrary(fc), 5)
+// All 5 users have age between 18-100, guaranteed
+```
+
+#### Common Schema Constraints for Arbitrary Generation
+
+Use these Schema combinators to constrain generation (never filter):
+
+```typescript
+import { Schema } from "effect"
+
+// Numeric constraints
+Schema.Number.pipe(Schema.int())                    // Integers only
+Schema.Number.pipe(Schema.positive())               // > 0
+Schema.Number.pipe(Schema.nonNegative())            // >= 0
+Schema.Number.pipe(Schema.between(1, 100))          // 1 <= n <= 100
+Schema.Number.pipe(Schema.greaterThan(0))           // > 0
+Schema.Number.pipe(Schema.lessThanOrEqualTo(100))   // <= 100
+
+// String constraints
+Schema.String.pipe(Schema.minLength(1))             // Non-empty
+Schema.String.pipe(Schema.maxLength(100))           // Max 100 chars
+Schema.String.pipe(Schema.length(10))               // Exactly 10 chars
+Schema.String.pipe(Schema.nonEmptyString())         // Non-empty (alias)
+Schema.String.pipe(Schema.pattern(/^[A-Z]{3}$/))    // Matches regex
+
+// Array constraints
+Schema.Array(Item).pipe(Schema.minItems(1))         // Non-empty array
+Schema.Array(Item).pipe(Schema.maxItems(10))        // Max 10 items
+Schema.Array(Item).pipe(Schema.itemsCount(5))       // Exactly 5 items
+Schema.NonEmptyArray(Item)                          // Non-empty array
+
+// Built-in constrained types
+Schema.NonEmptyString                               // String with minLength(1)
+Schema.Positive                                     // Number > 0
+Schema.NonNegative                                  // Number >= 0
+Schema.Int                                          // Integer
+```
+
+#### Custom Arbitrary Annotations (When Needed)
+
+For complex constraints that Schema combinators can't express, use `arbitrary` annotation:
+
+```typescript
+import { Schema, Arbitrary } from "effect"
+import * as fc from "fast-check"
+
+// Custom email generation (pattern too complex for generation)
+const Email = Schema.String.pipe(
+  Schema.pattern(/^[^@]+@[^@]+\.[^@]+$/),
+  Schema.annotations({
+    arbitrary: () => (fc) => fc.emailAddress()  // Use fast-check's generator
+  })
+)
+
+// Custom UUID generation
+const UserId = Schema.String.pipe(
+  Schema.annotations({
+    arbitrary: () => (fc) => fc.uuid()
+  })
+)
+
+// Custom date range
+const BirthDate = Schema.Date.pipe(
+  Schema.annotations({
+    arbitrary: () => (fc) =>
+      fc.date({
+        min: new Date("1900-01-01"),
+        max: new Date("2010-01-01")
+      })
+  })
+)
+```
+
+#### Property Testing with it.prop
+
+Use `it.prop` from `@effect/vitest` for property-based tests (see [Testing Skill](../testing/SKILL.md) for full details):
+
+```typescript
+import { it, expect } from "@effect/vitest"
+import { Schema, Arbitrary } from "effect"
+
+// Array form
+it.prop("validates all generated users", [Arbitrary.make(User)], ([user]) => {
+  expect(user.age).toBeGreaterThanOrEqual(18)
+  expect(user.name.length).toBeGreaterThan(0)
+})
+
+// Object form
+it.prop(
+  "round-trip preserves data",
+  { user: Arbitrary.make(User) },
+  ({ user }) => {
+    const encoded = Schema.encodeSync(User)(user)
+    const decoded = Schema.decodeUnknownSync(User)(encoded)
+    expect(decoded).toEqual(user)
+  }
+)
+
+// Effect-based property test
+it.effect.prop(
+  "processes all order states",
+  [Arbitrary.make(Order)],
+  ([order]) =>
+    Effect.gen(function* () {
+      const result = yield* processOrder(order)
+      expect(result).toBeDefined()
+    })
+)
+```
+
+### 4. Schema + Match Together
 
 The most powerful pattern: **TaggedClass for data, Schema.is() in Match for logic.**
 
@@ -915,8 +1075,9 @@ const program = getUser(id).pipe(
 - **Use Match for ALL conditional logic** - replace if/else, switch, ternaries
 - **Wrap ALL external dependencies in Services** - API calls, databases, file I/O, third-party SDKs, email, caches, queues MUST go through `Context.Tag` services
 - **Create Test Layers for every Service** - `*Live` for production, `*Test` for testing. This is required for 100% test coverage.
-- **Use `@effect/vitest` for ALL tests** - `it.effect`, `it.scoped`, `it.live`, `it.layer`, `it.prop`
+- **Use `@effect/vitest` for ALL tests** - `it.effect`, `it.scoped`, `it.live`, `it.layer`, `it.prop` (see [Testing Skill](../testing/SKILL.md))
 - **Use `Arbitrary.make(Schema)` for ALL test data** - Never hand-craft test objects
+- **Define constraints in Schema, not fast-check filters** - `Schema.between()`, `Schema.minLength()`, etc. generate constrained values directly
 - **Combine service test layers + Arbitrary** - Services control I/O, Arbitrary generates data — together they enable 100% coverage
 - Use Effect.gen for sequential code
 - Define services with Context.Tag
@@ -956,18 +1117,21 @@ const program = getUser(id).pipe(
 - **NEVER use `Effect.runPromise` in tests** - use `it.effect` from `@effect/vitest`
 - **NEVER import `it` from `vitest`** in Effect test files - import from `@effect/vitest`
 - **NEVER hand-craft test data** - use `Arbitrary.make(Schema)` or `it.prop`
+- **NEVER use fast-check `.filter()`** - define constraints in Schema (`Schema.between()`, `Schema.minLength()`, etc.) so Arbitrary generates valid values directly
 
 ## Related Skills
 
 This skill covers high-level patterns and conventions. For detailed API usage and specific topics, consult these specialized skills:
 
+> **CRITICAL: Always consult the [Testing Skill](../testing/SKILL.md) when writing tests.** It covers the full service-oriented testing pattern, `@effect/vitest` APIs (`it.effect`, `it.prop`, `it.layer`), test layers, and achieving 100% test coverage.
+
 | Skill | Purpose | Key Topics |
 |-------|---------|------------|
-| [Effect Core](./effect-core/SKILL.md) | Core Effect type and APIs | Creating Effects, Effect.gen, pipe, map, flatMap, running Effects |
-| [Error Management](./error-management/SKILL.md) | Typed error handling | catchTag, catchAll, mapError, orElse, error accumulation |
-| [Pattern Matching](./pattern-matching/SKILL.md) | Match module APIs | Match.value, Match.type, Match.tag, Match.when, exhaustive matching |
-| [Schema](./schema/SKILL.md) | Data modeling and validation | Schema.Class, Schema.Struct, parsing, transformations, filters |
-| [Testing](./testing/SKILL.md) | Effect testing patterns | @effect/vitest, it.effect, property-based testing, Arbitrary |
+| [Testing](../testing/SKILL.md) | **Effect testing patterns** | **@effect/vitest, it.effect, it.prop, test layers, service mocking, Arbitrary** |
+| [Effect Core](../effect-core/SKILL.md) | Core Effect type and APIs | Creating Effects, Effect.gen, pipe, map, flatMap, running Effects |
+| [Error Management](../error-management/SKILL.md) | Typed error handling | catchTag, catchAll, mapError, orElse, error accumulation |
+| [Pattern Matching](../pattern-matching/SKILL.md) | Match module APIs | Match.value, Match.type, Match.tag, Match.when, exhaustive matching |
+| [Schema](../schema/SKILL.md) | Data modeling and validation | Schema.Class, Schema.Struct, parsing, transformations, filters |
 
 These skills work together: this Code Style skill defines the **what** (patterns to follow), while the specialized skills define the **how** (API details).
 
