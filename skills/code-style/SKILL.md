@@ -1,6 +1,6 @@
 ---
 name: Code Style
-description: This skill should be used when the user asks about "Effect best practices", "Effect code style", "idiomatic Effect", "Schema-first", "Match-first", "when to use Schema", "when to use Match", "branded types", "dual APIs", "Effect guidelines", "do notation", "Effect.gen", "pipe vs method chaining", "Effect naming conventions", "Effect project structure", "data modeling in Effect", or needs to understand idiomatic Effect-TS patterns and conventions.
+description: This skill should be used EVERY TIME you're writing TypeScript with Effect, especially when the user asks about "Effect best practices", "Effect code style", "idiomatic Effect", "Schema-first", "Match-first", "when to use Schema", "when to use Match", "branded types", "dual APIs", "Effect guidelines", "do notation", "Effect.gen", "pipe vs method chaining", "Effect naming conventions", "Effect project structure", "data modeling in Effect", or needs to understand idiomatic Effect-TS patterns and conventions.
 version: 1.0.0
 ---
 
@@ -119,46 +119,47 @@ if (Schema.is(UserCreated)(event)) {
 **Define ALL data structures as Effect Schemas.** This is the foundation of type-safe Effect code.
 
 **Key principles:**
+
 - **Use Schema.Class over Schema.Struct** - Get methods and Schema.is() type guards
 - **Use tagged unions over optional properties** - Make states explicit
 - **Use Schema.is() in Match patterns** - Combine validation with matching
 
 ```typescript
-import { Schema, Match } from "effect"
+import { Schema, Match } from "effect";
 
 // ✅ GOOD: Class-based schema with methods
 class User extends Schema.Class<User>("User")({
   id: Schema.String.pipe(Schema.brand("UserId")),
   email: Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\.[^@]+$/)),
   name: Schema.String.pipe(Schema.nonEmptyString()),
-  createdAt: Schema.Date
+  createdAt: Schema.Date,
 }) {
   get emailDomain() {
-    return this.email.split("@")[1]
+    return this.email.split("@")[1];
   }
 }
 
 // ✅ GOOD: Tagged union over optional properties
 class Pending extends Schema.TaggedClass<Pending>()("Pending", {
   orderId: Schema.String,
-  items: Schema.Array(Schema.String)
+  items: Schema.Array(Schema.String),
 }) {}
 
 class Shipped extends Schema.TaggedClass<Shipped>()("Shipped", {
   orderId: Schema.String,
   items: Schema.Array(Schema.String),
   trackingNumber: Schema.String,
-  shippedAt: Schema.Date
+  shippedAt: Schema.Date,
 }) {}
 
 class Delivered extends Schema.TaggedClass<Delivered>()("Delivered", {
   orderId: Schema.String,
   items: Schema.Array(Schema.String),
-  deliveredAt: Schema.Date
+  deliveredAt: Schema.Date,
 }) {}
 
-const Order = Schema.Union(Pending, Shipped, Delivered)
-type Order = Schema.Schema.Type<typeof Order>
+const Order = Schema.Union(Pending, Shipped, Delivered);
+type Order = Schema.Schema.Type<typeof Order>;
 
 // ✅ GOOD: Schema.is() in Match patterns
 const getOrderStatus = (order: Order) =>
@@ -166,8 +167,8 @@ const getOrderStatus = (order: Order) =>
     Match.when(Schema.is(Pending), () => "Awaiting shipment"),
     Match.when(Schema.is(Shipped), (o) => `Tracking: ${o.trackingNumber}`),
     Match.when(Schema.is(Delivered), (o) => `Delivered ${o.deliveredAt}`),
-    Match.exhaustive
-  )
+    Match.exhaustive,
+  );
 ```
 
 ```typescript
@@ -175,13 +176,14 @@ const getOrderStatus = (order: Order) =>
 const Order = Schema.Struct({
   orderId: Schema.String,
   items: Schema.Array(Schema.String),
-  trackingNumber: Schema.optional(Schema.String),  // When is this set?
-  shippedAt: Schema.optional(Schema.Date),         // Unclear state
-  deliveredAt: Schema.optional(Schema.Date)        // Can be shipped AND delivered?
-})
+  trackingNumber: Schema.optional(Schema.String), // When is this set?
+  shippedAt: Schema.optional(Schema.Date), // Unclear state
+  deliveredAt: Schema.optional(Schema.Date), // Can be shipped AND delivered?
+});
 ```
 
 **Why Schema for everything:**
+
 - Runtime validation at system boundaries
 - Automatic type inference (no duplicate type definitions)
 - Encode/decode for serialization
@@ -194,15 +196,15 @@ const Order = Schema.Struct({
 **Define ALL conditional logic and algorithms using Effect Match.** Replace if/else chains, switch statements, and ternaries with exhaustive pattern matching.
 
 ```typescript
-import { Match } from "effect"
+import { Match } from "effect";
 
 // Process by discriminated union - use Match
 const handleEvent = Match.type<AppEvent>().pipe(
   Match.tag("UserCreated", (event) => notifyAdmin(event.userId)),
   Match.tag("UserDeleted", (event) => cleanupData(event.userId)),
   Match.tag("OrderPlaced", (event) => processOrder(event.orderId)),
-  Match.exhaustive
-)
+  Match.exhaustive,
+);
 
 // Transform values - use Match
 const toHttpStatus = Match.type<AppError>().pipe(
@@ -210,27 +212,29 @@ const toHttpStatus = Match.type<AppError>().pipe(
   Match.tag("Unauthorized", () => 401),
   Match.tag("ValidationError", () => 400),
   Match.tag("InternalError", () => 500),
-  Match.exhaustive
-)
+  Match.exhaustive,
+);
 
 // Handle options/results - use Match
 const displayUser = Match.type<Option<User>>().pipe(
   Match.tag("Some", ({ value }) => `Welcome, ${value.name}`),
   Match.tag("None", () => "Guest user"),
-  Match.exhaustive
-)
+  Match.exhaustive,
+);
 
 // Multi-condition logic - use Match.when
-const calculateDiscount = (order: Order) => Match.value(order).pipe(
-  Match.when({ total: (t) => t > 1000, isPremium: true }, () => 0.25),
-  Match.when({ total: (t) => t > 1000 }, () => 0.15),
-  Match.when({ isPremium: true }, () => 0.10),
-  Match.when({ itemCount: (c) => c > 10 }, () => 0.05),
-  Match.orElse(() => 0)
-)
+const calculateDiscount = (order: Order) =>
+  Match.value(order).pipe(
+    Match.when({ total: (t) => t > 1000, isPremium: true }, () => 0.25),
+    Match.when({ total: (t) => t > 1000 }, () => 0.15),
+    Match.when({ isPremium: true }, () => 0.1),
+    Match.when({ itemCount: (c) => c > 10 }, () => 0.05),
+    Match.orElse(() => 0),
+  );
 ```
 
 **Why Match for everything:**
+
 - Exhaustive checking catches missing cases at compile time
 - Self-documenting code structure
 - No forgotten else branches
@@ -242,48 +246,46 @@ const calculateDiscount = (order: Order) => Match.value(order).pipe(
 The most powerful pattern: **TaggedClass for data, Schema.is() in Match for logic.**
 
 ```typescript
-import { Schema, Match } from "effect"
+import { Schema, Match } from "effect";
 
 // Define all variants with TaggedClass (not Struct)
 class CreditCard extends Schema.TaggedClass<CreditCard>()("CreditCard", {
   last4: Schema.String,
   expiryMonth: Schema.Number,
-  expiryYear: Schema.Number
+  expiryYear: Schema.Number,
 }) {
   get isExpired() {
-    const now = new Date()
-    return this.expiryYear < now.getFullYear() ||
+    const now = new Date();
+    return (
+      this.expiryYear < now.getFullYear() ||
       (this.expiryYear === now.getFullYear() && this.expiryMonth < now.getMonth() + 1)
+    );
   }
 }
 
 class BankTransfer extends Schema.TaggedClass<BankTransfer>()("BankTransfer", {
   accountId: Schema.String,
-  routingNumber: Schema.String
+  routingNumber: Schema.String,
 }) {}
 
 class Crypto extends Schema.TaggedClass<Crypto>()("Crypto", {
   walletAddress: Schema.String,
-  network: Schema.Literal("ethereum", "bitcoin", "solana")
+  network: Schema.Literal("ethereum", "bitcoin", "solana"),
 }) {}
 
-const PaymentMethod = Schema.Union(CreditCard, BankTransfer, Crypto)
-type PaymentMethod = Schema.Schema.Type<typeof PaymentMethod>
+const PaymentMethod = Schema.Union(CreditCard, BankTransfer, Crypto);
+type PaymentMethod = Schema.Schema.Type<typeof PaymentMethod>;
 
 // Process with Schema.is() to access class methods
 const processPayment = (method: PaymentMethod, amount: number) =>
   Match.value(method).pipe(
     Match.when(Schema.is(CreditCard), (card) =>
-      card.isExpired ? Effect.fail("Card expired") : chargeCard(card.last4, amount)
+      card.isExpired ? Effect.fail("Card expired") : chargeCard(card.last4, amount),
     ),
-    Match.when(Schema.is(BankTransfer), (bank) =>
-      initiateBankTransfer(bank.accountId, bank.routingNumber, amount)
-    ),
-    Match.when(Schema.is(Crypto), (crypto) =>
-      sendCrypto(crypto.walletAddress, crypto.network, amount)
-    ),
-    Match.exhaustive
-  )
+    Match.when(Schema.is(BankTransfer), (bank) => initiateBankTransfer(bank.accountId, bank.routingNumber, amount)),
+    Match.when(Schema.is(Crypto), (crypto) => sendCrypto(crypto.walletAddress, crypto.network, amount)),
+    Match.exhaustive,
+  );
 
 // Also works with Match.tag for simple cases
 const getPaymentLabel = (method: PaymentMethod) =>
@@ -291,8 +293,8 @@ const getPaymentLabel = (method: PaymentMethod) =>
     Match.tag("CreditCard", (c) => `Card ending ${c.last4}`),
     Match.tag("BankTransfer", (b) => `Bank ${b.accountId}`),
     Match.tag("Crypto", (c) => `${c.network}: ${c.walletAddress.slice(0, 8)}...`),
-    Match.exhaustive
-  )
+    Match.exhaustive,
+  );
 ```
 
 ## Branded Types
@@ -300,19 +302,19 @@ const getPaymentLabel = (method: PaymentMethod) =>
 Prevent mixing up values of the same underlying type:
 
 ```typescript
-import { Brand } from "effect"
+import { Brand } from "effect";
 
 // Define branded types
-type UserId = string & Brand.Brand<"UserId">
-type OrderId = string & Brand.Brand<"OrderId">
+type UserId = string & Brand.Brand<"UserId">;
+type OrderId = string & Brand.Brand<"OrderId">;
 
 // Constructors
-const UserId = Brand.nominal<UserId>()
-const OrderId = Brand.nominal<OrderId>()
+const UserId = Brand.nominal<UserId>();
+const OrderId = Brand.nominal<OrderId>();
 
 // Usage
-const userId: UserId = UserId("user-123")
-const orderId: OrderId = OrderId("order-456")
+const userId: UserId = UserId("user-123");
+const orderId: OrderId = OrderId("order-456");
 
 // Type error: can't assign UserId to OrderId
 // const wrong: OrderId = userId
@@ -321,35 +323,30 @@ const orderId: OrderId = OrderId("order-456")
 ### With Validation
 
 ```typescript
-import { Brand, Either } from "effect"
+import { Brand, Either } from "effect";
 
-type Email = string & Brand.Brand<"Email">
+type Email = string & Brand.Brand<"Email">;
 
 const Email = Brand.refined<Email>(
   (s) => /^[^@]+@[^@]+\.[^@]+$/.test(s),
-  (s) => Brand.error(`Invalid email: ${s}`)
-)
+  (s) => Brand.error(`Invalid email: ${s}`),
+);
 
 // Returns Either
-const result = Email.either("test@example.com")
+const result = Email.either("test@example.com");
 // Or throws
-const email = Email("test@example.com")
+const email = Email("test@example.com");
 ```
 
 ### With Schema
 
 ```typescript
-import { Schema } from "effect"
+import { Schema } from "effect";
 
-const UserId = Schema.String.pipe(
-  Schema.brand("UserId")
-)
-type UserId = Schema.Schema.Type<typeof UserId>
+const UserId = Schema.String.pipe(Schema.brand("UserId"));
+type UserId = Schema.Schema.Type<typeof UserId>;
 
-const Email = Schema.String.pipe(
-  Schema.pattern(/^[^@]+@[^@]+\.[^@]+$/),
-  Schema.brand("Email")
-)
+const Email = Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\.[^@]+$/), Schema.brand("Email"));
 ```
 
 ## Dual APIs
@@ -359,27 +356,27 @@ Most Effect functions support both styles:
 ### Data-Last (Pipeable) - Recommended
 
 ```typescript
-import { Effect, pipe } from "effect"
+import { Effect, pipe } from "effect";
 
 // Using pipe
 const result = pipe(
   Effect.succeed(1),
   Effect.map((n) => n + 1),
-  Effect.flatMap((n) => Effect.succeed(n * 2))
-)
+  Effect.flatMap((n) => Effect.succeed(n * 2)),
+);
 
 // Using method chaining
 const result = Effect.succeed(1).pipe(
   Effect.map((n) => n + 1),
-  Effect.flatMap((n) => Effect.succeed(n * 2))
-)
+  Effect.flatMap((n) => Effect.succeed(n * 2)),
+);
 ```
 
 ### Data-First
 
 ```typescript
 // Useful for single transformations
-const mapped = Effect.map(Effect.succeed(1), (n) => n + 1)
+const mapped = Effect.map(Effect.succeed(1), (n) => n + 1);
 ```
 
 ### Convention
@@ -395,24 +392,20 @@ The preferred way to write sequential Effect code:
 ```typescript
 // Generator style - recommended
 const program = Effect.gen(function* () {
-  const user = yield* getUser(id)
-  const orders = yield* getOrders(user.id)
-  const enriched = yield* enrichOrders(orders)
-  return { user, orders: enriched }
-})
+  const user = yield* getUser(id);
+  const orders = yield* getOrders(user.id);
+  const enriched = yield* enrichOrders(orders);
+  return { user, orders: enriched };
+});
 
 // Equivalent flatMap chain
 const program = getUser(id).pipe(
   Effect.flatMap((user) =>
     getOrders(user.id).pipe(
-      Effect.flatMap((orders) =>
-        enrichOrders(orders).pipe(
-          Effect.map((enriched) => ({ user, orders: enriched }))
-        )
-      )
-    )
-  )
-)
+      Effect.flatMap((orders) => enrichOrders(orders).pipe(Effect.map((enriched) => ({ user, orders: enriched })))),
+    ),
+  ),
+);
 ```
 
 ### When to Use Effect.gen
@@ -420,7 +413,7 @@ const program = getUser(id).pipe(
 - Sequential operations
 - Complex control flow
 - When readability matters
-- Error handling with yield*
+- Error handling with yield\*
 
 ### When to Use pipe
 
@@ -433,14 +426,14 @@ const program = getUser(id).pipe(
 Alternative to generators for some cases:
 
 ```typescript
-import { Effect } from "effect"
+import { Effect } from "effect";
 
 const program = Effect.Do.pipe(
   Effect.bind("user", () => getUser(id)),
   Effect.bind("orders", ({ user }) => getOrders(user.id)),
   Effect.bind("enriched", ({ orders }) => enrichOrders(orders)),
-  Effect.map(({ user, enriched }) => ({ user, orders: enriched }))
-)
+  Effect.map(({ user, enriched }) => ({ user, orders: enriched })),
+);
 ```
 
 ## Project Structure
@@ -471,17 +464,17 @@ src/
 
 ```typescript
 // services/UserRepository.ts
-import { Context, Effect } from "effect"
-import { User, UserId } from "../domain/User"
-import { UserNotFound } from "../domain/errors"
+import { Context, Effect } from "effect";
+import { User, UserId } from "../domain/User";
+import { UserNotFound } from "../domain/errors";
 
 export class UserRepository extends Context.Tag("UserRepository")<
   UserRepository,
   {
-    readonly findById: (id: UserId) => Effect.Effect<User, UserNotFound>
-    readonly findByEmail: (email: string) => Effect.Effect<User, UserNotFound>
-    readonly save: (user: User) => Effect.Effect<void>
-    readonly delete: (id: UserId) => Effect.Effect<void>
+    readonly findById: (id: UserId) => Effect.Effect<User, UserNotFound>;
+    readonly findByEmail: (email: string) => Effect.Effect<User, UserNotFound>;
+    readonly save: (user: User) => Effect.Effect<void>;
+    readonly delete: (id: UserId) => Effect.Effect<void>;
   }
 >() {}
 ```
@@ -490,29 +483,19 @@ export class UserRepository extends Context.Tag("UserRepository")<
 
 ```typescript
 // layers/AppLive.ts
-import { Layer } from "effect"
+import { Layer } from "effect";
 
 // Infrastructure
-const InfraLive = Layer.mergeAll(
-  DatabaseLive,
-  HttpClientLive,
-  LoggerLive
-)
+const InfraLive = Layer.mergeAll(DatabaseLive, HttpClientLive, LoggerLive);
 
 // Repositories
-const RepositoriesLive = Layer.mergeAll(
-  UserRepositoryLive,
-  OrderRepositoryLive
-).pipe(Layer.provide(InfraLive))
+const RepositoriesLive = Layer.mergeAll(UserRepositoryLive, OrderRepositoryLive).pipe(Layer.provide(InfraLive));
 
 // Services
-const ServicesLive = Layer.mergeAll(
-  UserServiceLive,
-  OrderServiceLive
-).pipe(Layer.provide(RepositoriesLive))
+const ServicesLive = Layer.mergeAll(UserServiceLive, OrderServiceLive).pipe(Layer.provide(RepositoriesLive));
 
 // Full application
-export const AppLive = ServicesLive
+export const AppLive = ServicesLive;
 ```
 
 ## Naming Conventions
@@ -561,28 +544,25 @@ const User = (data: UserData): User => ...
 ### Tagged Errors
 
 ```typescript
-import { Schema } from "effect"
+import { Schema } from "effect";
 
 // Always use Schema.TaggedError for domain errors
-class UserNotFound extends Schema.TaggedError<UserNotFound>()(
-  "UserNotFound",
-  { userId: Schema.String }
-) {}
+class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", { userId: Schema.String }) {}
 
-class ValidationError extends Schema.TaggedError<ValidationError>()(
-  "ValidationError",
-  { field: Schema.String, message: Schema.String }
-) {}
+class ValidationError extends Schema.TaggedError<ValidationError>()("ValidationError", {
+  field: Schema.String,
+  message: Schema.String,
+}) {}
 
 // Use in services
 const getUser = (id: string): Effect.Effect<User, UserNotFound> =>
   Effect.gen(function* () {
-    const user = yield* findInDb(id)
+    const user = yield* findInDb(id);
     if (!user) {
-      return yield* Effect.fail(new UserNotFound({ userId: id }))
+      return yield* Effect.fail(new UserNotFound({ userId: id }));
     }
-    return user
-  })
+    return user;
+  });
 ```
 
 ### Error Recovery Pattern
@@ -590,15 +570,13 @@ const getUser = (id: string): Effect.Effect<User, UserNotFound> =>
 ```typescript
 const program = getUser(id).pipe(
   // Specific error handling
-  Effect.catchTag("UserNotFound", (error) =>
-    Effect.succeed(defaultUser)
-  ),
+  Effect.catchTag("UserNotFound", (error) => Effect.succeed(defaultUser)),
   // Or match all errors
   Effect.catchTags({
     UserNotFound: () => Effect.succeed(defaultUser),
-    ValidationError: (e) => Effect.fail(new BadRequest(e.message))
-  })
-)
+    ValidationError: (e) => Effect.fail(new BadRequest(e.message)),
+  }),
+);
 ```
 
 ## Best Practices Summary
@@ -651,6 +629,7 @@ const program = getUser(id).pipe(
 For comprehensive code style documentation, consult `${CLAUDE_PLUGIN_ROOT}/references/llms-full.txt`.
 
 Search for these sections:
+
 - "Branded Types" for nominal typing
 - "Dual APIs" for function styles
 - "Guidelines" for best practices
