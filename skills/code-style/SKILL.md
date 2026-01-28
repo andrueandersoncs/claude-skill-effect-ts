@@ -215,12 +215,12 @@ const toHttpStatus = Match.type<AppError>().pipe(
   Match.exhaustive,
 );
 
-// Handle options/results - use Match
-const displayUser = Match.type<Option<User>>().pipe(
-  Match.tag("Some", ({ value }) => `Welcome, ${value.name}`),
-  Match.tag("None", () => "Guest user"),
-  Match.exhaustive,
-);
+// Handle options - use Option.match
+const displayUser = (maybeUser: Option<User>) =>
+  Option.match(maybeUser, {
+    onNone: () => "Guest user",
+    onSome: (user) => `Welcome, ${user.name}`
+  });
 
 // Multi-condition logic - use Match.when
 const calculateDiscount = (order: Order) =>

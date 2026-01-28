@@ -655,13 +655,18 @@ const Password = Schema.String.pipe(
 import { TreeFormatter, ArrayFormatter } from "effect/ParseResult"
 
 const result = Schema.decodeUnknownEither(User)(input)
-if (Either.isLeft(result)) {
-  // Tree format
-  console.log(TreeFormatter.formatErrorSync(result.left))
+Either.match(result, {
+  onLeft: (error) => {
+    // Tree format
+    console.log(TreeFormatter.formatErrorSync(error))
 
-  // Array format
-  console.log(ArrayFormatter.formatErrorSync(result.left))
-}
+    // Array format
+    console.log(ArrayFormatter.formatErrorSync(error))
+  },
+  onRight: () => {
+    // Valid input, no errors to format
+  }
+})
 ```
 
 ## JSON Schema Export
