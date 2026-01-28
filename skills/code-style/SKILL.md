@@ -624,6 +624,20 @@ const program = getUser(id).pipe(
 - **NEVER import `it` from `vitest`** in Effect test files - import from `@effect/vitest`
 - **NEVER hand-craft test data** - use `Arbitrary.make(Schema)` or `it.prop`
 
+## Related Skills
+
+This skill covers high-level patterns and conventions. For detailed API usage and specific topics, consult these specialized skills:
+
+| Skill | Purpose | Key Topics |
+|-------|---------|------------|
+| [Effect Core](./effect-core/SKILL.md) | Core Effect type and APIs | Creating Effects, Effect.gen, pipe, map, flatMap, running Effects |
+| [Error Management](./error-management/SKILL.md) | Typed error handling | catchTag, catchAll, mapError, orElse, error accumulation |
+| [Pattern Matching](./pattern-matching/SKILL.md) | Match module APIs | Match.value, Match.type, Match.tag, Match.when, exhaustive matching |
+| [Schema](./schema/SKILL.md) | Data modeling and validation | Schema.Class, Schema.Struct, parsing, transformations, filters |
+| [Testing](./testing/SKILL.md) | Effect testing patterns | @effect/vitest, it.effect, property-based testing, Arbitrary |
+
+These skills work together: this Code Style skill defines the **what** (patterns to follow), while the specialized skills define the **how** (API details).
+
 ## Additional Resources
 
 For comprehensive code style documentation, consult `${CLAUDE_PLUGIN_ROOT}/references/llms-full.txt`.
