@@ -1,17 +1,18 @@
 ---
 name: Code Style
-description: This skill should be used EVERY TIME you're writing TypeScript with Effect, especially when the user asks about "Effect best practices", "Effect code style", "idiomatic Effect", "Schema-first", "Match-first", "when to use Schema", "when to use Match", "branded types", "dual APIs", "Effect guidelines", "do notation", "Effect.gen", "pipe vs method chaining", "Effect naming conventions", "Effect project structure", "data modeling in Effect", or needs to understand idiomatic Effect-TS patterns and conventions.
-version: 1.0.0
+description: This skill should be used EVERY TIME you're writing TypeScript with Effect, especially when the user asks about "Effect best practices", "Effect code style", "idiomatic Effect", "functional programming", "no loops", "no for loops", "avoid imperative", "Effect Array", "Effect Record", "Effect Struct", "Effect Tuple", "Effect Predicate", "Schema-first", "Match-first", "when to use Schema", "when to use Match", "branded types", "dual APIs", "Effect guidelines", "do notation", "Effect.gen", "pipe vs method chaining", "Effect naming conventions", "Effect project structure", "data modeling in Effect", or needs to understand idiomatic Effect-TS patterns and conventions.
+version: 1.1.0
 ---
 
 # Code Style in Effect
 
 ## Overview
 
-Effect's idiomatic style centers on two core principles:
+Effect's idiomatic style centers on three core principles:
 
-1. **Schema-First Data Modeling** - Define ALL data structures as Effect Schemas
-2. **Match-First Control Flow** - Define ALL conditional logic using Effect Match
+1. **Functional Programming Only** - No imperative logic (loops, mutation, conditionals)
+2. **Schema-First Data Modeling** - Define ALL data structures as Effect Schemas
+3. **Match-First Control Flow** - Define ALL conditional logic using Effect Match
 
 Additional patterns include:
 
@@ -22,9 +23,28 @@ Additional patterns include:
 
 ## Core Principles
 
-### 0. No Imperative Control Flow
+### 0. No Imperative Logic - Functional Programming Only
 
-**NEVER use `if/else`, `switch/case`, or ternary operators.** These imperative constructs must be replaced with pattern matching in ALL cases:
+**NEVER use imperative constructs.** All code must follow functional programming principles:
+
+- **No conditionals**: `if/else`, `switch/case`, ternary operators
+- **No loops**: `for`, `while`, `do...while`, `for...of`, `for...in`
+- **No mutation**: Reassignment, push/pop/splice, property mutation
+
+**Use instead:**
+
+- Pattern matching (`Match`, `Option.match`, `Either.match`, `Array.match`)
+- Effect's `Array` module (`Array.map`, `Array.filter`, `Array.reduce`, `Array.flatMap`, `Array.filterMap`, etc.)
+- Effect's `Record` module (`Record.map`, `Record.filter`, `Record.get`, `Record.keys`, `Record.values`, etc.)
+- Effect's `Struct` module (`Struct.pick`, `Struct.omit`, `Struct.evolve`, `Struct.get`, etc.)
+- Effect's `Tuple` module (`Tuple.make`, `Tuple.getFirst`, `Tuple.mapBoth`, etc.)
+- Effect's `Predicate` module (`Predicate.and`, `Predicate.or`, `Predicate.not`, `Predicate.struct`, etc.)
+- Effect combinators (`Effect.forEach`, `Effect.all`, `Effect.reduce`)
+- Effect's `Function` module (`pipe`, `flow`, `identity`, `constant`, `compose`)
+- Recursion for complex iteration
+- First-class functions (pass functions as arguments, return functions)
+
+#### Conditionals - Use Pattern Matching
 
 - **`if/else` chains** → `Match.value` + `Match.when`
 - **`switch/case` statements** → `Match.type` + `Match.tag` or `Match.when`
@@ -112,7 +132,308 @@ if (Schema.is(UserCreated)(event)) {
 // Always use Schema.TaggedError for domain errors.
 ```
 
-**When you encounter imperative control flow in existing code, refactor it immediately.** This is not optional - imperative conditionals are code smells that must be eliminated.
+**When you encounter imperative conditionals in existing code, refactor them immediately.**
+
+#### Loops - Use Effect's Array Module and Recursion
+
+**NEVER use `for`, `while`, `do...while`, `for...of`, or `for...in` loops.** Use Effect's functional alternatives.
+
+**Why Effect's Array module over native Array methods:**
+
+- `Array.findFirst` returns `Option<A>` instead of `A | undefined`
+- `Array.get` returns `Option<A>` for safe indexing
+- `Array.filterMap` combines filter and map in one pass
+- `Array.partition` returns typed tuple `[excluded, satisfying]`
+- `Array.groupBy` returns `Record<K, NonEmptyArray<A>>`
+- `Array.match` provides exhaustive empty/non-empty handling
+- All functions work with `pipe` for composable pipelines
+- Consistent dual API (data-first and data-last)
+
+```typescript
+import { Array, pipe } from "effect"
+
+// ❌ FORBIDDEN: for loop
+const doubled = []
+for (let i = 0; i < numbers.length; i++) {
+  doubled.push(numbers[i] * 2)
+}
+
+// ❌ FORBIDDEN: for...of loop
+const results = []
+for (const item of items) {
+  results.push(process(item))
+}
+
+// ❌ FORBIDDEN: while loop
+let sum = 0
+let i = 0
+while (i < numbers.length) {
+  sum += numbers[i]
+  i++
+}
+
+// ❌ FORBIDDEN: forEach with mutation
+const output = []
+items.forEach(item => output.push(transform(item)))
+
+// ✅ REQUIRED: Array.map for transformation
+const doubled = Array.map(numbers, (n) => n * 2)
+// or with pipe
+const doubled = pipe(numbers, Array.map((n) => n * 2))
+
+// ✅ REQUIRED: Array.filter for selection
+const adults = Array.filter(users, (u) => u.age >= 18)
+
+// ✅ REQUIRED: Array.reduce for accumulation
+const sum = Array.reduce(numbers, 0, (acc, n) => acc + n)
+
+// ✅ REQUIRED: Array.flatMap for one-to-many
+const allTags = Array.flatMap(posts, (post) => post.tags)
+
+// ✅ REQUIRED: Array.findFirst for search (returns Option)
+const admin = Array.findFirst(users, (u) => u.role === "admin")
+
+// ✅ REQUIRED: Array.some/every for predicates
+const hasAdmin = Array.some(users, (u) => u.role === "admin")
+const allVerified = Array.every(users, (u) => u.verified)
+
+// ✅ REQUIRED: Array.filterMap for filter + transform in one pass
+const validEmails = Array.filterMap(users, (u) =>
+  isValidEmail(u.email) ? Option.some(u.email) : Option.none()
+)
+
+// ✅ REQUIRED: Array.partition to split by predicate
+const [minors, adults] = Array.partition(users, (u) => u.age >= 18)
+
+// ✅ REQUIRED: Array.groupBy for grouping
+const usersByRole = Array.groupBy(users, (u) => u.role)
+
+// ✅ REQUIRED: Array.dedupe for removing duplicates
+const uniqueIds = Array.dedupe(ids)
+
+// ✅ REQUIRED: Array.match for empty vs non-empty handling
+const message = Array.match(items, {
+  onEmpty: () => "No items",
+  onNonEmpty: (items) => `${items.length} items`
+})
+```
+
+**Record operations - use Effect's Record module:**
+
+```typescript
+import { Record, pipe } from "effect"
+
+// ✅ REQUIRED: Record.map for transforming values
+const doubled = Record.map(prices, (price) => price * 2)
+
+// ✅ REQUIRED: Record.filter for filtering entries
+const expensive = Record.filter(prices, (price) => price > 100)
+
+// ✅ REQUIRED: Record.get for safe access (returns Option)
+const price = Record.get(prices, "item1")
+
+// ✅ REQUIRED: Record.keys and Record.values
+const allKeys = Record.keys(config)
+const allValues = Record.values(config)
+
+// ✅ REQUIRED: Record.fromEntries and Record.toEntries
+const record = Record.fromEntries([["a", 1], ["b", 2]])
+const entries = Record.toEntries(record)
+
+// ✅ REQUIRED: Record.filterMap for filter + transform
+const validPrices = Record.filterMap(rawPrices, (value) =>
+  typeof value === "number" ? Option.some(value) : Option.none()
+)
+```
+
+**Struct operations - use Effect's Struct module:**
+
+```typescript
+import { Struct, pipe } from "effect"
+
+// ✅ REQUIRED: Struct.pick for selecting properties
+const namePart = Struct.pick(user, "firstName", "lastName")
+
+// ✅ REQUIRED: Struct.omit for excluding properties
+const publicUser = Struct.omit(user, "password", "ssn")
+
+// ✅ REQUIRED: Struct.evolve for transforming specific fields
+const updated = Struct.evolve(user, {
+  age: (age) => age + 1,
+  name: (name) => name.toUpperCase()
+})
+
+// ✅ REQUIRED: Struct.get for property access
+const getName = Struct.get("name")
+const name = getName(user)
+```
+
+**Tuple operations - use Effect's Tuple module:**
+
+```typescript
+import { Tuple } from "effect"
+
+// ✅ REQUIRED: Tuple.make for creating tuples
+const pair = Tuple.make("key", 42)
+
+// ✅ REQUIRED: Tuple.getFirst/getSecond for access
+const key = Tuple.getFirst(pair)
+const value = Tuple.getSecond(pair)
+
+// ✅ REQUIRED: Tuple.mapFirst/mapSecond/mapBoth for transformation
+const upperKey = Tuple.mapFirst(pair, (s) => s.toUpperCase())
+const doubled = Tuple.mapSecond(pair, (n) => n * 2)
+const both = Tuple.mapBoth(pair, {
+  onFirst: (s) => s.toUpperCase(),
+  onSecond: (n) => n * 2
+})
+
+// ✅ REQUIRED: Tuple.at for indexed access
+const first = Tuple.at(tuple, 0)
+```
+
+**Predicate operations - use Effect's Predicate module:**
+
+```typescript
+import { Predicate } from "effect"
+
+// ✅ REQUIRED: Predicate.and/or/not for combining predicates
+const isPositive = (n: number) => n > 0
+const isEven = (n: number) => n % 2 === 0
+const isPositiveAndEven = Predicate.and(isPositive, isEven)
+const isPositiveOrEven = Predicate.or(isPositive, isEven)
+const isNegative = Predicate.not(isPositive)
+
+// ✅ REQUIRED: Predicate.struct for validating object shapes
+const isValidUser = Predicate.struct({
+  name: Predicate.isString,
+  age: Predicate.isNumber
+})
+
+// ✅ REQUIRED: Predicate.tuple for validating tuple shapes
+const isStringNumberPair = Predicate.tuple(Predicate.isString, Predicate.isNumber)
+
+// ✅ REQUIRED: Built-in type guards
+Predicate.isString(value)
+Predicate.isNumber(value)
+Predicate.isNullable(value)
+Predicate.isNotNullable(value)
+Predicate.isRecord(value)
+```
+
+**Effect loops - use Effect combinators:**
+
+```typescript
+// ❌ FORBIDDEN: for...of with yield*
+const processAll = Effect.gen(function* () {
+  const results = []
+  for (const item of items) {
+    const result = yield* processItem(item)
+    results.push(result)
+  }
+  return results
+})
+
+// ✅ REQUIRED: Effect.forEach for sequential
+const processAll = Effect.forEach(items, processItem)
+
+// ✅ REQUIRED: Effect.all for parallel (when items are Effects)
+const results = Effect.all(effects)
+
+// ✅ REQUIRED: Effect.all with concurrency
+const results = Effect.all(effects, { concurrency: 10 })
+
+// ✅ REQUIRED: Effect.reduce for accumulation
+const total = Effect.reduce(items, 0, (acc, item) =>
+  getPrice(item).pipe(Effect.map((price) => acc + price))
+)
+
+// ✅ REQUIRED: Stream for large/infinite sequences
+const processed = Stream.fromIterable(items).pipe(
+  Stream.mapEffect(processItem),
+  Stream.runCollect
+)
+```
+
+**Recursion for complex iteration:**
+
+```typescript
+// ❌ FORBIDDEN: while loop for tree traversal
+const collectLeaves = (node) => {
+  const leaves = []
+  const stack = [node]
+  while (stack.length > 0) {
+    const current = stack.pop()
+    if (current.children.length === 0) {
+      leaves.push(current)
+    } else {
+      stack.push(...current.children)
+    }
+  }
+  return leaves
+}
+
+// ✅ REQUIRED: Recursion for tree traversal
+const collectLeaves = (node: TreeNode): ReadonlyArray<TreeNode> =>
+  Array.match(node.children, {
+    onEmpty: () => [node],
+    onNonEmpty: (children) => Array.flatMap(children, collectLeaves)
+  })
+
+// ✅ REQUIRED: Recursion with Effect
+const processTree = (node: TreeNode): Effect.Effect<Result> =>
+  node.children.length === 0
+    ? processLeaf(node)
+    : Effect.forEach(node.children, processTree).pipe(
+        Effect.flatMap(combineResults)
+      )
+```
+
+**First-class functions - use Effect's Function module:**
+
+```typescript
+import { Array, Function, pipe, flow } from "effect"
+
+// ❌ BAD: Inline logic repeated
+const processUsers = (users: Array<User>) =>
+  users.filter((u) => u.active).map((u) => u.email)
+const processOrders = (orders: Array<Order>) =>
+  orders.filter((o) => o.active).map((o) => o.total)
+
+// ✅ GOOD: Extract reusable predicates and transformers
+const isActive = <T extends { active: boolean }>(item: T) => item.active
+const getEmail = (user: User) => user.email
+const getTotal = (order: Order) => order.total
+
+// ✅ GOOD: Use pipe for data transformation pipelines
+const processUsers = (users: Array<User>) =>
+  pipe(users, Array.filter(isActive), Array.map(getEmail))
+
+const processOrders = (orders: Array<Order>) =>
+  pipe(orders, Array.filter(isActive), Array.map(getTotal))
+
+// ✅ GOOD: Use flow to compose reusable pipelines
+const getActiveEmails = flow(
+  Array.filter(isActive<User>),
+  Array.map(getEmail)
+)
+
+const getActiveTotals = flow(
+  Array.filter(isActive<Order>),
+  Array.map(getTotal)
+)
+
+// ✅ GOOD: Use Function.compose for simple composition
+const parseAndValidate = Function.compose(parse, validate)
+
+// ✅ GOOD: Use Function.identity for pass-through
+const transform = shouldTransform ? myTransform : Function.identity
+
+// ✅ GOOD: Use Function.constant for fixed values
+const getDefaultUser = Function.constant(defaultUser)
+```
+
+**When you encounter imperative loops in existing code, refactor them immediately.** This is not optional - imperative logic is a code smell that must be eliminated.
 
 ### 1. Schema-First Data Modeling
 
@@ -583,7 +904,10 @@ const program = getUser(id).pipe(
 
 ### Do
 
-- **ELIMINATE all if/else, switch/case, and ternaries** - use Match, Option.match, Either.match instead
+- **ELIMINATE all imperative logic** - no if/else, switch/case, ternaries, for/while loops
+- **Use Effect's data modules** - `Array`, `Record`, `Struct`, `Tuple` for data manipulation
+- **Use Effect's Predicate module** - `Predicate.and`, `Predicate.or`, `Predicate.struct` for composing predicates
+- **Use Effect's Function module** - `pipe`, `flow`, `identity`, `constant`, `compose`
 - **Refactor imperative code on sight** - this is mandatory, not optional
 - **Use Schema.Class/TaggedClass** - not Schema.Struct for domain entities
 - **Use tagged unions over optional properties** - make states explicit
@@ -607,6 +931,15 @@ const program = getUser(id).pipe(
 - **NEVER use switch/case** - always use Match.type + Match.tag
 - **NEVER use ternary operators** - always use Match.value + Match.when
 - **NEVER use `if (x != null)`** - always use Option.match
+- **NEVER use for/while/do...while loops** - use Effect's `Array.map`/`Array.filter`/`Array.reduce` or `Effect.forEach`
+- **NEVER use for...of/for...in loops** - use Effect's `Array` module or `Effect` combinators
+- **NEVER mutate arrays** (push/pop/splice) - use `Array.append`, `Array.prepend`, spread, or immutable operations
+- **NEVER reassign variables** - use const and functional transformations
+- **NEVER use native `Array.prototype.find`** - use `Array.findFirst` which returns `Option`
+- **NEVER use native `array[index]`** - use `Array.get(array, index)` which returns `Option`
+- **NEVER use native `Object.keys/values/entries`** - use `Record.keys`, `Record.values`, `Record.toEntries`
+- **NEVER use native `record[key]`** - use `Record.get(record, key)` which returns `Option`
+- **NEVER use manual `&&`/`||` for predicates** - use `Predicate.and`, `Predicate.or`, `Predicate.not`
 - **NEVER check `.success` or similar** - always use Either.match or Effect.match
 - **NEVER access `._tag` directly** - always use Match.tag or Schema.is() (for Schema types only)
 - **NEVER extract `._tag` as a type** - e.g., `type Tag = Foo["_tag"]` is forbidden
