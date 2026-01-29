@@ -1,0 +1,96 @@
+{
+  "id": "testing",
+  "name": "Testing Anti-Patterns",
+  "patterns": [
+    {
+      "id": "run-promise-to-it-effect",
+      "rule": "Effect.runPromise in tests → it.effect from @effect/vitest",
+      "example": {
+        "description": "Basic Effect test",
+        "bad": "import { it, expect } from \"vitest\"\n\nit(\"should get user\", async () => {\n  const result = await Effect.runPromise(getUser(\"123\"))\n  expect(result.name).toBe(\"Alice\")\n})",
+        "good": "import { it, expect } from \"@effect/vitest\"\n\nit.effect(\"should get user\", () =>\n  Effect.gen(function* () {\n    const result = yield* getUser(\"123\")\n    expect(result.name).toBe(\"Alice\")\n  })\n)"
+      }
+    },
+    {
+      "id": "run-promise-with-layer",
+      "rule": "Effect.runPromise in tests → it.effect from @effect/vitest",
+      "example": {
+        "description": "Test with service dependencies",
+        "bad": "it(\"should process order\", async () => {\n  const result = await Effect.runPromise(\n    processOrder(order).pipe(\n      Effect.provide(TestLayer)\n    )\n  )\n  expect(result.status).toBe(\"completed\")\n})",
+        "good": "it.effect(\"should process order\", () =>\n  Effect.gen(function* () {\n    const result = yield* processOrder(order)\n    expect(result.status).toBe(\"completed\")\n  }).pipe(Effect.provide(TestLayer))\n)\n\n// Or use it.layer for multiple tests\ndescribe(\"OrderService\", () => {\n  it.layer(TestLayer)(\"should process order\", () =>\n    Effect.gen(function* () {\n      const result = yield* processOrder(order)\n      expect(result.status).toBe(\"completed\")\n    })\n  )\n})"
+      }
+    },
+    {
+      "id": "vitest-import-to-effect-vitest",
+      "rule": "import { it } from \"vitest\" → import { it } from \"@effect/vitest\"",
+      "example": {
+        "description": "Test file imports",
+        "bad": "import { describe, it, expect } from \"vitest\"\nimport { Effect } from \"effect\"\n\ndescribe(\"UserService\", () => {\n  it(\"should create user\", async () => {\n    const result = await Effect.runPromise(createUser(data))\n    expect(result).toBeDefined()\n  })\n})",
+        "good": "import { describe, it, expect } from \"@effect/vitest\"\nimport { Effect } from \"effect\"\n\ndescribe(\"UserService\", () => {\n  it.effect(\"should create user\", () =>\n    Effect.gen(function* () {\n      const result = yield* createUser(data)\n      expect(result).toBeDefined()\n    })\n  )\n})"
+      }
+    },
+    {
+      "id": "hardcoded-to-arbitrary",
+      "rule": "Hard-coded test data → Arbitrary.make(Schema)",
+      "example": {
+        "description": "User test data",
+        "bad": "const testUser = {\n  id: \"user-123\",\n  name: \"Test User\",\n  email: \"test@example.com\",\n  age: 25,\n}\n\nit(\"should validate user\", () => {\n  expect(validateUser(testUser)).toBe(true)\n})",
+        "good": "import { Arbitrary } from \"effect\"\nimport * as fc from \"fast-check\"\n\nconst UserArbitrary = Arbitrary.make(User)\n\nit.prop(\"should validate all generated users\", [UserArbitrary], ([user]) => {\n  expect(validateUser(user)).toBe(true)\n})"
+      }
+    },
+    {
+      "id": "foreach-to-prop",
+      "rule": "Hard-coded test data → Arbitrary.make(Schema)",
+      "example": {
+        "description": "Multiple test inputs",
+        "bad": "const testOrders = [\n  { id: \"order-1\", total: 100, items: [\"a\", \"b\"] },\n  { id: \"order-2\", total: 200, items: [\"c\"] },\n  { id: \"order-3\", total: 50, items: [] },\n]\n\ntestOrders.forEach((order) => {\n  it(`should process order ${order.id}`, async () => {\n    const result = await processOrder(order)\n    expect(result).toBeDefined()\n  })\n})",
+        "good": "it.prop(\n  \"should process all valid orders\",\n  { order: Arbitrary.make(Order) },\n  ({ order }) =>\n    Effect.gen(function* () {\n      const result = yield* processOrder(order)\n      expect(result).toBeDefined()\n    })\n)"
+      }
+    },
+    {
+      "id": "fc-filter-to-schema-between",
+      "rule": "fast-check .filter() → Schema constraints (Schema.between, Schema.minLength)",
+      "example": {
+        "description": "Filtering numeric range",
+        "bad": "const adultAge = fc.integer().filter((n) => n >= 18 && n <= 100)\n\nit.prop(\"processes adult ages\", [adultAge], ([age]) => {\n  expect(isValidAdultAge(age)).toBe(true)\n})",
+        "good": "const Age = Schema.Number.pipe(\n  Schema.int(),\n  Schema.between(18, 100)\n)\n\nconst AgeArbitrary = Arbitrary.make(Age)\n\nit.prop(\"processes adult ages\", [AgeArbitrary], ([age]) => {\n  expect(isValidAdultAge(age)).toBe(true)\n})"
+      }
+    },
+    {
+      "id": "fc-filter-string-length",
+      "rule": "fast-check .filter() → Schema constraints (Schema.between, Schema.minLength)",
+      "example": {
+        "description": "Filtering string length",
+        "bad": "const nonEmptyString = fc.string().filter((s) => s.length > 0)\nconst shortString = fc.string().filter((s) => s.length <= 100)",
+        "good": "const NonEmptyName = Schema.String.pipe(Schema.minLength(1))\nconst ShortDescription = Schema.String.pipe(Schema.maxLength(100))\n\n// Arbitraries generate ONLY valid values\nconst NameArbitrary = Arbitrary.make(NonEmptyName)\nconst DescArbitrary = Arbitrary.make(ShortDescription)"
+      }
+    },
+    {
+      "id": "fc-record-to-schema-class",
+      "rule": "fast-check .filter() → Schema constraints (Schema.between, Schema.minLength)",
+      "example": {
+        "description": "Complex Schema constraints",
+        "bad": "const validUser = fc.record({\n  id: fc.string(),\n  name: fc.string(),\n  age: fc.integer(),\n  email: fc.string(),\n}).filter((u) =>\n  u.name.length > 0 &&\n  u.age >= 18 &&\n  u.email.includes(\"@\")\n)",
+        "good": "class User extends Schema.Class<User>(\"User\")({\n  id: Schema.String.pipe(Schema.minLength(1)),\n  name: Schema.String.pipe(Schema.nonEmptyString()),\n  age: Schema.Number.pipe(Schema.int(), Schema.greaterThanOrEqualTo(18)),\n  email: Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\\.[^@]+$/)),\n}) {}\n\n// Arbitrary generates only valid users - no filtering needed\nconst UserArbitrary = Arbitrary.make(User)"
+      }
+    },
+    {
+      "id": "manual-roundtrip",
+      "rule": "Manual property tests → it.prop with Arbitrary.make(Schema)",
+      "example": {
+        "description": "Round-trip testing",
+        "bad": "it(\"should encode and decode user\", () => {\n  const users = [\n    { id: \"1\", name: \"Alice\", age: 30 },\n    { id: \"2\", name: \"Bob\", age: 25 },\n  ]\n\n  users.forEach((user) => {\n    const encoded = Schema.encodeSync(User)(user)\n    const decoded = Schema.decodeSync(User)(encoded)\n    expect(decoded).toEqual(user)\n  })\n})",
+        "good": "it.prop(\n  \"should encode and decode any user\",\n  { user: Arbitrary.make(User) },\n  ({ user }) => {\n    const encoded = Schema.encodeSync(User)(user)\n    const decoded = Schema.decodeUnknownSync(User)(encoded)\n    expect(decoded).toEqual(user)\n  }\n)"
+      }
+    },
+    {
+      "id": "loop-test-to-prop-effect",
+      "rule": "Manual property tests → it.prop with Arbitrary.make(Schema)",
+      "example": {
+        "description": "Property test with Effect",
+        "bad": "it(\"should process orders correctly\", async () => {\n  const orders = generateTestOrders(100)\n\n  for (const order of orders) {\n    const result = await Effect.runPromise(processOrder(order))\n    expect(result.status).toBe(\"completed\")\n  }\n})",
+        "good": "it.effect.prop(\n  \"should process any valid order\",\n  [Arbitrary.make(Order)],\n  ([order]) =>\n    Effect.gen(function* () {\n      const result = yield* processOrder(order)\n      expect(result.status).toBe(\"completed\")\n    })\n)"
+      }
+    }
+  ]
+}

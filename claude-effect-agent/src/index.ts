@@ -1,4 +1,4 @@
-import { CATEGORIES } from "./categories/index.js";
+import { loadCategories, flattenCategories } from "./categories/index.js";
 import { runDetectionPhase } from "./phases/detection.js";
 import { runMergePhase } from "./phases/merge.js";
 import { runApplyPhase } from "./phases/apply.js";
@@ -23,17 +23,22 @@ async function main() {
     process.exit(1);
   }
 
+  // Load categories and flatten to patterns
+  const categories = await loadCategories();
+  const patterns = flattenCategories(categories);
+
   console.log(`\n🔍 Effect Code Style Fixer (Parallel)`);
   console.log(`Target: ${target}`);
   console.log(`Max iterations: ${maxIterations}`);
-  console.log(`Categories: ${CATEGORIES.map((c) => c.id).join(", ")}`);
+  console.log(`Categories: ${categories.map((c) => c.id).join(", ")}`);
+  console.log(`Patterns: ${patterns.length} total`);
 
   for (let iteration = 1; iteration <= maxIterations; iteration++) {
     console.log(`\n${"━".repeat(50)}`);
     console.log(`Iteration ${iteration}`);
     console.log(`${"━".repeat(50)}`);
 
-    // Phase 1: Detection (parallel by category)
+    // Phase 1: Detection (parallel by pattern)
     await runDetectionPhase(target);
 
     // Phase 2: Merge (sequential, in-process)

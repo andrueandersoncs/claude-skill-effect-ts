@@ -8,6 +8,7 @@ export interface Change {
 
 export interface ChangeDescriptor {
   category: string;
+  pattern: string;
   targetFile: string;
   changes: Change[];
 }
@@ -16,6 +17,7 @@ export interface MergedDescriptor {
   targetFile: string;
   changes: Change[];
   categories: string[];
+  patterns: string[];
 }
 
 export interface QueryResult {

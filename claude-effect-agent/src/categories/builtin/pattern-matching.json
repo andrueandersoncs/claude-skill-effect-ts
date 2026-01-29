@@ -1,0 +1,177 @@
+{
+  "id": "pattern-matching",
+  "name": "Pattern Matching",
+  "patterns": [
+    {
+      "id": "match-value-role",
+      "rule": "Match.value for value-based matching",
+      "example": {
+        "description": "Role-based access control",
+        "bad": "if (user.role === \"admin\") {\n  return \"full access\"\n} else if (user.role === \"user\") {\n  return \"limited access\"\n} else {\n  return \"no access\"\n}",
+        "good": "const getAccess = (user: User) =>\n  Match.value(user.role).pipe(\n    Match.when(\"admin\", () => \"full access\"),\n    Match.when(\"user\", () => \"limited access\"),\n    Match.orElse(() => \"no access\")\n  )"
+      }
+    },
+    {
+      "id": "match-value-range",
+      "rule": "Match.value for value-based matching",
+      "example": {
+        "description": "Numeric range matching",
+        "bad": "if (score >= 90) {\n  return \"A\"\n} else if (score >= 80) {\n  return \"B\"\n} else {\n  return \"F\"\n}",
+        "good": "const getGrade = (score: number) =>\n  Match.value(score).pipe(\n    Match.when((s) => s >= 90, () => \"A\"),\n    Match.when((s) => s >= 80, () => \"B\"),\n    Match.orElse(() => \"F\")\n  )"
+      }
+    },
+    {
+      "id": "match-value-object",
+      "rule": "Match.value for value-based matching",
+      "example": {
+        "description": "Object property matching",
+        "bad": "if (order.total > 1000 && order.isPremium) {\n  return 0.25\n} else if (order.total > 1000) {\n  return 0.15\n} else {\n  return 0\n}",
+        "good": "const calculateDiscount = (order: Order) =>\n  Match.value(order).pipe(\n    Match.when({ total: (t) => t > 1000, isPremium: true }, () => 0.25),\n    Match.when({ total: (t) => t > 1000 }, () => 0.15),\n    Match.orElse(() => 0)\n  )"
+      }
+    },
+    {
+      "id": "match-tag-event",
+      "rule": "Match.type + Match.tag for discriminated unions",
+      "example": {
+        "description": "Event handling",
+        "bad": "switch (event.type) {\n  case \"UserCreated\":\n    return notifyAdmin(event.userId)\n  case \"UserDeleted\":\n    return cleanupData(event.userId)\n  default:\n    throw new Error(\"Unknown event\")\n}",
+        "good": "const handleEvent = Match.type<AppEvent>().pipe(\n  Match.tag(\"UserCreated\", (e) => notifyAdmin(e.userId)),\n  Match.tag(\"UserDeleted\", (e) => cleanupData(e.userId)),\n  Match.exhaustive\n)"
+      }
+    },
+    {
+      "id": "match-tag-error-status",
+      "rule": "Match.type + Match.tag for discriminated unions",
+      "example": {
+        "description": "Error to HTTP status mapping",
+        "bad": "function toHttpStatus(error: AppError): number {\n  if (error._tag === \"NotFound\") return 404\n  if (error._tag === \"Unauthorized\") return 401\n  if (error._tag === \"ValidationError\") return 400\n  return 500\n}",
+        "good": "const toHttpStatus = Match.type<AppError>().pipe(\n  Match.tag(\"NotFound\", () => 404),\n  Match.tag(\"Unauthorized\", () => 401),\n  Match.tag(\"ValidationError\", () => 400),\n  Match.tag(\"InternalError\", () => 500),\n  Match.exhaustive\n)"
+      }
+    },
+    {
+      "id": "match-tag-order-status",
+      "rule": "Match.type + Match.tag for discriminated unions",
+      "example": {
+        "description": "Order status display",
+        "bad": "function getStatusMessage(order: Order): string {\n  switch (order._tag) {\n    case \"Pending\": return \"Awaiting shipment\"\n    case \"Shipped\": return `Tracking: ${order.trackingNumber}`\n    case \"Delivered\": return `Delivered ${order.deliveredAt}`\n  }\n}",
+        "good": "const getOrderStatus = (order: Order) =>\n  Match.value(order).pipe(\n    Match.when(Schema.is(Pending), () => \"Awaiting shipment\"),\n    Match.when(Schema.is(Shipped), (o) => `Tracking: ${o.trackingNumber}`),\n    Match.when(Schema.is(Delivered), (o) => `Delivered ${o.deliveredAt}`),\n    Match.exhaustive\n  )"
+      }
+    },
+    {
+      "id": "schema-is-conditional",
+      "rule": "Schema.is() for type guards (not ._tag access)",
+      "example": {
+        "description": "Type narrowing in conditionals",
+        "bad": "if (event._tag === \"UserCreated\") {\n  notifyAdmin(event.userId)\n}\n\nconst isCreated = event._tag === \"UserCreated\"",
+        "good": "if (Schema.is(UserCreated)(event)) {\n  // event is narrowed to UserCreated\n  notifyAdmin(event.userId)\n}\n\nconst isCreated = Schema.is(UserCreated)(event)"
+      }
+    },
+    {
+      "id": "schema-is-array-predicates",
+      "rule": "Schema.is() for type guards (not ._tag access)",
+      "example": {
+        "description": "Array predicates with Schema.is()",
+        "bad": "const hasConflict = conflicts.some((c) => c._tag === \"MergeConflict\")\nconst mergeConflicts = conflicts.filter((c) => c._tag === \"MergeConflict\")\nconst countMerge = conflicts.filter((c) => c._tag === \"MergeConflict\").length",
+        "good": "const hasConflict = conflicts.some(Schema.is(MergeConflict))\nconst mergeConflicts = conflicts.filter(Schema.is(MergeConflict))\nconst countMerge = conflicts.filter(Schema.is(MergeConflict)).length"
+      }
+    },
+    {
+      "id": "schema-is-find-partition",
+      "rule": "Schema.is() for type guards (not ._tag access)",
+      "example": {
+        "description": "Finding and partitioning by type",
+        "bad": "const firstPending = orders.find((o) => o._tag === \"Pending\")\nconst pending = orders.filter((o) => o._tag === \"Pending\")\nconst notPending = orders.filter((o) => o._tag !== \"Pending\")",
+        "good": "const firstPending = Array.findFirst(orders, Schema.is(Pending))\nconst [notPending, pending] = Array.partition(orders, Schema.is(Pending))"
+      }
+    },
+    {
+      "id": "no-extract-tag",
+      "rule": "Schema.is() for type guards (not ._tag access)",
+      "example": {
+        "description": "Never extract ._tag as a type",
+        "bad": "type ConflictTag = Conflict[\"_tag\"]\ntype EventType = AppEvent[\"_tag\"]\n\n// Using extracted tag\nfunction handleByTag(tag: EventType) { ... }",
+        "good": "// Don't extract _tag - use the union directly with Match or Schema.is\n\n// For type narrowing, use Schema.is\nconst isUserCreated = Schema.is(UserCreated)\n\n// For exhaustive handling, use Match\nconst handleAll = Match.type<AppEvent>().pipe(\n  Match.tag(\"UserCreated\", handleUserCreated),\n  Match.tag(\"UserDeleted\", handleUserDeleted),\n  Match.exhaustive\n)"
+      }
+    },
+    {
+      "id": "option-match-null",
+      "rule": "Option.match for nullable/optional values",
+      "example": {
+        "description": "Null check for display",
+        "bad": "if (user != null) {\n  return user.name\n} else {\n  return \"Guest\"\n}\n\n// Or with nullish coalescing\nconst name = user?.name ?? \"Guest\"",
+        "good": "const displayName = Option.match(maybeUser, {\n  onNone: () => \"Guest\",\n  onSome: (user) => user.name\n})"
+      }
+    },
+    {
+      "id": "option-match-transform",
+      "rule": "Option.match for nullable/optional values",
+      "example": {
+        "description": "Optional with transformation",
+        "bad": "const email = user?.email?.toLowerCase() ?? \"no-email\"",
+        "good": "const email = pipe(\n  Option.fromNullable(user),\n  Option.flatMap((u) => Option.fromNullable(u.email)),\n  Option.map((e) => e.toLowerCase()),\n  Option.getOrElse(() => \"no-email\")\n)"
+      }
+    },
+    {
+      "id": "option-match-effectful",
+      "rule": "Option.match for nullable/optional values",
+      "example": {
+        "description": "Effectful handling of Option",
+        "bad": "if (maybeUser != null) {\n  await sendEmail(maybeUser.email)\n} else {\n  console.log(\"No user to notify\")\n}",
+        "good": "Option.match(maybeUser, {\n  onNone: () => Effect.log(\"No user to notify\"),\n  onSome: (user) => sendEmail(user.email)\n})"
+      }
+    },
+    {
+      "id": "either-match-parse",
+      "rule": "Either.match for Result types",
+      "example": {
+        "description": "Parse result handling",
+        "bad": "const result = parseUser(input)\nif (result.success) {\n  process(result.data)\n} else {\n  handleError(result.error)\n}",
+        "good": "pipe(\n  Schema.decodeEither(User)(input),\n  Either.match({\n    onLeft: (error) => handleError(error),\n    onRight: (user) => process(user)\n  })\n)"
+      }
+    },
+    {
+      "id": "either-match-validation",
+      "rule": "Either.match for Result types",
+      "example": {
+        "description": "Validation result",
+        "bad": "try {\n  const validated = validate(data)\n  return { success: true, data: validated }\n} catch (e) {\n  return { success: false, error: e }\n}",
+        "good": "const result = Schema.decodeEither(ValidationSchema)(data)\n\nEither.match(result, {\n  onLeft: (error) => Effect.fail(new ValidationError({ cause: error })),\n  onRight: (validated) => Effect.succeed(validated)\n})"
+      }
+    },
+    {
+      "id": "effect-match-success-failure",
+      "rule": "Effect.match for Effect results",
+      "example": {
+        "description": "Handling Effect success/failure",
+        "bad": "try {\n  const user = await Effect.runPromise(getUser(id))\n  return { status: \"success\", user }\n} catch (error) {\n  return { status: \"error\", message: error.message }\n}",
+        "good": "Effect.match(getUser(id), {\n  onFailure: (error) => ({ status: \"error\", message: error.message }),\n  onSuccess: (user) => ({ status: \"success\", user })\n})"
+      }
+    },
+    {
+      "id": "effect-match-response",
+      "rule": "Effect.match for Effect results",
+      "example": {
+        "description": "Converting Effect to response",
+        "bad": "const handleRequest = async (id: string) => {\n  try {\n    const data = await Effect.runPromise(fetchData(id))\n    return new Response(JSON.stringify(data), { status: 200 })\n  } catch (e) {\n    return new Response(\"Error\", { status: 500 })\n  }\n}",
+        "good": "const handleRequest = (id: string) =>\n  fetchData(id).pipe(\n    Effect.match({\n      onFailure: () => new Response(\"Error\", { status: 500 }),\n      onSuccess: (data) => new Response(JSON.stringify(data), { status: 200 })\n    })\n  )"
+      }
+    },
+    {
+      "id": "array-match-empty",
+      "rule": "Array.match for empty/non-empty handling",
+      "example": {
+        "description": "Empty array display",
+        "bad": "if (items.length === 0) {\n  return \"No items\"\n} else {\n  return `${items.length} items`\n}",
+        "good": "const message = Array.match(items, {\n  onEmpty: () => \"No items\",\n  onNonEmpty: (items) => `${items.length} items`\n})"
+      }
+    },
+    {
+      "id": "array-match-head",
+      "rule": "Array.match for empty/non-empty handling",
+      "example": {
+        "description": "First element or default",
+        "bad": "const first = items.length > 0 ? items[0] : defaultItem",
+        "good": "const first = Array.match(items, {\n  onEmpty: () => defaultItem,\n  onNonEmpty: (arr) => Array.headNonEmpty(arr)\n})"
+      }
+    }
+  ]
+}

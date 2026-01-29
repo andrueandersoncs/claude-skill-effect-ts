@@ -1,0 +1,96 @@
+{
+  "id": "schema",
+  "name": "Schema Anti-Patterns",
+  "patterns": [
+    {
+      "id": "interface-to-class",
+      "rule": "Plain TypeScript interfaces → Schema.Class or Schema.Struct",
+      "example": {
+        "description": "Domain entity definition",
+        "bad": "interface User {\n  id: string\n  email: string\n  name: string\n  createdAt: Date\n}",
+        "good": "class User extends Schema.Class<User>(\"User\")({\n  id: Schema.String.pipe(Schema.brand(\"UserId\")),\n  email: Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\\.[^@]+$/)),\n  name: Schema.String.pipe(Schema.nonEmptyString()),\n  createdAt: Schema.Date,\n}) {\n  get emailDomain() {\n    return this.email.split(\"@\")[1]\n  }\n}"
+      }
+    },
+    {
+      "id": "type-to-struct",
+      "rule": "Plain TypeScript interfaces → Schema.Class or Schema.Struct",
+      "example": {
+        "description": "Simple data structure",
+        "bad": "type Point = { x: number; y: number }",
+        "good": "const Point = Schema.Struct({\n  x: Schema.Number,\n  y: Schema.Number,\n})\ntype Point = Schema.Schema.Type<typeof Point>"
+      }
+    },
+    {
+      "id": "struct-to-class-methods",
+      "rule": "Schema.Struct for domain entities → Schema.Class (with methods)",
+      "example": {
+        "description": "Entity needing methods",
+        "bad": "const User = Schema.Struct({\n  id: Schema.String,\n  firstName: Schema.String,\n  lastName: Schema.String,\n})\n\n// Helper function outside schema\nconst getFullName = (user: User) => `${user.firstName} ${user.lastName}`",
+        "good": "class User extends Schema.Class<User>(\"User\")({\n  id: Schema.String,\n  firstName: Schema.String,\n  lastName: Schema.String,\n}) {\n  get fullName() {\n    return `${this.firstName} ${this.lastName}`\n  }\n}"
+      }
+    },
+    {
+      "id": "struct-to-class-computed",
+      "rule": "Schema.Struct for domain entities → Schema.Class (with methods)",
+      "example": {
+        "description": "Entity with computed properties",
+        "bad": "const Order = Schema.Struct({\n  items: Schema.Array(OrderItem),\n  discount: Schema.Number,\n})\n\nconst getTotal = (order: Order) =>\n  order.items.reduce((sum, i) => sum + i.price, 0) * (1 - order.discount)",
+        "good": "class Order extends Schema.Class<Order>(\"Order\")({\n  items: Schema.Array(OrderItem),\n  discount: Schema.Number,\n}) {\n  get subtotal() {\n    return Array.reduce(this.items, 0, (sum, i) => sum + i.price)\n  }\n  get total() {\n    return this.subtotal * (1 - this.discount)\n  }\n}"
+      }
+    },
+    {
+      "id": "optional-to-tagged-union",
+      "rule": "Optional properties for state → Tagged unions",
+      "example": {
+        "description": "Order status with optional fields",
+        "bad": "const Order = Schema.Struct({\n  orderId: Schema.String,\n  items: Schema.Array(Schema.String),\n  trackingNumber: Schema.optional(Schema.String),\n  shippedAt: Schema.optional(Schema.Date),\n  deliveredAt: Schema.optional(Schema.Date),\n})",
+        "good": "class Pending extends Schema.TaggedClass<Pending>()(\"Pending\", {\n  orderId: Schema.String,\n  items: Schema.Array(Schema.String),\n}) {}\n\nclass Shipped extends Schema.TaggedClass<Shipped>()(\"Shipped\", {\n  orderId: Schema.String,\n  items: Schema.Array(Schema.String),\n  trackingNumber: Schema.String,\n  shippedAt: Schema.Date,\n}) {}\n\nclass Delivered extends Schema.TaggedClass<Delivered>()(\"Delivered\", {\n  orderId: Schema.String,\n  items: Schema.Array(Schema.String),\n  deliveredAt: Schema.Date,\n}) {}\n\nconst Order = Schema.Union(Pending, Shipped, Delivered)\ntype Order = Schema.Schema.Type<typeof Order>"
+      }
+    },
+    {
+      "id": "optional-to-tagged-auth",
+      "rule": "Optional properties for state → Tagged unions",
+      "example": {
+        "description": "Authentication state",
+        "bad": "const AuthState = Schema.Struct({\n  isAuthenticated: Schema.Boolean,\n  user: Schema.optional(UserSchema),\n  error: Schema.optional(Schema.String),\n})",
+        "good": "class Anonymous extends Schema.TaggedClass<Anonymous>()(\"Anonymous\", {}) {}\n\nclass Authenticated extends Schema.TaggedClass<Authenticated>()(\"Authenticated\", {\n  user: UserSchema,\n  token: Schema.String,\n}) {}\n\nclass AuthError extends Schema.TaggedClass<AuthError>()(\"AuthError\", {\n  message: Schema.String,\n}) {}\n\nconst AuthState = Schema.Union(Anonymous, Authenticated, AuthError)"
+      }
+    },
+    {
+      "id": "any-to-typed",
+      "rule": "Schema.Any/Schema.Unknown → Proper typed schemas",
+      "example": {
+        "description": "API response handling",
+        "bad": "const ApiResponse = Schema.Struct({\n  status: Schema.Number,\n  data: Schema.Any, // What's in here?\n})",
+        "good": "// Define specific response schemas\nconst UserResponse = Schema.Struct({\n  status: Schema.Literal(200),\n  data: User,\n})\n\nconst ErrorResponse = Schema.Struct({\n  status: Schema.Number.pipe(Schema.greaterThan(299)),\n  error: Schema.String,\n})\n\nconst ApiResponse = Schema.Union(UserResponse, ErrorResponse)"
+      }
+    },
+    {
+      "id": "unknown-legitimate",
+      "rule": "Schema.Any/Schema.Unknown → Proper typed schemas",
+      "example": {
+        "description": "Exception cause field (legitimate use)",
+        "bad": "// Overusing Schema.Unknown\nconst Event = Schema.Struct({\n  type: Schema.String,\n  payload: Schema.Unknown, // Should be typed\n})",
+        "good": "// Schema.Unknown is OK for genuinely unconstrained data\nclass AppError extends Schema.TaggedError<AppError>()(\"AppError\", {\n  message: Schema.String,\n  cause: Schema.Unknown, // Legitimate: captures arbitrary caught exceptions\n}) {}\n\n// But domain data should be typed\nclass UserCreated extends Schema.TaggedClass<UserCreated>()(\"UserCreated\", {\n  userId: Schema.String,\n  email: Schema.String,\n}) {}"
+      }
+    },
+    {
+      "id": "json-parse-to-schema",
+      "rule": "JSON.parse() → Schema.parseJson()",
+      "example": {
+        "description": "Parsing JSON string",
+        "bad": "const data = JSON.parse(jsonString)\n// data is 'any' - no validation",
+        "good": "const parseUser = Schema.decodeUnknownSync(\n  Schema.parseJson(User)\n)\nconst user = parseUser(jsonString)\n// user is fully typed and validated"
+      }
+    },
+    {
+      "id": "json-parse-error-handling",
+      "rule": "JSON.parse() → Schema.parseJson()",
+      "example": {
+        "description": "Parsing with error handling",
+        "bad": "try {\n  const data = JSON.parse(jsonString)\n  processUser(data)\n} catch (e) {\n  console.error(\"Invalid JSON\")\n}",
+        "good": "const parseUser = Schema.decodeUnknown(Schema.parseJson(User))\n\npipe(\n  parseUser(jsonString),\n  Effect.map(processUser),\n  Effect.catchTag(\"ParseError\", (e) =>\n    Effect.logError(\"Invalid user JSON\", e)\n  )\n)"
+      }
+    }
+  ]
+}

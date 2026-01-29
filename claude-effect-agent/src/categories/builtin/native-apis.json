@@ -1,0 +1,168 @@
+{
+  "id": "native-apis",
+  "name": "Native API Replacements",
+  "patterns": [
+    {
+      "id": "array-find-to-findfirst",
+      "rule": "array.find() → Array.findFirst (returns Option)",
+      "example": {
+        "description": "Finding element in array",
+        "bad": "const admin = users.find((u) => u.role === \"admin\")\nif (admin) {\n  notifyAdmin(admin)\n}",
+        "good": "const admin = Array.findFirst(users, (u) => u.role === \"admin\")\nOption.match(admin, {\n  onNone: () => Effect.void,\n  onSome: (a) => notifyAdmin(a)\n})"
+      }
+    },
+    {
+      "id": "array-find-default",
+      "rule": "array.find() → Array.findFirst (returns Option)",
+      "example": {
+        "description": "Finding with default",
+        "bad": "const found = items.find((i) => i.id === targetId) ?? defaultItem",
+        "good": "const found = pipe(\n  Array.findFirst(items, (i) => i.id === targetId),\n  Option.getOrElse(() => defaultItem)\n)"
+      }
+    },
+    {
+      "id": "array-index-to-get",
+      "rule": "array[index] → Array.get(array, index) (returns Option)",
+      "example": {
+        "description": "Safe index access",
+        "bad": "const first = items[0]\nif (first) {\n  process(first)\n}",
+        "good": "pipe(\n  Array.get(items, 0),\n  Option.match({\n    onNone: () => Effect.void,\n    onSome: (item) => process(item)\n  })\n)"
+      }
+    },
+    {
+      "id": "array-index-fallback",
+      "rule": "array[index] → Array.get(array, index) (returns Option)",
+      "example": {
+        "description": "Index with fallback",
+        "bad": "const item = items[index] ?? defaultItem",
+        "good": "const item = pipe(\n  Array.get(items, index),\n  Option.getOrElse(() => defaultItem)\n)"
+      }
+    },
+    {
+      "id": "array-head-last",
+      "rule": "array[index] → Array.get(array, index) (returns Option)",
+      "example": {
+        "description": "Head and tail access",
+        "bad": "const first = arr[0]\nconst last = arr[arr.length - 1]",
+        "good": "const first = Array.head(arr)     // Option<A>\nconst last = Array.last(arr)       // Option<A>"
+      }
+    },
+    {
+      "id": "object-keys-to-record",
+      "rule": "Object.keys/values/entries → Record.keys/values/toEntries",
+      "example": {
+        "description": "Iterating object keys",
+        "bad": "Object.keys(config).forEach((key) => {\n  console.log(key, config[key])\n})",
+        "good": "pipe(\n  Record.toEntries(config),\n  Array.forEach(([key, value]) => console.log(key, value))\n)"
+      }
+    },
+    {
+      "id": "object-values-keys",
+      "rule": "Object.keys/values/entries → Record.keys/values/toEntries",
+      "example": {
+        "description": "Getting all values",
+        "bad": "const allValues = Object.values(priceMap)\nconst allKeys = Object.keys(priceMap)",
+        "good": "const allValues = Record.values(priceMap)\nconst allKeys = Record.keys(priceMap)"
+      }
+    },
+    {
+      "id": "object-entries-from-entries",
+      "rule": "Object.keys/values/entries → Record.keys/values/toEntries",
+      "example": {
+        "description": "Converting to entries",
+        "bad": "const entries = Object.entries(config)\nconst fromEntries = Object.fromEntries(entries)",
+        "good": "const entries = Record.toEntries(config)\nconst fromEntries = Record.fromEntries(entries)"
+      }
+    },
+    {
+      "id": "record-index-to-get",
+      "rule": "record[key] → Record.get(record, key) (returns Option)",
+      "example": {
+        "description": "Safe property access",
+        "bad": "const price = prices[itemId]\nif (price !== undefined) {\n  calculateTotal(price)\n}",
+        "good": "pipe(\n  Record.get(prices, itemId),\n  Option.match({\n    onNone: () => Effect.fail(new ItemNotFound({ itemId })),\n    onSome: (price) => calculateTotal(price)\n  })\n)"
+      }
+    },
+    {
+      "id": "record-key-default",
+      "rule": "record[key] → Record.get(record, key) (returns Option)",
+      "example": {
+        "description": "Property with default",
+        "bad": "const value = config[key] ?? defaultValue",
+        "good": "const value = pipe(\n  Record.get(config, key),\n  Option.getOrElse(() => defaultValue)\n)"
+      }
+    },
+    {
+      "id": "predicate-and-or",
+      "rule": "Manual && / || for predicates → Predicate.and / Predicate.or / Predicate.not",
+      "example": {
+        "description": "Combining predicates",
+        "bad": "const isValidUser = (u: User) =>\n  u.age >= 18 && u.verified && !u.banned",
+        "good": "const isAdult = (u: User) => u.age >= 18\nconst isVerified = (u: User) => u.verified\nconst isBanned = (u: User) => u.banned\n\nconst isValidUser = Predicate.and(\n  isAdult,\n  Predicate.and(isVerified, Predicate.not(isBanned))\n)"
+      }
+    },
+    {
+      "id": "predicate-or",
+      "rule": "Manual && / || for predicates → Predicate.and / Predicate.or / Predicate.not",
+      "example": {
+        "description": "Alternative conditions",
+        "bad": "const canAccess = (u: User) =>\n  u.role === \"admin\" || u.permissions.includes(\"read\")",
+        "good": "const isAdmin = (u: User) => u.role === \"admin\"\nconst hasReadPermission = (u: User) => u.permissions.includes(\"read\")\n\nconst canAccess = Predicate.or(isAdmin, hasReadPermission)"
+      }
+    },
+    {
+      "id": "predicate-struct",
+      "rule": "Manual && / || for predicates → Predicate.and / Predicate.or / Predicate.not",
+      "example": {
+        "description": "Struct predicate",
+        "bad": "const isValidInput = (input: unknown) =>\n  typeof input === \"object\" &&\n  input !== null &&\n  typeof (input as any).name === \"string\" &&\n  typeof (input as any).age === \"number\"",
+        "good": "const isValidInput = Predicate.struct({\n  name: Predicate.isString,\n  age: Predicate.isNumber\n})"
+      }
+    },
+    {
+      "id": "spread-to-evolve",
+      "rule": "Struct spread for updates → Struct.evolve",
+      "example": {
+        "description": "Updating specific fields",
+        "bad": "const updated = {\n  ...user,\n  age: user.age + 1,\n  name: user.name.toUpperCase()\n}",
+        "good": "const updated = Struct.evolve(user, {\n  age: (age) => age + 1,\n  name: (name) => name.toUpperCase()\n})"
+      }
+    },
+    {
+      "id": "destructure-to-pick",
+      "rule": "Struct spread for updates → Struct.evolve",
+      "example": {
+        "description": "Picking fields",
+        "bad": "const { firstName, lastName } = user\nconst namePart = { firstName, lastName }",
+        "good": "const namePart = Struct.pick(user, \"firstName\", \"lastName\")"
+      }
+    },
+    {
+      "id": "rest-spread-to-omit",
+      "rule": "Struct spread for updates → Struct.evolve",
+      "example": {
+        "description": "Omitting fields",
+        "bad": "const { password, ssn, ...publicUser } = user",
+        "good": "const publicUser = Struct.omit(user, \"password\", \"ssn\")"
+      }
+    },
+    {
+      "id": "tuple-index-to-get",
+      "rule": "tuple[0]/tuple[1] → Tuple.getFirst/getSecond",
+      "example": {
+        "description": "Tuple element access",
+        "bad": "const pair = [\"key\", 42] as const\nconst key = pair[0]\nconst value = pair[1]",
+        "good": "const pair = Tuple.make(\"key\", 42)\nconst key = Tuple.getFirst(pair)\nconst value = Tuple.getSecond(pair)"
+      }
+    },
+    {
+      "id": "tuple-transform",
+      "rule": "tuple[0]/tuple[1] → Tuple.getFirst/getSecond",
+      "example": {
+        "description": "Tuple transformation",
+        "bad": "const transformed = [\n  pair[0].toUpperCase(),\n  pair[1] * 2\n] as const",
+        "good": "const transformed = Tuple.mapBoth(pair, {\n  onFirst: (s) => s.toUpperCase(),\n  onSecond: (n) => n * 2\n})"
+      }
+    }
+  ]
+}

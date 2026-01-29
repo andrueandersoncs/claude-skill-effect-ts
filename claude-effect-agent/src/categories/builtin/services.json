@@ -1,0 +1,60 @@
+{
+  "id": "services",
+  "name": "Service & Layer Patterns",
+  "patterns": [
+    {
+      "id": "direct-api-to-context-tag",
+      "rule": "Direct external API calls → Context.Tag service",
+      "example": {
+        "description": "HTTP API call",
+        "bad": "const getUser = (id: string) =>\n  Effect.tryPromise(() =>\n    fetch(`https://api.example.com/users/${id}`).then((r) => r.json())\n  )\n\n// Used directly in business logic\nconst processUser = (id: string) =>\n  Effect.gen(function* () {\n    const user = yield* getUser(id) // Direct API call - untestable!\n    return processData(user)\n  })",
+        "good": "// Define service interface\nclass UserApi extends Context.Tag(\"UserApi\")<\n  UserApi,\n  {\n    readonly getUser: (id: string) => Effect.Effect<User, ApiError>\n    readonly updateUser: (user: User) => Effect.Effect<void, ApiError>\n  }\n>() {}\n\n// Use service in business logic\nconst processUser = (id: string) =>\n  Effect.gen(function* () {\n    const api = yield* UserApi\n    const user = yield* api.getUser(id)\n    return processData(user)\n  })\n\n// Live implementation\nconst UserApiLive = Layer.succeed(UserApi, {\n  getUser: (id) =>\n    Effect.tryPromise({\n      try: () => fetch(`https://api.example.com/users/${id}`).then((r) => r.json()),\n      catch: (e) => new ApiError({ cause: e })\n    }),\n  updateUser: (user) =>\n    Effect.tryPromise({\n      try: () => fetch(`https://api.example.com/users/${user.id}`, {\n        method: \"PUT\",\n        body: JSON.stringify(user)\n      }),\n      catch: (e) => new ApiError({ cause: e })\n    })\n})\n\n// Test implementation\nconst UserApiTest = Layer.succeed(UserApi, {\n  getUser: (id) => Effect.succeed({ id, name: \"Test User\", email: \"test@test.com\" }),\n  updateUser: () => Effect.void\n})"
+      }
+    },
+    {
+      "id": "direct-db-to-repository",
+      "rule": "Direct database access → Context.Tag repository",
+      "example": {
+        "description": "Database operations",
+        "bad": "import { db } from \"./database\"\n\nconst findUser = (id: string) =>\n  Effect.tryPromise(() => db.query(\"SELECT * FROM users WHERE id = ?\", [id]))\n\nconst saveUser = (user: User) =>\n  Effect.tryPromise(() => db.query(\"INSERT INTO users VALUES (?)\", [user]))",
+        "good": "// Repository interface\nclass UserRepository extends Context.Tag(\"UserRepository\")<\n  UserRepository,\n  {\n    readonly findById: (id: UserId) => Effect.Effect<User, UserNotFound>\n    readonly findByEmail: (email: string) => Effect.Effect<User, UserNotFound>\n    readonly save: (user: User) => Effect.Effect<void>\n    readonly delete: (id: UserId) => Effect.Effect<void>\n  }\n>() {}\n\n// Live implementation with real database\nconst UserRepositoryLive = Layer.effect(\n  UserRepository,\n  Effect.gen(function* () {\n    const db = yield* Database\n    return {\n      findById: (id) =>\n        Effect.tryPromise({\n          try: () => db.query(\"SELECT * FROM users WHERE id = ?\", [id]),\n          catch: () => new UserNotFound({ userId: id })\n        }),\n      findByEmail: (email) =>\n        Effect.tryPromise({\n          try: () => db.query(\"SELECT * FROM users WHERE email = ?\", [email]),\n          catch: () => new UserNotFound({ userId: email })\n        }),\n      save: (user) =>\n        Effect.tryPromise({\n          try: () => db.query(\"INSERT INTO users VALUES (?)\", [user]),\n          catch: (e) => new DatabaseError({ cause: e })\n        }),\n      delete: (id) =>\n        Effect.tryPromise({\n          try: () => db.query(\"DELETE FROM users WHERE id = ?\", [id]),\n          catch: (e) => new DatabaseError({ cause: e })\n        })\n    }\n  })\n)\n\n// Test implementation with in-memory store\nconst UserRepositoryTest = Layer.succeed(UserRepository, {\n  findById: (id) => Effect.succeed({ id, name: \"Test\", email: \"test@test.com\" }),\n  findByEmail: (email) => Effect.succeed({ id: \"1\", name: \"Test\", email }),\n  save: () => Effect.void,\n  delete: () => Effect.void\n})"
+      }
+    },
+    {
+      "id": "direct-fs-to-service",
+      "rule": "Direct file I/O → Context.Tag service",
+      "example": {
+        "description": "File system operations",
+        "bad": "import * as fs from \"fs/promises\"\n\nconst readConfig = () =>\n  Effect.tryPromise(() => fs.readFile(\"config.json\", \"utf-8\"))\n\nconst writeLog = (message: string) =>\n  Effect.tryPromise(() => fs.appendFile(\"app.log\", message))",
+        "good": "// FileSystem service\nclass FileSystem extends Context.Tag(\"FileSystem\")<\n  FileSystem,\n  {\n    readonly readFile: (path: string) => Effect.Effect<string, FileError>\n    readonly writeFile: (path: string, content: string) => Effect.Effect<void, FileError>\n    readonly appendFile: (path: string, content: string) => Effect.Effect<void, FileError>\n    readonly exists: (path: string) => Effect.Effect<boolean>\n  }\n>() {}\n\n// Live implementation\nconst FileSystemLive = Layer.succeed(FileSystem, {\n  readFile: (path) =>\n    Effect.tryPromise({\n      try: () => fs.readFile(path, \"utf-8\"),\n      catch: (e) => new FileError({ path, cause: e })\n    }),\n  writeFile: (path, content) =>\n    Effect.tryPromise({\n      try: () => fs.writeFile(path, content),\n      catch: (e) => new FileError({ path, cause: e })\n    }),\n  appendFile: (path, content) =>\n    Effect.tryPromise({\n      try: () => fs.appendFile(path, content),\n      catch: (e) => new FileError({ path, cause: e })\n    }),\n  exists: (path) =>\n    Effect.tryPromise({\n      try: () => fs.access(path).then(() => true).catch(() => false),\n      catch: () => false\n    })\n})\n\n// Test implementation with virtual file system\nconst FileSystemTest = (files: Map<string, string>) =>\n  Layer.succeed(FileSystem, {\n    readFile: (path) =>\n      pipe(\n        Option.fromNullable(files.get(path)),\n        Option.match({\n          onNone: () => Effect.fail(new FileError({ path, cause: \"Not found\" })),\n          onSome: (content) => Effect.succeed(content)\n        })\n      ),\n    writeFile: (path, content) =>\n      Effect.sync(() => { files.set(path, content) }),\n    appendFile: (path, content) =>\n      Effect.sync(() => {\n        const existing = files.get(path) ?? \"\"\n        files.set(path, existing + content)\n      }),\n    exists: (path) =>\n      Effect.succeed(files.has(path))\n  })"
+      }
+    },
+    {
+      "id": "missing-test-layers",
+      "rule": "Missing test Layers → *Live + *Test layers for every service",
+      "example": {
+        "description": "Complete layer setup",
+        "bad": "// Only has live implementation\nconst EmailServiceLive = Layer.succeed(EmailService, {\n  send: (email) => sendRealEmail(email)\n})\n\n// Tests hit real email service!\nit.effect(\"should send welcome email\", () =>\n  Effect.gen(function* () {\n    yield* sendWelcomeEmail(user)\n  }).pipe(Effect.provide(EmailServiceLive))\n)",
+        "good": "// Live implementation\nconst EmailServiceLive = Layer.succeed(EmailService, {\n  send: (email) => sendRealEmail(email)\n})\n\n// Test implementation that captures sent emails\nconst EmailServiceTest = (sentEmails: Array<Email> = []) =>\n  Layer.succeed(EmailService, {\n    send: (email) =>\n      Effect.sync(() => {\n        sentEmails.push(email)\n      })\n  })\n\n// Test can verify email behavior without sending\nit.effect(\"should send welcome email\", () => {\n  const sentEmails: Email[] = []\n  return Effect.gen(function* () {\n    yield* sendWelcomeEmail(user)\n    expect(sentEmails).toHaveLength(1)\n    expect(sentEmails[0].to).toBe(user.email)\n    expect(sentEmails[0].subject).toContain(\"Welcome\")\n  }).pipe(Effect.provide(EmailServiceTest(sentEmails)))\n})"
+      }
+    },
+    {
+      "id": "service-without-layer",
+      "rule": "Services without layers → Layer.effect or Layer.succeed",
+      "example": {
+        "description": "Simple stateless service",
+        "bad": "// Service defined but no layer\nclass Logger extends Context.Tag(\"Logger\")<\n  Logger,\n  { readonly log: (msg: string) => Effect.Effect<void> }\n>() {}\n\n// Using Effect.provideService directly (works but not composable)\nconst program = myEffect.pipe(\n  Effect.provideService(Logger, { log: (msg) => Effect.log(msg) })\n)",
+        "good": "class Logger extends Context.Tag(\"Logger\")<\n  Logger,\n  { readonly log: (msg: string) => Effect.Effect<void> }\n>() {}\n\n// Layer.succeed for simple implementations\nconst LoggerLive = Layer.succeed(Logger, {\n  log: (msg) => Effect.log(msg)\n})\n\n// Layer.effect when you need other services\nconst LoggerWithTimestamp = Layer.effect(\n  Logger,\n  Effect.gen(function* () {\n    const clock = yield* Clock\n    return {\n      log: (msg) =>\n        Effect.gen(function* () {\n          const now = yield* clock.currentTimeMillis\n          yield* Effect.log(`[${now}] ${msg}`)\n        })\n    }\n  })\n)\n\n// Layers compose\nconst AppLive = Layer.mergeAll(\n  LoggerLive,\n  UserRepositoryLive,\n  EmailServiceLive\n)"
+      }
+    },
+    {
+      "id": "inline-service-to-layer",
+      "rule": "Services without layers → Layer.effect or Layer.succeed",
+      "example": {
+        "description": "Service with dependencies",
+        "bad": "// Creating service implementation inline\nconst program = Effect.gen(function* () {\n  const db = yield* Database\n  const cache = yield* Cache\n\n  // Business logic mixed with service creation\n  const user = yield* db.query(\"...\")\n  yield* cache.set(user.id, user)\n})",
+        "good": "// UserService depends on Database and Cache\nconst UserServiceLive = Layer.effect(\n  UserService,\n  Effect.gen(function* () {\n    const db = yield* Database\n    const cache = yield* Cache\n\n    return {\n      getUser: (id) =>\n        Effect.gen(function* () {\n          // Check cache first\n          const cached = yield* cache.get(id)\n          if (Option.isSome(cached)) {\n            return cached.value\n          }\n\n          // Fetch from DB and cache\n          const user = yield* db.query(\"SELECT * FROM users WHERE id = ?\", [id])\n          yield* cache.set(id, user)\n          return user\n        }),\n      // ... other methods\n    }\n  })\n)\n\n// Layer composition handles dependencies\nconst AppLive = UserServiceLive.pipe(\n  Layer.provide(Layer.mergeAll(DatabaseLive, CacheLive))\n)"
+      }
+    }
+  ]
+}

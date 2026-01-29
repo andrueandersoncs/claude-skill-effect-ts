@@ -44,13 +44,15 @@ export async function runMergePhase(): Promise<string[]> {
       targetFile,
       changes: descs.flatMap((d) => d.changes),
       categories: [...new Set(descs.map((d) => d.category))],
+      patterns: [...new Set(descs.map((d) => d.pattern).filter(Boolean))],
     };
 
     const mergedPath = `.change-queue/merged/${sanitizeFilename(targetFile)}.json`;
     await writeFile(mergedPath, JSON.stringify(merged, null, 2));
     mergedFiles.push(mergedPath);
 
-    console.log(`  ${targetFile} (${merged.changes.length} changes from ${merged.categories.join(", ")})`);
+    const patternInfo = merged.patterns.length > 0 ? ` [${merged.patterns.length} patterns]` : "";
+    console.log(`  ${targetFile} (${merged.changes.length} changes from ${merged.categories.join(", ")}${patternInfo})`);
   }
 
   return mergedFiles;

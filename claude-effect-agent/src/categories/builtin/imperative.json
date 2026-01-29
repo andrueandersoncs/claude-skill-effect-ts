@@ -1,0 +1,204 @@
+{
+  "id": "imperative",
+  "name": "Loops & Mutation",
+  "patterns": [
+    {
+      "id": "for-loop-transform",
+      "rule": "for/while/do...while loops → Array.map/filter/reduce, Effect.forEach",
+      "example": {
+        "description": "Transforming array elements",
+        "bad": "const doubled = []\nfor (let i = 0; i < numbers.length; i++) {\n  doubled.push(numbers[i] * 2)\n}",
+        "good": "const doubled = Array.map(numbers, (n) => n * 2)\n// or with pipe\nconst doubled = pipe(numbers, Array.map((n) => n * 2))"
+      }
+    },
+    {
+      "id": "while-loop-accumulate",
+      "rule": "for/while/do...while loops → Array.map/filter/reduce, Effect.forEach",
+      "example": {
+        "description": "Accumulating values",
+        "bad": "let sum = 0\nlet i = 0\nwhile (i < numbers.length) {\n  sum += numbers[i]\n  i++\n}",
+        "good": "const sum = Array.reduce(numbers, 0, (acc, n) => acc + n)"
+      }
+    },
+    {
+      "id": "for-of-effectful",
+      "rule": "for/while/do...while loops → Array.map/filter/reduce, Effect.forEach",
+      "example": {
+        "description": "Effectful iteration",
+        "bad": "const results = []\nfor (const item of items) {\n  const result = await processItem(item)\n  results.push(result)\n}",
+        "good": "const results = yield* Effect.forEach(items, processItem)"
+      }
+    },
+    {
+      "id": "do-while-retry",
+      "rule": "for/while/do...while loops → Array.map/filter/reduce, Effect.forEach",
+      "example": {
+        "description": "do...while conversion",
+        "bad": "let attempts = 0\ndo {\n  const result = tryOperation()\n  if (result.success) break\n  attempts++\n} while (attempts < 3)",
+        "good": "const result = yield* Effect.retry(\n  tryOperation,\n  Schedule.recurs(3)\n)"
+      }
+    },
+    {
+      "id": "for-of-map",
+      "rule": "for...of/for...in → Array module functions",
+      "example": {
+        "description": "Processing collection",
+        "bad": "const results = []\nfor (const item of items) {\n  results.push(process(item))\n}",
+        "good": "const results = Array.map(items, process)"
+      }
+    },
+    {
+      "id": "for-of-filter-map",
+      "rule": "for...of/for...in → Array module functions",
+      "example": {
+        "description": "Filtering and transforming",
+        "bad": "const activeEmails = []\nfor (const user of users) {\n  if (user.active) {\n    activeEmails.push(user.email)\n  }\n}",
+        "good": "const activeEmails = pipe(\n  users,\n  Array.filter((u) => u.active),\n  Array.map((u) => u.email)\n)"
+      }
+    },
+    {
+      "id": "for-of-conditional-reduce",
+      "rule": "for...of/for...in → Array module functions",
+      "example": {
+        "description": "Conditional accumulation",
+        "bad": "let total = 0\nfor (const order of orders) {\n  if (order.status === \"completed\") {\n    total += order.amount\n  }\n}",
+        "good": "const total = pipe(\n  orders,\n  Array.filter((o) => o.status === \"completed\"),\n  Array.reduce(0, (acc, o) => acc + o.amount)\n)"
+      }
+    },
+    {
+      "id": "for-in-record-map",
+      "rule": "for...of/for...in → Array module functions",
+      "example": {
+        "description": "for...in on objects",
+        "bad": "const result = {}\nfor (const key in source) {\n  result[key] = transform(source[key])\n}",
+        "good": "const result = Record.map(source, transform)"
+      }
+    },
+    {
+      "id": "push-to-map",
+      "rule": "Variable mutation (let, push, pop, splice) → Immutable operations",
+      "example": {
+        "description": "Building array with push",
+        "bad": "const output = []\nitems.forEach(item => output.push(transform(item)))",
+        "good": "const output = Array.map(items, transform)"
+      }
+    },
+    {
+      "id": "let-accumulator",
+      "rule": "Variable mutation (let, push, pop, splice) → Immutable operations",
+      "example": {
+        "description": "Accumulator mutation",
+        "bad": "let total = 0\nfor (const price of prices) {\n  total += price\n}",
+        "good": "const total = Array.reduce(prices, 0, (acc, price) => acc + price)"
+      }
+    },
+    {
+      "id": "push-concat",
+      "rule": "Variable mutation (let, push, pop, splice) → Immutable operations",
+      "example": {
+        "description": "Array concatenation with push",
+        "bad": "const all = []\nall.push(...first)\nall.push(...second)",
+        "good": "const all = [...first, ...second]\n// or\nconst all = Array.appendAll(first, second)"
+      }
+    },
+    {
+      "id": "conditional-push",
+      "rule": "Variable mutation (let, push, pop, splice) → Immutable operations",
+      "example": {
+        "description": "Conditional array building",
+        "bad": "const selected = []\nfor (const item of items) {\n  if (isValid(item)) {\n    selected.push(item)\n  }\n}",
+        "good": "const selected = Array.filter(items, isValid)"
+      }
+    },
+    {
+      "id": "splice-to-array-ops",
+      "rule": "Variable mutation (let, push, pop, splice) → Immutable operations",
+      "example": {
+        "description": "Array splice/modification",
+        "bad": "const arr = [...items]\narr.splice(2, 1)  // Remove at index 2\narr.splice(1, 0, newItem)  // Insert at index 1",
+        "good": "const removed = pipe(\n  items,\n  Array.remove(2)\n)\nconst inserted = pipe(\n  items,\n  Array.insertAt(1, newItem),\n  Option.getOrElse(() => items)\n)"
+      }
+    },
+    {
+      "id": "let-counter",
+      "rule": "Reassignment → Functional transformation",
+      "example": {
+        "description": "Incrementing counter",
+        "bad": "let count = 0\nitems.forEach((item) => {\n  if (item.active) count++\n})",
+        "good": "const count = Array.filter(items, (i) => i.active).length\n// or\nconst count = Array.reduce(items, 0, (acc, i) => i.active ? acc + 1 : acc)"
+      }
+    },
+    {
+      "id": "conditional-reassign",
+      "rule": "Reassignment → Functional transformation",
+      "example": {
+        "description": "Conditional reassignment",
+        "bad": "let result = defaultValue\nif (condition1) {\n  result = value1\n} else if (condition2) {\n  result = value2\n}",
+        "good": "const result = Match.value({ condition1, condition2 }).pipe(\n  Match.when({ condition1: true }, () => value1),\n  Match.when({ condition2: true }, () => value2),\n  Match.orElse(() => defaultValue)\n)"
+      }
+    },
+    {
+      "id": "object-mutation",
+      "rule": "Reassignment → Functional transformation",
+      "example": {
+        "description": "Building object with mutation",
+        "bad": "const obj: Record<string, number> = {}\nfor (const item of items) {\n  obj[item.key] = item.value\n}",
+        "good": "const obj = pipe(\n  items,\n  Array.map((item) => [item.key, item.value] as const),\n  Record.fromEntries\n)"
+      }
+    },
+    {
+      "id": "stack-tree-traversal",
+      "rule": "Recursion for complex iteration",
+      "example": {
+        "description": "Tree traversal",
+        "bad": "const collectLeaves = (node) => {\n  const leaves = []\n  const stack = [node]\n  while (stack.length > 0) {\n    const current = stack.pop()\n    if (current.children.length === 0) {\n      leaves.push(current)\n    } else {\n      stack.push(...current.children)\n    }\n  }\n  return leaves\n}",
+        "good": "const collectLeaves = (node: TreeNode): ReadonlyArray<TreeNode> =>\n  Array.match(node.children, {\n    onEmpty: () => [node],\n    onNonEmpty: (children) => Array.flatMap(children, collectLeaves)\n  })"
+      }
+    },
+    {
+      "id": "recursive-async-tree",
+      "rule": "Recursion for complex iteration",
+      "example": {
+        "description": "Recursive Effect processing",
+        "bad": "async function processTree(node) {\n  if (node.children.length === 0) {\n    return await processLeaf(node)\n  }\n  const results = []\n  for (const child of node.children) {\n    results.push(await processTree(child))\n  }\n  return combineResults(results)\n}",
+        "good": "const processTree = (node: TreeNode): Effect.Effect<Result> =>\n  Array.match(node.children, {\n    onEmpty: () => processLeaf(node),\n    onNonEmpty: (children) =>\n      Effect.forEach(children, processTree).pipe(\n        Effect.flatMap(combineResults)\n      )\n  })"
+      }
+    },
+    {
+      "id": "for-loop-to-foreach",
+      "rule": "Effect combinators for async loops",
+      "example": {
+        "description": "Sequential processing",
+        "bad": "const processAll = Effect.gen(function* () {\n  const results = []\n  for (const item of items) {\n    const result = yield* processItem(item)\n    results.push(result)\n  }\n  return results\n})",
+        "good": "const processAll = Effect.forEach(items, processItem)"
+      }
+    },
+    {
+      "id": "promise-all-parallel",
+      "rule": "Effect combinators for async loops",
+      "example": {
+        "description": "Parallel processing",
+        "bad": "const results = await Promise.all(items.map(processItem))",
+        "good": "const results = yield* Effect.all(\n  Array.map(items, processItem),\n  { concurrency: \"unbounded\" }\n)"
+      }
+    },
+    {
+      "id": "batch-concurrency",
+      "rule": "Effect combinators for async loops",
+      "example": {
+        "description": "Limited concurrency",
+        "bad": "// Complex manual batching with Promise.all\nconst batchSize = 5\nfor (let i = 0; i < items.length; i += batchSize) {\n  const batch = items.slice(i, i + batchSize)\n  await Promise.all(batch.map(processItem))\n}",
+        "good": "const results = yield* Effect.all(\n  Array.map(items, processItem),\n  { concurrency: 5 }\n)"
+      }
+    },
+    {
+      "id": "effectful-reduce",
+      "rule": "Effect combinators for async loops",
+      "example": {
+        "description": "Effectful reduce",
+        "bad": "let total = 0\nfor (const item of items) {\n  const price = await getPrice(item)\n  total += price\n}",
+        "good": "const total = yield* Effect.reduce(items, 0, (acc, item) =>\n  getPrice(item).pipe(Effect.map((price) => acc + price))\n)"
+      }
+    }
+  ]
+}

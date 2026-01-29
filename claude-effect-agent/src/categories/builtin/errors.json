@@ -1,0 +1,78 @@
+{
+  "id": "errors",
+  "name": "Error Handling",
+  "patterns": [
+    {
+      "id": "throw-to-effect-fail",
+      "rule": "throw statements → Effect.fail()",
+      "example": {
+        "description": "Throwing domain error",
+        "bad": "function getUser(id: string): User {\n  const user = db.find(id)\n  if (!user) {\n    throw new Error(\"User not found\")\n  }\n  return user\n}",
+        "good": "const getUser = (id: string): Effect.Effect<User, UserNotFound> =>\n  Effect.gen(function* () {\n    const user = yield* findInDb(id)\n    if (!user) {\n      return yield* Effect.fail(new UserNotFound({ userId: id }))\n    }\n    return user\n  })"
+      }
+    },
+    {
+      "id": "throw-validation",
+      "rule": "throw statements → Effect.fail()",
+      "example": {
+        "description": "Validation error",
+        "bad": "function validateEmail(email: string): string {\n  if (!email.includes(\"@\")) {\n    throw new Error(\"Invalid email\")\n  }\n  return email\n}",
+        "good": "class InvalidEmail extends Schema.TaggedError<InvalidEmail>()(\"InvalidEmail\", {\n  email: Schema.String,\n}) {}\n\nconst validateEmail = (email: string): Effect.Effect<string, InvalidEmail> =>\n  email.includes(\"@\")\n    ? Effect.succeed(email)\n    : Effect.fail(new InvalidEmail({ email }))"
+      }
+    },
+    {
+      "id": "try-catch-sync",
+      "rule": "try/catch blocks → Effect.try() or Effect.tryPromise()",
+      "example": {
+        "description": "Wrapping sync operation",
+        "bad": "function parseConfig(json: string): Config {\n  try {\n    return JSON.parse(json)\n  } catch (e) {\n    throw new Error(\"Invalid config\")\n  }\n}",
+        "good": "const parseConfig = (json: string) =>\n  Effect.try({\n    try: () => JSON.parse(json) as Config,\n    catch: (e) => new ConfigParseError({ cause: e })\n  })"
+      }
+    },
+    {
+      "id": "try-catch-async",
+      "rule": "try/catch blocks → Effect.try() or Effect.tryPromise()",
+      "example": {
+        "description": "Wrapping async operation",
+        "bad": "async function fetchUser(id: string): Promise<User> {\n  try {\n    const response = await fetch(`/users/${id}`)\n    return await response.json()\n  } catch (e) {\n    throw new Error(\"Failed to fetch user\")\n  }\n}",
+        "good": "const fetchUser = (id: string) =>\n  Effect.tryPromise({\n    try: async () => {\n      const response = await fetch(`/users/${id}`)\n      return response.json() as Promise<User>\n    },\n    catch: (e) => new FetchUserError({ userId: id, cause: e })\n  })"
+      }
+    },
+    {
+      "id": "multiple-try-catch",
+      "rule": "try/catch blocks → Effect.try() or Effect.tryPromise()",
+      "example": {
+        "description": "Multiple try/catch",
+        "bad": "async function processOrder(data: string) {\n  let order\n  try {\n    order = JSON.parse(data)\n  } catch (e) {\n    throw new Error(\"Invalid order JSON\")\n  }\n\n  try {\n    await saveOrder(order)\n  } catch (e) {\n    throw new Error(\"Failed to save order\")\n  }\n}",
+        "good": "const processOrder = (data: string) =>\n  Effect.gen(function* () {\n    const order = yield* Effect.try({\n      try: () => JSON.parse(data) as Order,\n      catch: () => new InvalidOrderJson({ data })\n    })\n\n    yield* Effect.tryPromise({\n      try: () => saveOrder(order),\n      catch: (e) => new SaveOrderError({ orderId: order.id, cause: e })\n    })\n  })"
+      }
+    },
+    {
+      "id": "error-class-to-tagged",
+      "rule": "Untyped errors → Schema.TaggedError",
+      "example": {
+        "description": "Plain Error class",
+        "bad": "class UserNotFoundError extends Error {\n  constructor(public userId: string) {\n    super(`User ${userId} not found`)\n    this.name = \"UserNotFoundError\"\n  }\n}",
+        "good": "class UserNotFound extends Schema.TaggedError<UserNotFound>()(\"UserNotFound\", {\n  userId: Schema.String,\n}) {}"
+      }
+    },
+    {
+      "id": "multiple-error-types",
+      "rule": "Untyped errors → Schema.TaggedError",
+      "example": {
+        "description": "Multiple error types",
+        "bad": "class ValidationError extends Error {\n  constructor(public field: string, public message: string) {\n    super(message)\n  }\n}\n\nclass NotFoundError extends Error {\n  constructor(public resource: string, public id: string) {\n    super(`${resource} ${id} not found`)\n  }\n}",
+        "good": "class ValidationError extends Schema.TaggedError<ValidationError>()(\"ValidationError\", {\n  field: Schema.String,\n  message: Schema.String,\n}) {}\n\nclass NotFoundError extends Schema.TaggedError<NotFoundError>()(\"NotFoundError\", {\n  resource: Schema.String,\n  id: Schema.String,\n}) {}\n\n// Now you can use catchTag for specific handling\nconst program = getUser(id).pipe(\n  Effect.catchTag(\"NotFoundError\", (e) =>\n    Effect.succeed(defaultUser)\n  ),\n  Effect.catchTag(\"ValidationError\", (e) =>\n    Effect.fail(new BadRequest({ message: e.message }))\n  )\n)"
+      }
+    },
+    {
+      "id": "error-complex-payload",
+      "rule": "Untyped errors → Schema.TaggedError",
+      "example": {
+        "description": "Error with complex payload",
+        "bad": "class ApiError extends Error {\n  constructor(\n    public statusCode: number,\n    public body: unknown,\n    public headers: Record<string, string>\n  ) {\n    super(`API error: ${statusCode}`)\n  }\n}",
+        "good": "class ApiError extends Schema.TaggedError<ApiError>()(\"ApiError\", {\n  statusCode: Schema.Number,\n  body: Schema.Unknown,\n  headers: Schema.Record({ key: Schema.String, value: Schema.String }),\n}) {\n  get isClientError() {\n    return this.statusCode >= 400 && this.statusCode < 500\n  }\n  get isServerError() {\n    return this.statusCode >= 500\n  }\n}"
+      }
+    }
+  ]
+}
