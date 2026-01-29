@@ -1,0 +1,87 @@
+{
+  "id": "conditionals",
+  "name": "Conditional Statements",
+  "description": "ZERO if/else, switch/case, or ternary operators are acceptable in Effect code. Use Match module for all conditional logic.",
+  "rules": [
+    {
+      "rule": "Never use if/else chains; use Match.value with Match.when",
+      "example": {
+        "description": "Multi-condition object matching",
+        "bad": "if (order.total > 1000 && order.isPremium) {\n  return 0.25\n} else if (order.total > 1000) {\n  return 0.15\n} else if (order.isPremium) {\n  return 0.10\n} else {\n  return 0\n}",
+        "good": "const calculateDiscount = (order: Order) =>\n  Match.value(order).pipe(\n    Match.when({ total: (t) => t > 1000, isPremium: true }, () => 0.25),\n    Match.when({ total: (t) => t > 1000 }, () => 0.15),\n    Match.when({ isPremium: true }, () => 0.10),\n    Match.orElse(() => 0)\n  )"
+      }
+    },
+    {
+      "rule": "Never use switch/case statements; use Match.type with Match.tag",
+      "example": {
+        "description": "Discriminated union event handling",
+        "bad": "switch (event.type) {\n  case \"UserCreated\":\n    return notifyAdmin(event.userId)\n  case \"UserDeleted\":\n    return cleanupData(event.userId)\n  case \"OrderPlaced\":\n    return processOrder(event.orderId)\n  default:\n    throw new Error(\"Unknown event\")\n}",
+        "good": "const handleEvent = Match.type<AppEvent>().pipe(\n  Match.tag(\"UserCreated\", (e) => notifyAdmin(e.userId)),\n  Match.tag(\"UserDeleted\", (e) => cleanupData(e.userId)),\n  Match.tag(\"OrderPlaced\", (e) => processOrder(e.orderId)),\n  Match.exhaustive\n)"
+      }
+    },
+    {
+      "rule": "Never use ternary operators; use Match.value with Match.when",
+      "example": {
+        "description": "Nested ternary",
+        "bad": "const level = score > 90 ? \"expert\" : score > 70 ? \"intermediate\" : \"beginner\"",
+        "good": "const level = Match.value(score).pipe(\n  Match.when((s) => s > 90, () => \"expert\"),\n  Match.when((s) => s > 70, () => \"intermediate\"),\n  Match.orElse(() => \"beginner\")\n)"
+      }
+    },
+    {
+      "rule": "Never use null checks (if x != null); use Option.match",
+      "example": {
+        "description": "Effectful handling of nullable",
+        "bad": "if (maybeUser != null) {\n  await sendEmail(maybeUser.email)\n} else {\n  console.log(\"No user to notify\")\n}",
+        "good": "Option.match(maybeUser, {\n  onNone: () => Effect.log(\"No user to notify\"),\n  onSome: (user) => sendEmail(user.email)\n})"
+      }
+    },
+    {
+      "rule": "Never use result/error flag checks; use Either.match or Effect.match",
+      "example": {
+        "description": "Effect success/failure handling",
+        "bad": "try {\n  const user = await Effect.runPromise(getUser(id))\n  return { status: \"success\", user }\n} catch (error) {\n  return { status: \"error\", message: error.message }\n}",
+        "good": "Effect.match(getUser(id), {\n  onFailure: (error) => ({ status: \"error\", message: error.message }),\n  onSuccess: (user) => ({ status: \"success\", user })\n})"
+      }
+    },
+    {
+      "rule": "Never use array empty checks; use Array.match",
+      "example": {
+        "description": "First element with fallback",
+        "bad": "const first = items.length > 0 ? items[0] : defaultItem",
+        "good": "const first = Array.match(items, {\n  onEmpty: () => defaultItem,\n  onNonEmpty: (arr) => Array.headNonEmpty(arr)\n})"
+      }
+    },
+    {
+      "rule": "Never use conditional variable reassignment; use Match.value",
+      "example": {
+        "description": "Multi-condition assignment",
+        "bad": "let result = defaultValue\nif (condition1) {\n  result = value1\n} else if (condition2) {\n  result = value2\n}",
+        "good": "const result = Match.value({ condition1, condition2 }).pipe(\n  Match.when({ condition1: true }, () => value1),\n  Match.when({ condition2: true }, () => value2),\n  Match.orElse(() => defaultValue)\n)"
+      }
+    },
+    {
+      "rule": "Never use negative conditions in if statements; use Match.when with explicit predicates",
+      "example": {
+        "description": "Matching when condition is NOT true",
+        "bad": "if (n > 0) {\n  return \"positive\"\n} else {\n  return \"not positive\"\n}",
+        "good": "const classify = Match.type<number>().pipe(\n  Match.when((n) => n === 0, () => \"zero\"),\n  Match.when((n) => n < 0, () => \"negative\"),\n  Match.orElse(() => \"positive\")\n)"
+      }
+    },
+    {
+      "rule": "Never use multiple OR conditions (||); use Match.when with Predicate.or",
+      "example": {
+        "description": "Matching any of several values",
+        "bad": "if (day === \"Saturday\" || day === \"Sunday\") {\n  return true\n}\nreturn false",
+        "good": "import { Predicate } from \"effect\"\n\nconst isWeekendDay = Predicate.or(\n  (d: string) => d === \"Saturday\",\n  (d: string) => d === \"Sunday\"\n)\n\nconst isWeekend = Match.type<string>().pipe(\n  Match.when(isWeekendDay, () => true),\n  Match.orElse(() => false)\n)"
+      }
+    },
+    {
+      "rule": "Never use combined AND conditions (&&); use Match.when with object pattern",
+      "example": {
+        "description": "Matching multiple conditions together",
+        "bad": "if (user.role === \"admin\" && user.verified) {\n  return true\n}\nreturn false",
+        "good": "const canDelete = Match.type<User>().pipe(\n  Match.when({ role: \"admin\", verified: true }, () => true),\n  Match.orElse(() => false)\n)"
+      }
+    }
+  ]
+}

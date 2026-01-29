@@ -1,0 +1,71 @@
+{
+  "id": "async",
+  "name": "Async & Promises",
+  "description": "NEVER mix async/await with Effect. Convert all Promise-based code to Effect. Use Effect.gen with yield* for sequential async operations.",
+  "rules": [
+    {
+      "rule": "Never use async functions; use Effect.gen with yield*",
+      "example": {
+        "description": "Wrapping external async library",
+        "bad": "import { externalLib } from \"some-lib\"\n\nconst useLibrary = Effect.gen(function* () {\n  // Mixing async/await with Effect - BAD\n  const result = await externalLib.doSomething()\n  return result\n})",
+        "good": "import { externalLib } from \"some-lib\"\n\n// Wrap at the boundary\nconst doSomething = Effect.tryPromise({\n  try: () => externalLib.doSomething(),\n  catch: (e) => new LibraryError({ cause: e })\n})\n\n// Use the wrapped Effect\nconst useLibrary = Effect.gen(function* () {\n  const result = yield* doSomething\n  return result\n})"
+      }
+    },
+    {
+      "rule": "Never use Promise.all; use Effect.all",
+      "example": {
+        "description": "Named parallel results",
+        "bad": "const results = await Promise.all([getUser(id), getOrders(id)])\nconst user = results[0]\nconst orders = results[1]",
+        "good": "const { user, orders } = yield* Effect.all({\n  user: getUser(id),\n  orders: getOrders(id),\n})"
+      }
+    },
+    {
+      "rule": "Never use Promise.race; use Effect.race or Effect.raceAll",
+      "example": {
+        "description": "Racing multiple operations",
+        "bad": "const result = await Promise.race([\n  fetchFromPrimary(),\n  fetchFromBackup()\n])",
+        "good": "const result = yield* Effect.race(\n  fetchFromPrimary(),\n  fetchFromBackup()\n)"
+      }
+    },
+    {
+      "rule": "Never use Promise chains (.then); use pipe with Effect.map/flatMap",
+      "example": {
+        "description": "Promise chain with transformation",
+        "bad": "fetchData()\n  .then((data) => data.items)\n  .then((items) => items.filter((i) => i.active))\n  .then((active) => active.map((i) => i.id))",
+        "good": "pipe(\n  fetchData(),\n  Effect.map((data) => data.items),\n  Effect.map(Array.filter((i) => i.active)),\n  Effect.map(Array.map((i) => i.id))\n)"
+      }
+    },
+    {
+      "rule": "Never use yield or await in Effect.gen; use yield*",
+      "example": {
+        "description": "Correct generator usage",
+        "bad": "const program = Effect.gen(function* () {\n  const user = await getUser(id)      // Wrong: using await\n  const orders = yield getOrders(id)  // Wrong: missing *\n  return { user, orders }\n})",
+        "good": "const program = Effect.gen(function* () {\n  const user = yield* getUser(id)      // Correct: yield*\n  const orders = yield* getOrders(id)  // Correct: yield*\n  return { user, orders }\n})"
+      }
+    },
+    {
+      "rule": "Never use Effect.runPromise except at application boundaries",
+      "example": {
+        "description": "HTTP handler (boundary OK)",
+        "bad": "// Express handler mixing styles\napp.get(\"/users/:id\", async (req, res) => {\n  const user = yield* getUser(req.params.id)  // Won't work\n  res.json(user)\n})",
+        "good": "// Convert Effect to Promise at HTTP boundary\napp.get(\"/users/:id\", async (req, res) => {\n  const result = await Effect.runPromise(\n    getUser(req.params.id).pipe(\n      Effect.provide(AppLive),\n      Effect.either\n    )\n  )\n\n  Either.match(result, {\n    onLeft: (error) => res.status(500).json({ error: error.message }),\n    onRight: (user) => res.json(user)\n  })\n})"
+      }
+    },
+    {
+      "rule": "Never use new Promise(); use Effect.async for callback-based APIs",
+      "example": {
+        "description": "Converting callback-based API",
+        "bad": "const readFileAsync = (path: string) =>\n  new Promise((resolve, reject) => {\n    fs.readFile(path, (err, data) => {\n      if (err) reject(err)\n      else resolve(data)\n    })\n  })",
+        "good": "const readFileAsync = (path: string) =>\n  Effect.async<Buffer, NodeJS.ErrnoException>((resume) => {\n    fs.readFile(path, (err, data) => {\n      if (err) resume(Effect.fail(err))\n      else resume(Effect.succeed(data))\n    })\n  })"
+      }
+    },
+    {
+      "rule": "Never use setTimeout/setInterval; use Effect.sleep and Schedule",
+      "example": {
+        "description": "Repeated execution",
+        "bad": "const interval = setInterval(() => {\n  pollForUpdates()\n}, 5000)",
+        "good": "yield* Effect.repeat(\n  pollForUpdates,\n  Schedule.spaced(\"5 seconds\")\n)"
+      }
+    }
+  ]
+}

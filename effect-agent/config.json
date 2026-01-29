@@ -1,0 +1,22 @@
+{
+  "$schema": "./config.schema.json",
+  "categories": {
+    "useBuiltins": true,
+    "include": [],
+    "exclude": []
+  },
+  "detection": {
+    "extensions": [
+      ".ts",
+      ".tsx"
+    ],
+    "ignore": [
+      "node_modules",
+      "dist",
+      ".git"
+    ]
+  },
+  "apply": {
+    "maxIterations": 10
+  }
+}

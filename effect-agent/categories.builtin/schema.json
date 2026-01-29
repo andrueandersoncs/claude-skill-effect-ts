@@ -1,0 +1,95 @@
+{
+  "id": "schema",
+  "name": "Schema Violations",
+  "description": "ALL data types MUST be defined as Schema. Use Schema.Class for entities with methods, Schema.TaggedClass for discriminated unions, tagged unions over optional properties. NEVER use Schema.Any/Schema.Unknown except for genuinely unconstrained values.",
+  "rules": [
+    {
+      "rule": "Never use plain TypeScript interfaces; use Schema",
+      "example": {
+        "description": "Union type",
+        "bad": "type Status = \"pending\" | \"active\" | \"completed\"\ntype Result = Success | Failure",
+        "good": "const Status = Schema.Literal(\"pending\", \"active\", \"completed\")\ntype Status = Schema.Schema.Type<typeof Status>\n\n// For complex unions, use TaggedClass\nconst Result = Schema.Union(Success, Failure)\ntype Result = Schema.Schema.Type<typeof Result>"
+      }
+    },
+    {
+      "rule": "Never use Schema.Struct for entities with methods; use Schema.Class",
+      "example": {
+        "description": "Entity with computed properties",
+        "bad": "const Order = Schema.Struct({\n  items: Schema.Array(OrderItem),\n  discount: Schema.Number,\n})\n\nconst getTotal = (order: Order) =>\n  order.items.reduce((sum, i) => sum + i.price, 0) * (1 - order.discount)",
+        "good": "class Order extends Schema.Class<Order>(\"Order\")({\n  items: Schema.Array(OrderItem),\n  discount: Schema.Number,\n}) {\n  get subtotal() {\n    return Array.reduce(this.items, 0, (sum, i) => sum + i.price)\n  }\n  get total() {\n    return this.subtotal * (1 - this.discount)\n  }\n}"
+      }
+    },
+    {
+      "rule": "Never use optional properties for state; use tagged unions",
+      "example": {
+        "description": "Order status with optional fields",
+        "bad": "const Order = Schema.Struct({\n  orderId: Schema.String,\n  items: Schema.Array(Schema.String),\n  trackingNumber: Schema.optional(Schema.String),\n  shippedAt: Schema.optional(Schema.Date),\n  deliveredAt: Schema.optional(Schema.Date),\n})",
+        "good": "class Pending extends Schema.TaggedClass<Pending>()(\"Pending\", {\n  orderId: Schema.String,\n  items: Schema.Array(Schema.String),\n}) {}\n\nclass Shipped extends Schema.TaggedClass<Shipped>()(\"Shipped\", {\n  orderId: Schema.String,\n  items: Schema.Array(Schema.String),\n  trackingNumber: Schema.String,\n  shippedAt: Schema.Date,\n}) {}\n\nclass Delivered extends Schema.TaggedClass<Delivered>()(\"Delivered\", {\n  orderId: Schema.String,\n  items: Schema.Array(Schema.String),\n  deliveredAt: Schema.Date,\n}) {}\n\nconst Order = Schema.Union(Pending, Shipped, Delivered)\ntype Order = Schema.Schema.Type<typeof Order>"
+      }
+    },
+    {
+      "rule": "Never use Schema.Any/Schema.Unknown unless genuinely unconstrained",
+      "example": {
+        "description": "Legitimate use of Schema.Unknown (exception cause)",
+        "bad": "// Overusing Schema.Unknown\nconst Event = Schema.Struct({\n  type: Schema.String,\n  payload: Schema.Unknown, // Should be typed\n})",
+        "good": "// Schema.Unknown is OK for genuinely unconstrained data\nclass AppError extends Schema.TaggedError<AppError>()(\"AppError\", {\n  message: Schema.String,\n  cause: Schema.Unknown, // Legitimate: captures arbitrary caught exceptions\n}) {}\n\n// But domain data should be typed\nclass UserCreated extends Schema.TaggedClass<UserCreated>()(\"UserCreated\", {\n  userId: Schema.String,\n  email: Schema.String,\n}) {}"
+      }
+    },
+    {
+      "rule": "Never use JSON.parse(); use Schema.parseJson()",
+      "example": {
+        "description": "Separate JSON.parse then validate (WRONG)",
+        "bad": "// Two separate failure points\nconst parsed = JSON.parse(jsonString)  // Can throw!\nconst validated = Schema.decodeUnknownSync(MySchema)(parsed)",
+        "good": "// Schema.parseJson handles both in one type-safe step\nconst MyData = Schema.parseJson(Schema.Struct({\n  name: Schema.String,\n  count: Schema.Number\n}))\n\nconst data = Schema.decodeUnknownSync(MyData)(jsonString)"
+      }
+    },
+    {
+      "rule": "Never use raw primitives for IDs; use Schema.brand",
+      "example": {
+        "description": "Unbranded ID types",
+        "bad": "const User = Schema.Struct({\n  id: Schema.String,\n  email: Schema.String,\n})\n\n// Nothing prevents mixing up userId and orderId\nconst getOrder = (orderId: string) => ...\ngetOrder(user.id)  // Oops! Used userId as orderId",
+        "good": "const UserId = Schema.String.pipe(Schema.brand(\"UserId\"))\nconst OrderId = Schema.String.pipe(Schema.brand(\"OrderId\"))\n\nclass User extends Schema.Class<User>(\"User\")({\n  id: UserId,\n  email: Schema.String,\n}) {}\n\n// Type error: UserId is not assignable to OrderId\nconst getOrder = (orderId: Schema.Schema.Type<typeof OrderId>) => ...\ngetOrder(user.id)  // Type error!"
+      }
+    },
+    {
+      "rule": "Never use Data.TaggedError; use Schema.TaggedError",
+      "example": {
+        "description": "Error type definition",
+        "bad": "import { Data } from \"effect\"\n\nclass UserNotFound extends Data.TaggedError(\"UserNotFound\")<{\n  userId: string\n}> {}",
+        "good": "// Schema.TaggedError works with Schema.is(), catchTag, and Match.tag\nclass UserNotFound extends Schema.TaggedError<UserNotFound>()(\"UserNotFound\", {\n  userId: Schema.String\n}) {}"
+      }
+    },
+    {
+      "rule": "Never extend plain Error class; use Schema.TaggedError",
+      "example": {
+        "description": "Domain error types",
+        "bad": "class UserNotFoundError extends Error {\n  constructor(public userId: string) {\n    super(`User ${userId} not found`)\n    this.name = \"UserNotFoundError\"\n  }\n}",
+        "good": "class UserNotFound extends Schema.TaggedError<UserNotFound>()(\"UserNotFound\", {\n  userId: Schema.String,\n}) {}"
+      }
+    },
+    {
+      "rule": "Never use manual type conversions; use Schema.transform",
+      "example": {
+        "description": "Domain transformation (cents to dollars)",
+        "bad": "interface Price {\n  cents: number\n}\n\nconst toDollars = (p: Price) => p.cents / 100\nconst toCents = (dollars: number) => Math.round(dollars * 100)",
+        "good": "// Schema captures the transformation bidirectionally\nconst Dollars = Schema.transform(\n  Schema.Number.pipe(Schema.int()),  // Cents (external/encoded)\n  Schema.Number,                      // Dollars (internal/decoded)\n  {\n    decode: (cents) => cents / 100,\n    encode: (dollars) => Math.round(dollars * 100)\n  }\n)\n\n// API sends cents, code works with dollars\nconst price = Schema.decodeSync(Dollars)(4999)  // → 49.99"
+      }
+    },
+    {
+      "rule": "Never use TypeScript enum; use Schema.Literal",
+      "example": {
+        "description": "Converting TypeScript enums",
+        "bad": "enum Status {\n  Pending = \"pending\",\n  Active = \"active\",\n  Completed = \"completed\"\n}",
+        "good": "// Prefer Schema.Literal for union of string values\nconst Status = Schema.Literal(\"pending\", \"active\", \"completed\")\ntype Status = Schema.Schema.Type<typeof Status>\n\n// If you must use existing enum, wrap it\nenum LegacyStatus { Pending = \"pending\", Active = \"active\" }\nconst StatusFromEnum = Schema.Enums(LegacyStatus)"
+      }
+    },
+    {
+      "rule": "Never use manual validation functions; use Schema filters",
+      "example": {
+        "description": "Validation constraints in schema",
+        "bad": "const validateEmail = (s: string) => {\n  if (!s.includes(\"@\")) throw new Error(\"Invalid email\")\n  return s\n}\n\nconst validateAge = (n: number) => {\n  if (n < 0 || n > 150) throw new Error(\"Invalid age\")\n  return n\n}",
+        "good": "// Validation built into schema definition\nconst Email = Schema.String.pipe(\n  Schema.pattern(/^[^@]+@[^@]+\\.[^@]+$/),\n  Schema.annotations({ identifier: \"Email\" })\n)\n\nconst Age = Schema.Number.pipe(\n  Schema.int(),\n  Schema.between(0, 150),\n  Schema.annotations({ identifier: \"Age\" })\n)\n\nclass User extends Schema.Class<User>(\"User\")({\n  email: Email,\n  age: Age,\n}) {}"
+      }
+    }
+  ]
+}

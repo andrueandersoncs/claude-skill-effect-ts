@@ -1,0 +1,127 @@
+{
+  "id": "native-apis",
+  "name": "Native API Replacements",
+  "description": "NEVER use native JavaScript APIs that have Effect equivalents. Use Effect's Array module (not array.find), Record module (not Object.keys), Struct module (not spread), Tuple module (not indexing), and Predicate module (not manual &&/||).",
+  "rules": [
+    {
+      "rule": "Never use array.find(); use Array.findFirst (returns Option)",
+      "example": {
+        "description": "Finding with default",
+        "bad": "const found = items.find((i) => i.id === targetId) ?? defaultItem",
+        "good": "const found = pipe(\n  Array.findFirst(items, (i) => i.id === targetId),\n  Option.getOrElse(() => defaultItem)\n)"
+      }
+    },
+    {
+      "rule": "Never use array[index]; use Array.get or Array.head/last (returns Option)",
+      "example": {
+        "description": "Head and tail access",
+        "bad": "const first = arr[0]\nconst last = arr[arr.length - 1]",
+        "good": "const first = Array.head(arr)     // Option<A>\nconst last = Array.last(arr)       // Option<A>"
+      }
+    },
+    {
+      "rule": "Never use Object.keys/values/entries; use Record module",
+      "example": {
+        "description": "Converting to entries",
+        "bad": "const entries = Object.entries(config)\nconst fromEntries = Object.fromEntries(entries)",
+        "good": "const entries = Record.toEntries(config)\nconst fromEntries = Record.fromEntries(entries)"
+      }
+    },
+    {
+      "rule": "Never use record[key]; use Record.get (returns Option)",
+      "example": {
+        "description": "Safe property access",
+        "bad": "const price = prices[itemId]\nif (price !== undefined) {\n  calculateTotal(price)\n}",
+        "good": "pipe(\n  Record.get(prices, itemId),\n  Option.match({\n    onNone: () => Effect.fail(new ItemNotFound({ itemId })),\n    onSome: (price) => calculateTotal(price)\n  })\n)"
+      }
+    },
+    {
+      "rule": "Never use manual &&/|| for predicates; use Predicate.and/or/not",
+      "example": {
+        "description": "Struct predicate",
+        "bad": "const isValidInput = (input: unknown) =>\n  typeof input === \"object\" &&\n  input !== null &&\n  typeof (input as any).name === \"string\" &&\n  typeof (input as any).age === \"number\"",
+        "good": "const isValidInput = Predicate.struct({\n  name: Predicate.isString,\n  age: Predicate.isNumber\n})"
+      }
+    },
+    {
+      "rule": "Never use destructuring to omit fields; use Struct.omit",
+      "example": {
+        "description": "Omitting fields",
+        "bad": "const { password, ssn, ...publicUser } = user",
+        "good": "const publicUser = Struct.omit(user, \"password\", \"ssn\")"
+      }
+    },
+    {
+      "rule": "Never use tuple[0]/tuple[1]; use Tuple.getFirst/getSecond",
+      "example": {
+        "description": "Tuple transformation",
+        "bad": "const transformed = [\n  pair[0].toUpperCase(),\n  pair[1] * 2\n] as const",
+        "good": "const transformed = Tuple.mapBoth(pair, {\n  onFirst: (s) => s.toUpperCase(),\n  onSecond: (n) => n * 2\n})"
+      }
+    },
+    {
+      "rule": "Never use nested function calls; use flow for composing pipelines",
+      "example": {
+        "description": "Building reusable transformation pipeline",
+        "bad": "// Repeated inline logic\nconst processUsers = (users: Array<User>) =>\n  users.filter((u) => u.active).map((u) => u.email)\n\nconst processOrders = (orders: Array<Order>) =>\n  orders.filter((o) => o.active).map((o) => o.total)",
+        "good": "import { flow, Array } from \"effect\"\n\n// Reusable pipeline with flow\nconst getActiveEmails = flow(\n  Array.filter((u: User) => u.active),\n  Array.map((u) => u.email)\n)\n\nconst getActiveTotals = flow(\n  Array.filter((o: Order) => o.active),\n  Array.map((o) => o.total)\n)\n\n// Apply the composed pipelines\nconst emails = getActiveEmails(users)\nconst totals = getActiveTotals(orders)"
+      }
+    },
+    {
+      "rule": "Never nest two function calls; use Function.compose",
+      "example": {
+        "description": "Composing two functions",
+        "bad": "const parseAndValidate = (input: string) =>\n  validate(parse(input))",
+        "good": "import { Function } from \"effect\"\n\nconst parseAndValidate = Function.compose(parse, validate)\n// Now: parseAndValidate(input) = validate(parse(input))"
+      }
+    },
+    {
+      "rule": "Never use (x) => x; use Function.identity",
+      "example": {
+        "description": "Conditional transformation",
+        "bad": "const transform = shouldTransform\n  ? myTransform\n  : (x) => x  // Anonymous identity function",
+        "good": "import { Function } from \"effect\"\n\nconst transform = shouldTransform\n  ? myTransform\n  : Function.identity  // Standard identity function"
+      }
+    },
+    {
+      "rule": "Never use () => value; use Function.constant",
+      "example": {
+        "description": "Function that always returns same value",
+        "bad": "const getDefaultUser = () => defaultUser\nconst alwaysZero = () => 0\nconst noop = () => undefined",
+        "good": "import { Function } from \"effect\"\n\nconst getDefaultUser = Function.constant(defaultUser)\nconst alwaysZero = Function.constant(0)\nconst noop = Function.constVoid  // Built-in for () => void"
+      }
+    },
+    {
+      "rule": "Never use native method chaining; use pipe with Effect's Array module",
+      "example": {
+        "description": "Data transformation pipeline",
+        "bad": "// Method chaining (mixes native with Effect)\nconst result = users\n  .filter((u) => u.active)\n  .map((u) => u.email)\n  .slice(0, 10)",
+        "good": "import { pipe, Array } from \"effect\"\n\n// Consistent pipe with Effect's Array module\nconst result = pipe(\n  users,\n  Array.filter((u) => u.active),\n  Array.map((u) => u.email),\n  Array.take(10)\n)"
+      }
+    },
+    {
+      "rule": "Never chain filter then map; use Array.filterMap in one pass",
+      "example": {
+        "description": "Filter and transform in single pass",
+        "bad": "const validEmails = users\n  .filter((u) => isValidEmail(u.email))\n  .map((u) => u.email)",
+        "good": "import { Array, Option } from \"effect\"\n\nconst validEmails = Array.filterMap(users, (u) =>\n  isValidEmail(u.email) ? Option.some(u.email) : Option.none()\n)"
+      }
+    },
+    {
+      "rule": "Never manually group with loops; use Array.groupBy",
+      "example": {
+        "description": "Grouping items by key",
+        "bad": "const usersByRole: Record<string, User[]> = {}\nfor (const user of users) {\n  if (!usersByRole[user.role]) {\n    usersByRole[user.role] = []\n  }\n  usersByRole[user.role].push(user)\n}",
+        "good": "import { Array } from \"effect\"\n\n// Returns Record<K, NonEmptyArray<A>>\nconst usersByRole = Array.groupBy(users, (u) => u.role)"
+      }
+    },
+    {
+      "rule": "Never use [...new Set()]; use Array.dedupe",
+      "example": {
+        "description": "Removing duplicates",
+        "bad": "const uniqueIds = [...new Set(ids)]",
+        "good": "import { Array } from \"effect\"\n\nconst uniqueIds = Array.dedupe(ids)"
+      }
+    }
+  ]
+}

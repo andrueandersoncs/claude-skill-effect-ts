@@ -29,6 +29,9 @@ This skill defines MANDATORY patterns, FORBIDDEN anti-patterns, and idiomatic co
 | [Schema](../skills/schema/SKILL.md) | Data modeling and validation |
 | [Testing](../skills/testing/SKILL.md) | @effect/vitest, property-based testing |
 
-## Reference Material
+## Rule Categories
 
-For comprehensive code style documentation, consult `${CLAUDE_PLUGIN_ROOT}/references/llms-full.txt`.
+For structured rule checking, use `/effect-check <file>` which runs all bundled rule categories in parallel:
+
+- `effect-agent/categories.builtin/` - Core Effect-TS rules (async, errors, conditionals, services, etc.)
+- `effect-agent/categories/` - Additional style rules (code-style)

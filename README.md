@@ -44,28 +44,66 @@ The plugin includes skills covering all major Effect-TS domains:
 
 | Command | Description |
 |---------|-------------|
-| `/create-service` | Generate an Effect service with Layer |
-| `/add-errors` | Add typed errors to existing code |
-| `/create-schema` | Generate Schema definitions |
-| `/to-match` | Convert conditionals to Match expressions |
-| `/docs` | Look up Effect API documentation |
+| `/effect-check <file>` | Run parallel compliance checks across all rule categories |
+| `/effect-review [path]` | Review code for Effect-TS violations (spawns reviewer agent) |
+| `/docs <API>` | Look up Effect API documentation |
+| `/with-style` | Enforce idiomatic Effect code style |
 
 ### Agents
 
 | Agent | Description |
 |-------|-------------|
-| effect-reviewer | Review code for Effect-TS best practices |
-| effect-migrator | Migrate code to Effect-TS patterns |
+| effect-reviewer | Review ALL TypeScript code for Effect compliance violations |
+| effect-migrator | Migrate existing code to Effect-TS patterns |
+| category-checker | Check code against a single rule category (used by /effect-check) |
+
+### Rule Categories (effect-agent/)
+
+The plugin bundles structured rule categories for systematic compliance checking:
+
+**Builtin Categories:**
+- `async` - Async & Promises (no async/await mixing)
+- `conditionals` - Conditional Statements (use Match, not if/else)
+- `discriminated-unions` - Tagged union patterns
+- `errors` - Error Handling (typed errors, Effect.fail)
+- `imperative` - Imperative code patterns to avoid
+- `native-apis` - Native API replacements
+- `schema` - Schema-first data modeling
+- `services` - Services & Layers for testability
+- `testing` - Testing best practices
+
+**Custom Categories:**
+- `code-style` - Code style & hygiene rules
 
 ## Usage
 
-Once installed, Claude Code will automatically use these skills when working with Effect-TS code. You can also explicitly invoke commands:
+### Parallel Compliance Checking
+
+Run all rule categories as checks in parallel against a file:
 
 ```
-/create-service UserService
-/create-schema User
+/effect-check src/services/UserService.ts
+```
+
+This spawns one agent per category (10 categories = 10 parallel checks), then aggregates results into a unified report.
+
+### Code Review
+
+Review code for Effect compliance violations:
+
+```
+/effect-review src/services/
+/effect-review src/handlers/api.ts
+```
+
+### API Documentation
+
+Look up Effect API documentation:
+
+```
 /docs Effect.retry
-/docs Stream
+/docs Stream.map
+/docs Schema.Class
 ```
 
 ## License
