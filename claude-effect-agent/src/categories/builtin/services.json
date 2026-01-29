@@ -56,6 +56,33 @@
         "bad": "// Creating service implementation inline\nconst program = Effect.gen(function* () {\n  const db = yield* Database\n  const cache = yield* Cache\n\n  // Business logic mixed with service creation\n  const user = yield* db.query(\"...\")\n  yield* cache.set(user.id, user)\n})",
         "good": "// UserService depends on Database and Cache\nconst UserServiceLive = Layer.effect(\n  UserService,\n  Effect.gen(function* () {\n    const db = yield* Database\n    const cache = yield* Cache\n\n    return {\n      getUser: (id) =>\n        Effect.gen(function* () {\n          // Check cache first\n          const cached = yield* cache.get(id)\n          if (Option.isSome(cached)) {\n            return cached.value\n          }\n\n          // Fetch from DB and cache\n          const user = yield* db.query(\"SELECT * FROM users WHERE id = ?\", [id])\n          yield* cache.set(id, user)\n          return user\n        }),\n      // ... other methods\n    }\n  })\n)\n\n// Layer composition handles dependencies\nconst AppLive = UserServiceLive.pipe(\n  Layer.provide(Layer.mergeAll(DatabaseLive, CacheLive))\n)"
       }
+    },
+    {
+      "id": "direct-sdk-to-service",
+      "rule": "Direct third-party SDK calls → Context.Tag service",
+      "example": {
+        "description": "Third-party SDK usage (Stripe, SendGrid, AWS, etc.)",
+        "bad": "import Stripe from \"stripe\"\n\nconst stripe = new Stripe(process.env.STRIPE_KEY)\n\n// Direct SDK call in business logic - untestable!\nconst processPayment = (amount: number) =>\n  Effect.tryPromise(() =>\n    stripe.charges.create({ amount, currency: \"usd\" })\n  )",
+        "good": "import Stripe from \"stripe\"\n\n// Define service interface\nclass PaymentGateway extends Context.Tag(\"PaymentGateway\")<\n  PaymentGateway,\n  {\n    readonly charge: (amount: number, currency: string) => Effect.Effect<ChargeResult, PaymentError>\n    readonly refund: (chargeId: string) => Effect.Effect<void, RefundError>\n  }\n>() {}\n\n// Live implementation with real Stripe\nconst PaymentGatewayLive = Layer.effect(\n  PaymentGateway,\n  Effect.gen(function* () {\n    const config = yield* Config.string(\"STRIPE_KEY\")\n    const stripe = new Stripe(config)\n\n    return {\n      charge: (amount, currency) =>\n        Effect.tryPromise({\n          try: () => stripe.charges.create({ amount, currency }),\n          catch: (e) => new PaymentError({ cause: e })\n        }),\n      refund: (chargeId) =>\n        Effect.tryPromise({\n          try: () => stripe.refunds.create({ charge: chargeId }),\n          catch: (e) => new RefundError({ cause: e })\n        })\n    }\n  })\n)\n\n// Test implementation - no real Stripe calls\nconst PaymentGatewayTest = Layer.succeed(PaymentGateway, {\n  charge: (amount, currency) =>\n    Effect.succeed({ id: \"ch_test\", amount, currency, status: \"succeeded\" }),\n  refund: () => Effect.void\n})\n\n// Business logic uses service - fully testable\nconst processPayment = (amount: number) =>\n  Effect.gen(function* () {\n    const gateway = yield* PaymentGateway\n    return yield* gateway.charge(amount, \"usd\")\n  })"
+      }
+    },
+    {
+      "id": "layer-composition-bottom-up",
+      "rule": "Composing layers → Layer.mergeAll, Layer.provide",
+      "example": {
+        "description": "Building application layer stack",
+        "bad": "// Providing services ad-hoc throughout codebase\nconst result = yield* myEffect.pipe(\n  Effect.provideService(Logger, loggerImpl),\n  Effect.provideService(UserRepo, userRepoImpl),\n  Effect.provideService(EmailService, emailImpl)\n)",
+        "good": "// Compose layers bottom-up in a dedicated module\n\n// Infrastructure layer (no dependencies)\nconst InfraLive = Layer.mergeAll(\n  DatabaseLive,\n  HttpClientLive,\n  LoggerLive\n)\n\n// Repository layer (depends on Infrastructure)\nconst RepositoriesLive = Layer.mergeAll(\n  UserRepositoryLive,\n  OrderRepositoryLive\n).pipe(Layer.provide(InfraLive))\n\n// Service layer (depends on Repositories)\nconst ServicesLive = Layer.mergeAll(\n  UserServiceLive,\n  OrderServiceLive,\n  EmailServiceLive\n).pipe(Layer.provide(RepositoriesLive))\n\n// Application entry point\nexport const AppLive = ServicesLive\n\n// Usage at boundary\nEffect.runPromise(program.pipe(Effect.provide(AppLive)))"
+      }
+    },
+    {
+      "id": "stateful-test-layer-with-ref",
+      "rule": "Stateful test mocks → Layer.effect with Ref",
+      "example": {
+        "description": "Repository test layer maintaining state",
+        "bad": "// Stateless mock - can't test save then find\nconst UserRepositoryTest = Layer.succeed(UserRepository, {\n  findById: (id) => Effect.succeed({ id, name: \"Fixed\" }),\n  save: () => Effect.void,\n})",
+        "good": "// Stateful mock with Ref - tests can save then find\nconst UserRepositoryTest = Layer.effect(\n  UserRepository,\n  Effect.gen(function* () {\n    const store = yield* Ref.make<Map<string, User>>(new Map())\n\n    return {\n      findById: (id: string) =>\n        Effect.gen(function* () {\n          const users = yield* Ref.get(store)\n          return yield* pipe(\n            Option.fromNullable(users.get(id)),\n            Option.match({\n              onNone: () => Effect.fail(new UserNotFound({ userId: id })),\n              onSome: Effect.succeed\n            })\n          )\n        }).pipe(Effect.flatten),\n\n      save: (user: User) =>\n        Ref.update(store, (m) => new Map(m).set(user.id, user)),\n\n      delete: (id: string) =>\n        Ref.update(store, (m) => {\n          const next = new Map(m)\n          next.delete(id)\n          return next\n        })\n    }\n  })\n)"
+      }
     }
   ]
 }

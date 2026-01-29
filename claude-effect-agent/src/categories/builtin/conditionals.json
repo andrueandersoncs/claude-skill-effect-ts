@@ -164,6 +164,33 @@
         "bad": "let result = defaultValue\nif (condition1) {\n  result = value1\n} else if (condition2) {\n  result = value2\n}",
         "good": "const result = Match.value({ condition1, condition2 }).pipe(\n  Match.when({ condition1: true }, () => value1),\n  Match.when({ condition2: true }, () => value2),\n  Match.orElse(() => defaultValue)\n)"
       }
+    },
+    {
+      "id": "match-not-negative",
+      "rule": "Negative condition → Match.not",
+      "example": {
+        "description": "Matching when condition is NOT true",
+        "bad": "if (n > 0) {\n  return \"positive\"\n} else {\n  return \"not positive\"\n}",
+        "good": "const classify = Match.type<number>().pipe(\n  Match.when((n) => n === 0, () => \"zero\"),\n  Match.not((n) => n > 0, () => \"negative\"),  // Matches when NOT positive\n  Match.orElse(() => \"positive\")\n)"
+      }
+    },
+    {
+      "id": "match-whenor-multiple",
+      "rule": "Multiple OR conditions → Match.whenOr",
+      "example": {
+        "description": "Matching any of several values",
+        "bad": "if (day === \"Saturday\" || day === \"Sunday\") {\n  return true\n}\nreturn false",
+        "good": "const isWeekend = Match.type<string>().pipe(\n  Match.whenOr(\"Saturday\", \"Sunday\", () => true),\n  Match.orElse(() => false)\n)"
+      }
+    },
+    {
+      "id": "match-whenand-combined",
+      "rule": "Combined AND conditions → Match.whenAnd",
+      "example": {
+        "description": "Matching multiple conditions together",
+        "bad": "if (user.role === \"admin\" && user.verified) {\n  return true\n}\nreturn false",
+        "good": "const canDelete = Match.type<User>().pipe(\n  Match.whenAnd(\n    { role: \"admin\" },\n    (u) => u.verified,\n    () => true\n  ),\n  Match.orElse(() => false)\n)"
+      }
     }
   ]
 }

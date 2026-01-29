@@ -128,6 +128,78 @@
         "bad": "const result = fetchConfig().pipe(\n  Effect.catchAll(() => Effect.succeed(defaultConfig))\n)",
         "good": "const result = fetchConfig().pipe(\n  Effect.orElseSucceed(() => defaultConfig)\n)"
       }
+    },
+    {
+      "id": "timeout-duration",
+      "rule": "setTimeout race → Effect.timeout",
+      "example": {
+        "description": "Adding timeout to operation",
+        "bad": "const result = await Promise.race([\n  fetchData(),\n  new Promise((_, reject) =>\n    setTimeout(() => reject(new Error(\"Timeout\")), 5000)\n  )\n])",
+        "good": "const result = yield* fetchData().pipe(\n  Effect.timeout(\"5 seconds\")\n)"
+      }
+    },
+    {
+      "id": "timeout-fail-typed",
+      "rule": "setTimeout race → Effect.timeout",
+      "example": {
+        "description": "Timeout with typed error",
+        "bad": "const withTimeout = async <T>(promise: Promise<T>, ms: number): Promise<T> => {\n  const timeout = new Promise<never>((_, reject) =>\n    setTimeout(() => reject(new Error(\"Timeout\")), ms)\n  )\n  return Promise.race([promise, timeout])\n}",
+        "good": "class TimeoutError extends Schema.TaggedError<TimeoutError>()(\"TimeoutError\", {\n  operation: Schema.String,\n}) {}\n\nconst result = yield* fetchData().pipe(\n  Effect.timeoutFail({\n    duration: \"5 seconds\",\n    onTimeout: () => new TimeoutError({ operation: \"fetchData\" })\n  })\n)"
+      }
+    },
+    {
+      "id": "retry-exponential",
+      "rule": "Manual retry loop → Effect.retry with Schedule",
+      "example": {
+        "description": "Exponential backoff retry",
+        "bad": "let attempts = 0\nlet delay = 100\nwhile (attempts < 5) {\n  try {\n    return await fetchData()\n  } catch {\n    await sleep(delay)\n    delay *= 2\n    attempts++\n  }\n}\nthrow new Error(\"All retries failed\")",
+        "good": "const result = yield* fetchData().pipe(\n  Effect.retry(\n    Schedule.exponential(\"100 millis\").pipe(\n      Schedule.jittered,\n      Schedule.compose(Schedule.recurs(5))\n    )\n  )\n)"
+      }
+    },
+    {
+      "id": "retry-conditional",
+      "rule": "Manual retry loop → Effect.retry with Schedule",
+      "example": {
+        "description": "Retry only for specific errors",
+        "bad": "let attempts = 0\nwhile (attempts < 3) {\n  try {\n    return await fetchData()\n  } catch (e) {\n    if (e.code !== \"NETWORK_ERROR\") throw e\n    attempts++\n  }\n}",
+        "good": "const result = yield* fetchData().pipe(\n  Effect.retry({\n    schedule: Schedule.recurs(3),\n    while: (error) =>\n      Match.value(error).pipe(\n        Match.tag(\"NetworkError\", () => true),\n        Match.orElse(() => false)\n      )\n  })\n)"
+      }
+    },
+    {
+      "id": "error-accumulation-partition",
+      "rule": "Fail-fast errors → Error accumulation",
+      "example": {
+        "description": "Collect all errors instead of failing fast",
+        "bad": "const results = []\nfor (const item of items) {\n  try {\n    results.push(await processItem(item))\n  } catch (e) {\n    // First error stops processing\n    throw e\n  }\n}",
+        "good": "// Continue processing and collect all failures\nconst [failures, successes] = yield* Effect.partition(\n  items,\n  (item) => processItem(item)\n)"
+      }
+    },
+    {
+      "id": "error-accumulation-either-mode",
+      "rule": "Fail-fast errors → Error accumulation",
+      "example": {
+        "description": "Get Either results for each operation",
+        "bad": "const results = await Promise.all(\n  items.map(processItem)\n)  // Fails on first error",
+        "good": "// Each result is Either<E, A>\nconst results = yield* Effect.all(\n  Array.map(items, processItem),\n  { mode: \"either\" }\n)"
+      }
+    },
+    {
+      "id": "cause-sandbox",
+      "rule": "Full error inspection → Effect.sandbox with Cause",
+      "example": {
+        "description": "Handling defects and expected errors",
+        "bad": "try {\n  await Effect.runPromise(program)\n} catch (e) {\n  // Can't distinguish between expected errors and defects\n  console.error(e)\n}",
+        "good": "const handled = Effect.sandbox(program).pipe(\n  Effect.catchAll((cause) =>\n    Match.value(cause).pipe(\n      Match.when(Cause.isFailure, () => {\n        // Expected error - recover gracefully\n        return Effect.succeed(fallback)\n      }),\n      Match.when(Cause.isDie, (c) => {\n        // Defect (bug) - log and recover\n        return Effect.logError(\"Unexpected defect\", c).pipe(\n          Effect.as(fallback)\n        )\n      }),\n      Match.when(Cause.isInterrupt, () => {\n        // Interruption - clean shutdown\n        return Effect.succeed(fallback)\n      }),\n      Match.orElse(() => Effect.succeed(fallback))\n    )\n  )\n)"
+      }
+    },
+    {
+      "id": "map-error-boundary",
+      "rule": "Error transformation at boundaries → Effect.mapError",
+      "example": {
+        "description": "Transform low-level to domain errors",
+        "bad": "const result = await fetch(url).catch((e) => {\n  throw new Error(`API failed: ${e.message}`)\n})",
+        "good": "const result = yield* Effect.tryPromise({\n  try: () => fetch(url),\n  catch: (e) => new RawNetworkError({ cause: e })\n}).pipe(\n  Effect.mapError((e) => new ApiError({ url, cause: e }))\n)"
+      }
     }
   ]
 }

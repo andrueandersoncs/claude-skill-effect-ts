@@ -200,6 +200,42 @@
         "bad": "let total = 0\nfor (const item of items) {\n  const price = await getPrice(item)\n  total += price\n}",
         "good": "const total = yield* Effect.reduce(items, 0, (acc, item) =>\n  getPrice(item).pipe(Effect.map((price) => acc + price))\n)"
       }
+    },
+    {
+      "id": "stream-large-sequences",
+      "rule": "Large/infinite sequences → Stream",
+      "example": {
+        "description": "Processing large collections with backpressure",
+        "bad": "// Loading everything into memory\nconst allRecords = await db.fetchAll()\nconst processed = allRecords.map(processRecord)\nawait saveAll(processed)",
+        "good": "import { Stream } from \"effect\"\n\n// Stream processes items one at a time with backpressure\nconst processed = Stream.fromIterable(items).pipe(\n  Stream.mapEffect(processItem),\n  Stream.runCollect\n)"
+      }
+    },
+    {
+      "id": "stream-chunked-processing",
+      "rule": "Large/infinite sequences → Stream",
+      "example": {
+        "description": "Chunked processing with concurrency",
+        "bad": "// Manual batching\nconst batchSize = 100\nfor (let i = 0; i < items.length; i += batchSize) {\n  const batch = items.slice(i, i + batchSize)\n  await Promise.all(batch.map(processItem))\n}",
+        "good": "import { Stream } from \"effect\"\n\nconst results = yield* Stream.fromIterable(items).pipe(\n  Stream.grouped(100),\n  Stream.mapEffect((batch) =>\n    Effect.all(Array.map(batch, processItem), { concurrency: \"unbounded\" })\n  ),\n  Stream.runCollect\n)"
+      }
+    },
+    {
+      "id": "flatmap-one-to-many",
+      "rule": "Nested iteration → Array.flatMap",
+      "example": {
+        "description": "Flattening nested arrays",
+        "bad": "const allTags = []\nfor (const post of posts) {\n  for (const tag of post.tags) {\n    allTags.push(tag)\n  }\n}",
+        "good": "import { Array } from \"effect\"\n\nconst allTags = Array.flatMap(posts, (post) => post.tags)"
+      }
+    },
+    {
+      "id": "partition-split-by-predicate",
+      "rule": "Multiple filters → Array.partition",
+      "example": {
+        "description": "Splitting array by condition",
+        "bad": "const minors = users.filter((u) => u.age < 18)\nconst adults = users.filter((u) => u.age >= 18)",
+        "good": "import { Array } from \"effect\"\n\n// Single pass, returns [excluded, satisfying]\nconst [minors, adults] = Array.partition(users, (u) => u.age >= 18)"
+      }
     }
   ]
 }

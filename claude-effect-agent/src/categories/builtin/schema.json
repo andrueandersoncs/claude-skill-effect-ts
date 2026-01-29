@@ -137,6 +137,51 @@
         "bad": "class UserNotFoundError extends Error {\n  constructor(public userId: string) {\n    super(`User ${userId} not found`)\n    this.name = \"UserNotFoundError\"\n  }\n}",
         "good": "class UserNotFound extends Schema.TaggedError<UserNotFound>()(\"UserNotFound\", {\n  userId: Schema.String,\n}) {}"
       }
+    },
+    {
+      "id": "manual-conversion-to-transform",
+      "rule": "Manual type conversions → Schema.transform",
+      "example": {
+        "description": "Bidirectional string-to-number conversion",
+        "bad": "const parseNumber = (s: string): number => parseFloat(s)\nconst formatNumber = (n: number): string => String(n)\n\n// Manual conversion at every use site\nconst value = parseNumber(input)\nconst output = formatNumber(result)",
+        "good": "const NumberFromString = Schema.transform(\n  Schema.String,\n  Schema.Number,\n  {\n    decode: (s) => parseFloat(s),\n    encode: (n) => String(n)\n  }\n)\n\n// Use schema for automatic conversion\nconst value = Schema.decodeSync(NumberFromString)(input)  // \"42\" → 42\nconst output = Schema.encodeSync(NumberFromString)(result) // 42 → \"42\""
+      }
+    },
+    {
+      "id": "date-string-to-schema-date",
+      "rule": "Manual type conversions → Schema.transform",
+      "example": {
+        "description": "Date string to Date object",
+        "bad": "const parseDate = (s: string) => new Date(s)\nconst formatDate = (d: Date) => d.toISOString()\n\nconst data = {\n  createdAt: parseDate(json.createdAt)\n}",
+        "good": "// Use built-in DateFromString or define custom\nconst ApiResponse = Schema.Struct({\n  createdAt: Schema.DateFromString  // Automatic ISO string ↔ Date\n})\n\nconst data = Schema.decodeUnknownSync(ApiResponse)(json)"
+      }
+    },
+    {
+      "id": "cents-dollars-transform",
+      "rule": "Manual type conversions → Schema.transform",
+      "example": {
+        "description": "Domain transformation (cents to dollars)",
+        "bad": "interface Price {\n  cents: number\n}\n\nconst toDollars = (p: Price) => p.cents / 100\nconst toCents = (dollars: number) => Math.round(dollars * 100)",
+        "good": "// Schema captures the transformation bidirectionally\nconst Dollars = Schema.transform(\n  Schema.Number.pipe(Schema.int()),  // Cents (external/encoded)\n  Schema.Number,                      // Dollars (internal/decoded)\n  {\n    decode: (cents) => cents / 100,\n    encode: (dollars) => Math.round(dollars * 100)\n  }\n)\n\n// API sends cents, code works with dollars\nconst price = Schema.decodeSync(Dollars)(4999)  // → 49.99"
+      }
+    },
+    {
+      "id": "enum-to-literal",
+      "rule": "TypeScript enum → Schema.Literal",
+      "example": {
+        "description": "Converting TypeScript enums",
+        "bad": "enum Status {\n  Pending = \"pending\",\n  Active = \"active\",\n  Completed = \"completed\"\n}",
+        "good": "// Prefer Schema.Literal for union of string values\nconst Status = Schema.Literal(\"pending\", \"active\", \"completed\")\ntype Status = Schema.Schema.Type<typeof Status>\n\n// If you must use existing enum, wrap it\nenum LegacyStatus { Pending = \"pending\", Active = \"active\" }\nconst StatusFromEnum = Schema.Enums(LegacyStatus)"
+      }
+    },
+    {
+      "id": "schema-filters-validation",
+      "rule": "Manual validation → Schema filters",
+      "example": {
+        "description": "Validation constraints in schema",
+        "bad": "const validateEmail = (s: string) => {\n  if (!s.includes(\"@\")) throw new Error(\"Invalid email\")\n  return s\n}\n\nconst validateAge = (n: number) => {\n  if (n < 0 || n > 150) throw new Error(\"Invalid age\")\n  return n\n}",
+        "good": "// Validation built into schema definition\nconst Email = Schema.String.pipe(\n  Schema.pattern(/^[^@]+@[^@]+\\.[^@]+$/),\n  Schema.annotations({ identifier: \"Email\" })\n)\n\nconst Age = Schema.Number.pipe(\n  Schema.int(),\n  Schema.between(0, 150),\n  Schema.annotations({ identifier: \"Age\" })\n)\n\nclass User extends Schema.Class<User>(\"User\")({\n  email: Email,\n  age: Age,\n}) {}"
+      }
     }
   ]
 }

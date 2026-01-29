@@ -164,6 +164,78 @@
         "bad": "const transformed = [\n  pair[0].toUpperCase(),\n  pair[1] * 2\n] as const",
         "good": "const transformed = Tuple.mapBoth(pair, {\n  onFirst: (s) => s.toUpperCase(),\n  onSecond: (n) => n * 2\n})"
       }
+    },
+    {
+      "id": "flow-compose-pipeline",
+      "rule": "Nested function calls → flow for composing pipelines",
+      "example": {
+        "description": "Building reusable transformation pipeline",
+        "bad": "// Repeated inline logic\nconst processUsers = (users: Array<User>) =>\n  users.filter((u) => u.active).map((u) => u.email)\n\nconst processOrders = (orders: Array<Order>) =>\n  orders.filter((o) => o.active).map((o) => o.total)",
+        "good": "import { flow, Array } from \"effect\"\n\n// Reusable pipeline with flow\nconst getActiveEmails = flow(\n  Array.filter((u: User) => u.active),\n  Array.map((u) => u.email)\n)\n\nconst getActiveTotals = flow(\n  Array.filter((o: Order) => o.active),\n  Array.map((o) => o.total)\n)\n\n// Apply the composed pipelines\nconst emails = getActiveEmails(users)\nconst totals = getActiveTotals(orders)"
+      }
+    },
+    {
+      "id": "compose-two-functions",
+      "rule": "Nested function calls → Function.compose",
+      "example": {
+        "description": "Composing two functions",
+        "bad": "const parseAndValidate = (input: string) =>\n  validate(parse(input))",
+        "good": "import { Function } from \"effect\"\n\nconst parseAndValidate = Function.compose(parse, validate)\n// Now: parseAndValidate(input) = validate(parse(input))"
+      }
+    },
+    {
+      "id": "identity-passthrough",
+      "rule": "No-op functions → Function.identity",
+      "example": {
+        "description": "Conditional transformation",
+        "bad": "const transform = shouldTransform\n  ? myTransform\n  : (x) => x  // Anonymous identity function",
+        "good": "import { Function } from \"effect\"\n\nconst transform = shouldTransform\n  ? myTransform\n  : Function.identity  // Standard identity function"
+      }
+    },
+    {
+      "id": "constant-fixed-value",
+      "rule": "Arrow returning fixed value → Function.constant",
+      "example": {
+        "description": "Function that always returns same value",
+        "bad": "const getDefaultUser = () => defaultUser\nconst alwaysZero = () => 0\nconst noop = () => undefined",
+        "good": "import { Function } from \"effect\"\n\nconst getDefaultUser = Function.constant(defaultUser)\nconst alwaysZero = Function.constant(0)\nconst noop = Function.constVoid  // Built-in for () => void"
+      }
+    },
+    {
+      "id": "pipe-vs-method-chain",
+      "rule": "Method chaining → pipe for consistency",
+      "example": {
+        "description": "Data transformation pipeline",
+        "bad": "// Method chaining (mixes native with Effect)\nconst result = users\n  .filter((u) => u.active)\n  .map((u) => u.email)\n  .slice(0, 10)",
+        "good": "import { pipe, Array } from \"effect\"\n\n// Consistent pipe with Effect's Array module\nconst result = pipe(\n  users,\n  Array.filter((u) => u.active),\n  Array.map((u) => u.email),\n  Array.take(10)\n)"
+      }
+    },
+    {
+      "id": "filtermap-combined",
+      "rule": "filter + map → Array.filterMap in one pass",
+      "example": {
+        "description": "Filter and transform in single pass",
+        "bad": "const validEmails = users\n  .filter((u) => isValidEmail(u.email))\n  .map((u) => u.email)",
+        "good": "import { Array, Option } from \"effect\"\n\nconst validEmails = Array.filterMap(users, (u) =>\n  isValidEmail(u.email) ? Option.some(u.email) : Option.none()\n)"
+      }
+    },
+    {
+      "id": "groupby-to-array-groupby",
+      "rule": "Manual grouping → Array.groupBy",
+      "example": {
+        "description": "Grouping items by key",
+        "bad": "const usersByRole: Record<string, User[]> = {}\nfor (const user of users) {\n  if (!usersByRole[user.role]) {\n    usersByRole[user.role] = []\n  }\n  usersByRole[user.role].push(user)\n}",
+        "good": "import { Array } from \"effect\"\n\n// Returns Record<K, NonEmptyArray<A>>\nconst usersByRole = Array.groupBy(users, (u) => u.role)"
+      }
+    },
+    {
+      "id": "dedupe-unique",
+      "rule": "Set-based deduplication → Array.dedupe",
+      "example": {
+        "description": "Removing duplicates",
+        "bad": "const uniqueIds = [...new Set(ids)]",
+        "good": "import { Array } from \"effect\"\n\nconst uniqueIds = Array.dedupe(ids)"
+      }
     }
   ]
 }

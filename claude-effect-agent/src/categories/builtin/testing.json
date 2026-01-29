@@ -146,6 +146,51 @@
         "bad": "// Effect types may not compare correctly in expect()\nimport { it, expect } from \"@effect/vitest\"\n\nit.effect(\"should match\", () =>\n  Effect.gen(function* () {\n    const result = yield* getOption()\n    expect(result).toEqual(Option.some(42))  // May fail incorrectly\n  })\n)",
         "good": "// In vitest.setup.ts or at top of test file\nimport { addEqualityTesters } from \"@effect/vitest\"\naddEqualityTesters()\n\n// Now Effect types compare correctly\nit.effect(\"should match\", () =>\n  Effect.gen(function* () {\n    const result = yield* getOption()\n    expect(result).toEqual(Option.some(42))  // Works correctly\n  })\n)"
       }
+    },
+    {
+      "id": "scoped-resource-test",
+      "rule": "Tests with resources → it.scoped",
+      "example": {
+        "description": "Testing with acquireRelease resources",
+        "bad": "it(\"should use database connection\", async () => {\n  const conn = await connect()\n  try {\n    const result = await conn.query(\"SELECT 1\")\n    expect(result).toBeDefined()\n  } finally {\n    await conn.close()  // Manual cleanup\n  }\n})",
+        "good": "// it.scoped automatically handles resource cleanup\nit.scoped(\"should use database connection\", () =>\n  Effect.gen(function* () {\n    const conn = yield* acquireDbConnection  // acquireRelease resource\n    const result = yield* conn.query(\"SELECT 1\")\n    expect(result).toBeDefined()\n    // Connection automatically released when test ends\n  })\n)"
+      }
+    },
+    {
+      "id": "live-real-time-test",
+      "rule": "Tests needing real environment → it.live",
+      "example": {
+        "description": "Testing with real clock/environment",
+        "bad": "it.effect(\"should measure real time\", () =>\n  Effect.gen(function* () {\n    const start = Date.now()\n    yield* Effect.sleep(\"10 millis\")  // Uses TestClock - no real delay!\n    const elapsed = Date.now() - start\n    expect(elapsed).toBeGreaterThanOrEqual(10)  // Fails!\n  })\n)",
+        "good": "// it.live uses real clock, logger, etc.\nit.live(\"should measure real time\", () =>\n  Effect.gen(function* () {\n    const start = Date.now()\n    yield* Effect.sleep(\"10 millis\")  // Real 10ms delay\n    const elapsed = Date.now() - start\n    expect(elapsed).toBeGreaterThanOrEqual(10)  // Passes\n  })\n)"
+      }
+    },
+    {
+      "id": "flaky-test-retry",
+      "rule": "Flaky external operations → it.flakyTest",
+      "example": {
+        "description": "Retrying unreliable operations",
+        "bad": "it.effect(\"should eventually succeed\", () =>\n  unreliableExternalCall()  // May fail due to timing/network\n)",
+        "good": "it.effect(\"should eventually succeed\", () =>\n  it.flakyTest(\n    unreliableExternalCall(),\n    \"5 seconds\"  // Max retry duration\n  )\n)"
+      }
+    },
+    {
+      "id": "exit-error-inspection",
+      "rule": "Inspecting error details → Effect.exit in it.effect",
+      "example": {
+        "description": "Asserting on error type and data",
+        "bad": "it(\"should fail with UserNotFound\", async () => {\n  try {\n    await Effect.runPromise(getUser(\"nonexistent\"))\n    fail(\"Expected error\")\n  } catch (e) {\n    expect(e._tag).toBe(\"UserNotFound\")\n  }\n})",
+        "good": "it.effect(\"should fail with UserNotFound\", () =>\n  Effect.gen(function* () {\n    const exit = yield* Effect.exit(getUser(\"nonexistent\"))\n\n    expect(Exit.isFailure(exit)).toBe(true)\n\n    Exit.match(exit, {\n      onFailure: (cause) => {\n        const error = Option.getOrThrow(Cause.failureOption(cause))\n        expect(Schema.is(UserNotFound)(error)).toBe(true)\n        expect(error.userId).toBe(\"nonexistent\")\n      },\n      onSuccess: () => { throw new Error(\"Expected failure\") }\n    })\n  })\n)"
+      }
+    },
+    {
+      "id": "not-implemented-antipattern",
+      "rule": "\"Not implemented\" in test layers → Arbitrary-generated responses",
+      "example": {
+        "description": "Anti-pattern: stubbing methods as not implemented",
+        "bad": "const TestLayer = Layer.succeed(MyService, {\n  getUser: (id) => Effect.succeed({ id, name: \"Hardcoded\" }),\n  updateUser: () => Effect.fail(new Error(\"Not implemented\")),  // Won't test this path!\n  deleteUser: () => Effect.fail(new Error(\"Not implemented\")),\n})",
+        "good": "// Generate valid responses so all code paths can be exercised\nconst TestLayer = Layer.effect(\n  MyService,\n  Effect.sync(() => {\n    const UserArb = Arbitrary.make(User)(fc)\n    return {\n      getUser: (id) => Effect.succeed(\n        fc.sample(UserArb, 1)[0]\n      ),\n      updateUser: (user) => Effect.void,\n      deleteUser: (id) => Effect.void,\n    }\n  })\n)"
+      }
     }
   ]
 }
