@@ -4,7 +4,7 @@
   "description": "ALL data types MUST be defined as Schema. Use Schema.Class for entities with methods, Schema.TaggedClass for discriminated unions, tagged unions over optional properties. NEVER use Schema.Any/Schema.Unknown except for genuinely unconstrained values.",
   "rules": [
     {
-      "rule": "Plain TypeScript interfaces → Schema.Class",
+      "rule": "Never use plain TypeScript interfaces; use Schema",
       "example": {
         "description": "Union type",
         "bad": "type Status = \"pending\" | \"active\" | \"completed\"\ntype Result = Success | Failure",
@@ -12,7 +12,7 @@
       }
     },
     {
-      "rule": "Schema.Struct for domain entities → Schema.Class (with methods)",
+      "rule": "Never use Schema.Struct for entities with methods; use Schema.Class",
       "example": {
         "description": "Entity with computed properties",
         "bad": "const Order = Schema.Struct({\n  items: Schema.Array(OrderItem),\n  discount: Schema.Number,\n})\n\nconst getTotal = (order: Order) =>\n  order.items.reduce((sum, i) => sum + i.price, 0) * (1 - order.discount)",
@@ -20,7 +20,7 @@
       }
     },
     {
-      "rule": "Optional properties for state → Tagged unions",
+      "rule": "Never use optional properties for state; use tagged unions",
       "example": {
         "description": "Order status with optional fields",
         "bad": "const Order = Schema.Struct({\n  orderId: Schema.String,\n  items: Schema.Array(Schema.String),\n  trackingNumber: Schema.optional(Schema.String),\n  shippedAt: Schema.optional(Schema.Date),\n  deliveredAt: Schema.optional(Schema.Date),\n})",
@@ -28,7 +28,7 @@
       }
     },
     {
-      "rule": "Schema.Any/Schema.Unknown → Proper typed schemas (unless genuinely unconstrained)",
+      "rule": "Never use Schema.Any/Schema.Unknown unless genuinely unconstrained",
       "example": {
         "description": "Legitimate use of Schema.Unknown (exception cause)",
         "bad": "// Overusing Schema.Unknown\nconst Event = Schema.Struct({\n  type: Schema.String,\n  payload: Schema.Unknown, // Should be typed\n})",
@@ -36,7 +36,7 @@
       }
     },
     {
-      "rule": "JSON.parse() → Schema.parseJson()",
+      "rule": "Never use JSON.parse(); use Schema.parseJson()",
       "example": {
         "description": "Separate JSON.parse then validate (WRONG)",
         "bad": "// Two separate failure points\nconst parsed = JSON.parse(jsonString)  // Can throw!\nconst validated = Schema.decodeUnknownSync(MySchema)(parsed)",
@@ -44,7 +44,7 @@
       }
     },
     {
-      "rule": "Raw primitives for IDs → Schema.brand",
+      "rule": "Never use raw primitives for IDs; use Schema.brand",
       "example": {
         "description": "Unbranded ID types",
         "bad": "const User = Schema.Struct({\n  id: Schema.String,\n  email: Schema.String,\n})\n\n// Nothing prevents mixing up userId and orderId\nconst getOrder = (orderId: string) => ...\ngetOrder(user.id)  // Oops! Used userId as orderId",
@@ -52,7 +52,7 @@
       }
     },
     {
-      "rule": "Data.TaggedError → Schema.TaggedError",
+      "rule": "Never use Data.TaggedError; use Schema.TaggedError",
       "example": {
         "description": "Error type definition",
         "bad": "import { Data } from \"effect\"\n\nclass UserNotFound extends Data.TaggedError(\"UserNotFound\")<{\n  userId: string\n}> {}",
@@ -60,7 +60,7 @@
       }
     },
     {
-      "rule": "Plain Error class → Schema.TaggedError",
+      "rule": "Never extend plain Error class; use Schema.TaggedError",
       "example": {
         "description": "Domain error types",
         "bad": "class UserNotFoundError extends Error {\n  constructor(public userId: string) {\n    super(`User ${userId} not found`)\n    this.name = \"UserNotFoundError\"\n  }\n}",
@@ -68,7 +68,7 @@
       }
     },
     {
-      "rule": "Manual type conversions → Schema.transform",
+      "rule": "Never use manual type conversions; use Schema.transform",
       "example": {
         "description": "Domain transformation (cents to dollars)",
         "bad": "interface Price {\n  cents: number\n}\n\nconst toDollars = (p: Price) => p.cents / 100\nconst toCents = (dollars: number) => Math.round(dollars * 100)",
@@ -76,7 +76,7 @@
       }
     },
     {
-      "rule": "TypeScript enum → Schema.Literal",
+      "rule": "Never use TypeScript enum; use Schema.Literal",
       "example": {
         "description": "Converting TypeScript enums",
         "bad": "enum Status {\n  Pending = \"pending\",\n  Active = \"active\",\n  Completed = \"completed\"\n}",
@@ -84,7 +84,7 @@
       }
     },
     {
-      "rule": "Manual validation → Schema filters",
+      "rule": "Never use manual validation functions; use Schema filters",
       "example": {
         "description": "Validation constraints in schema",
         "bad": "const validateEmail = (s: string) => {\n  if (!s.includes(\"@\")) throw new Error(\"Invalid email\")\n  return s\n}\n\nconst validateAge = (n: number) => {\n  if (n < 0 || n > 150) throw new Error(\"Invalid age\")\n  return n\n}",

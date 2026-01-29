@@ -1,10 +1,10 @@
 {
   "id": "async",
-  "name": "Async & Promise Patterns",
+  "name": "Async & Promises",
   "description": "NEVER mix async/await with Effect. Convert all Promise-based code to Effect. Use Effect.gen with yield* for sequential async operations.",
   "rules": [
     {
-      "rule": "async functions → Effect.gen with yield*",
+      "rule": "Never use async functions; use Effect.gen with yield*",
       "example": {
         "description": "Wrapping external async library",
         "bad": "import { externalLib } from \"some-lib\"\n\nconst useLibrary = Effect.gen(function* () {\n  // Mixing async/await with Effect - BAD\n  const result = await externalLib.doSomething()\n  return result\n})",
@@ -12,7 +12,7 @@
       }
     },
     {
-      "rule": "Promise.all → Effect.all",
+      "rule": "Never use Promise.all; use Effect.all",
       "example": {
         "description": "Named parallel results",
         "bad": "const results = await Promise.all([getUser(id), getOrders(id)])\nconst user = results[0]\nconst orders = results[1]",
@@ -20,7 +20,7 @@
       }
     },
     {
-      "rule": "Promise.race → Effect.race or Effect.raceAll",
+      "rule": "Never use Promise.race; use Effect.race or Effect.raceAll",
       "example": {
         "description": "Racing multiple operations",
         "bad": "const result = await Promise.race([\n  fetchFromPrimary(),\n  fetchFromBackup()\n])",
@@ -28,7 +28,7 @@
       }
     },
     {
-      "rule": "Promise chains (.then) → pipe with Effect.flatMap",
+      "rule": "Never use Promise chains (.then); use pipe with Effect.map/flatMap",
       "example": {
         "description": "Promise chain with transformation",
         "bad": "fetchData()\n  .then((data) => data.items)\n  .then((items) => items.filter((i) => i.active))\n  .then((active) => active.map((i) => i.id))",
@@ -36,7 +36,7 @@
       }
     },
     {
-      "rule": "yield* in Effect.gen (not yield or await)",
+      "rule": "Never use yield or await in Effect.gen; use yield*",
       "example": {
         "description": "Correct generator usage",
         "bad": "const program = Effect.gen(function* () {\n  const user = await getUser(id)      // Wrong: using await\n  const orders = yield getOrders(id)  // Wrong: missing *\n  return { user, orders }\n})",
@@ -44,7 +44,7 @@
       }
     },
     {
-      "rule": "Effect.runPromise only at application boundaries",
+      "rule": "Never use Effect.runPromise except at application boundaries",
       "example": {
         "description": "HTTP handler (boundary OK)",
         "bad": "// Express handler mixing styles\napp.get(\"/users/:id\", async (req, res) => {\n  const user = yield* getUser(req.params.id)  // Won't work\n  res.json(user)\n})",
@@ -52,7 +52,7 @@
       }
     },
     {
-      "rule": "new Promise() → Effect.async for callback-based APIs",
+      "rule": "Never use new Promise(); use Effect.async for callback-based APIs",
       "example": {
         "description": "Converting callback-based API",
         "bad": "const readFileAsync = (path: string) =>\n  new Promise((resolve, reject) => {\n    fs.readFile(path, (err, data) => {\n      if (err) reject(err)\n      else resolve(data)\n    })\n  })",
@@ -60,7 +60,7 @@
       }
     },
     {
-      "rule": "setTimeout/setInterval → Effect.sleep, Schedule",
+      "rule": "Never use setTimeout/setInterval; use Effect.sleep and Schedule",
       "example": {
         "description": "Repeated execution",
         "bad": "const interval = setInterval(() => {\n  pollForUpdates()\n}, 5000)",

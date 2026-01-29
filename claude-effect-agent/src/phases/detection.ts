@@ -14,9 +14,9 @@ function buildSystemPrompt(rule: FlattenedRule): string {
   const ruleKey = getRuleKey(rule);
   const ruleSlug = slugify(rule.rule);
 
-  return `You are an Effect-TS code style expert. Your ONLY job is to detect ONE specific violation pattern.
+  return `You are an Effect-TS code style expert. Your ONLY job is to detect violations of ONE specific rule.
 
-## Your Pattern: ${rule.rule}
+## Rule: ${rule.rule}
 ## Category: ${rule.categoryName}
 
 ### What to Look For:
@@ -54,29 +54,29 @@ For EACH violation found, write a JSON file to .change-queue/ with this structur
 
 ## Rules
 
-1. ONLY detect violations of this specific pattern: ${rule.rule}
+1. ONLY detect violations of this specific rule: ${rule.rule}
 2. DO NOT edit source files - only write to .change-queue/
 3. Write one JSON file per source file with violations
 4. Use filename format: .change-queue/${ruleKey}-{source-filename}.json
 5. If no violations found, respond with: "NO_VIOLATIONS_FOUND"
-6. Use Glob to find .ts files, Grep to search for patterns, Read to examine code
+6. Use Glob to find .ts files, Grep to search for relevant code, Read to examine files
 7. Use Write to create the change descriptor JSON files
-8. Be precise - only flag code that clearly matches the anti-pattern`;
+8. Be precise - only flag code that clearly violates this rule`;
 }
 
 function buildPrompt(rule: FlattenedRule, target: string): string {
-  return `Scan all TypeScript files in "${target}" for this specific violation:
+  return `Scan all TypeScript files in "${target}" for violations of this rule:
 
-**Pattern**: ${rule.rule}
+**Rule**: ${rule.rule}
 **Description**: ${rule.example.description}
 
 Steps:
 1. Use Glob to find all .ts files in "${target}"
-2. Use Grep to search for potential violations matching this pattern
+2. Use Grep to search for code that may violate this rule
 3. Use Read to examine each file with matches
-4. For each actual violation, write a change descriptor to .change-queue/
+4. For each violation, write a change descriptor to .change-queue/
 
-Focus ONLY on this specific pattern. If no violations found, respond with: "NO_VIOLATIONS_FOUND"`;
+Focus ONLY on this specific rule. If no violations found, respond with: "NO_VIOLATIONS_FOUND"`;
 }
 
 export async function runDetectionPhase(target: string): Promise<void> {

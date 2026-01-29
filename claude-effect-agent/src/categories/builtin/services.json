@@ -1,10 +1,10 @@
 {
   "id": "services",
-  "name": "Service & Layer Patterns",
+  "name": "Services & Layers",
   "description": "NEVER call external APIs, databases, or file systems directly. ALL effectful dependencies MUST be behind a Context.Tag service. Every service MUST have both a *Live and *Test layer implementation for full testability.",
   "rules": [
     {
-      "rule": "Direct external API calls → Context.Tag service",
+      "rule": "Never call external APIs directly; use a Context.Tag service",
       "example": {
         "description": "HTTP API call",
         "bad": "const getUser = (id: string) =>\n  Effect.tryPromise(() =>\n    fetch(`https://api.example.com/users/${id}`).then((r) => r.json())\n  )\n\n// Used directly in business logic\nconst processUser = (id: string) =>\n  Effect.gen(function* () {\n    const user = yield* getUser(id) // Direct API call - untestable!\n    return processData(user)\n  })",
@@ -12,7 +12,7 @@
       }
     },
     {
-      "rule": "Direct database access → Context.Tag repository",
+      "rule": "Never access database directly; use a Context.Tag repository",
       "example": {
         "description": "Database operations",
         "bad": "import { db } from \"./database\"\n\nconst findUser = (id: string) =>\n  Effect.tryPromise(() => db.query(\"SELECT * FROM users WHERE id = ?\", [id]))\n\nconst saveUser = (user: User) =>\n  Effect.tryPromise(() => db.query(\"INSERT INTO users VALUES (?)\", [user]))",
@@ -20,7 +20,7 @@
       }
     },
     {
-      "rule": "Direct file I/O → Context.Tag service",
+      "rule": "Never use direct file I/O; use a Context.Tag service",
       "example": {
         "description": "File system operations",
         "bad": "import * as fs from \"fs/promises\"\n\nconst readConfig = () =>\n  Effect.tryPromise(() => fs.readFile(\"config.json\", \"utf-8\"))\n\nconst writeLog = (message: string) =>\n  Effect.tryPromise(() => fs.appendFile(\"app.log\", message))",
@@ -28,7 +28,7 @@
       }
     },
     {
-      "rule": "Missing test Layers → *Live + *Test layers for every service",
+      "rule": "Never create a service without both *Live and *Test layers",
       "example": {
         "description": "Complete layer setup",
         "bad": "// Only has live implementation\nconst EmailServiceLive = Layer.succeed(EmailService, {\n  send: (email) => sendRealEmail(email)\n})\n\n// Tests hit real email service!\nit.effect(\"should send welcome email\", () =>\n  Effect.gen(function* () {\n    yield* sendWelcomeEmail(user)\n  }).pipe(Effect.provide(EmailServiceLive))\n)",
@@ -36,7 +36,7 @@
       }
     },
     {
-      "rule": "Services without layers → Layer.effect or Layer.succeed",
+      "rule": "Never create services inline; use Layer.effect or Layer.succeed",
       "example": {
         "description": "Service with dependencies",
         "bad": "// Creating service implementation inline\nconst program = Effect.gen(function* () {\n  const db = yield* Database\n  const cache = yield* Cache\n\n  // Business logic mixed with service creation\n  const user = yield* db.query(\"...\")\n  yield* cache.set(user.id, user)\n})",
@@ -44,7 +44,7 @@
       }
     },
     {
-      "rule": "Direct third-party SDK calls → Context.Tag service",
+      "rule": "Never call third-party SDKs directly; wrap in a Context.Tag service",
       "example": {
         "description": "Third-party SDK usage (Stripe, SendGrid, AWS, etc.)",
         "bad": "import Stripe from \"stripe\"\n\nconst stripe = new Stripe(process.env.STRIPE_KEY)\n\n// Direct SDK call in business logic - untestable!\nconst processPayment = (amount: number) =>\n  Effect.tryPromise(() =>\n    stripe.charges.create({ amount, currency: \"usd\" })\n  )",
@@ -52,7 +52,7 @@
       }
     },
     {
-      "rule": "Composing layers → Layer.mergeAll, Layer.provide",
+      "rule": "Never provide services ad-hoc; compose layers with Layer.mergeAll/provide",
       "example": {
         "description": "Building application layer stack",
         "bad": "// Providing services ad-hoc throughout codebase\nconst result = yield* myEffect.pipe(\n  Effect.provideService(Logger, loggerImpl),\n  Effect.provideService(UserRepo, userRepoImpl),\n  Effect.provideService(EmailService, emailImpl)\n)",
@@ -60,7 +60,7 @@
       }
     },
     {
-      "rule": "Stateful test mocks → Layer.effect with Ref",
+      "rule": "Never use stateless test mocks; use Layer.effect with Ref for state",
       "example": {
         "description": "Repository test layer maintaining state",
         "bad": "// Stateless mock - can't test save then find\nconst UserRepositoryTest = Layer.succeed(UserRepository, {\n  findById: (id) => Effect.succeed({ id, name: \"Fixed\" }),\n  save: () => Effect.void,\n})",

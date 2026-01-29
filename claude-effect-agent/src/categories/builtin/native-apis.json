@@ -4,7 +4,7 @@
   "description": "NEVER use native JavaScript APIs that have Effect equivalents. Use Effect's Array module (not array.find), Record module (not Object.keys), Struct module (not spread), Tuple module (not indexing), and Predicate module (not manual &&/||).",
   "rules": [
     {
-      "rule": "array.find() → Array.findFirst (returns Option)",
+      "rule": "Never use array.find(); use Array.findFirst (returns Option)",
       "example": {
         "description": "Finding with default",
         "bad": "const found = items.find((i) => i.id === targetId) ?? defaultItem",
@@ -12,7 +12,7 @@
       }
     },
     {
-      "rule": "array[index] → Array.get(array, index) (returns Option)",
+      "rule": "Never use array[index]; use Array.get or Array.head/last (returns Option)",
       "example": {
         "description": "Head and tail access",
         "bad": "const first = arr[0]\nconst last = arr[arr.length - 1]",
@@ -20,7 +20,7 @@
       }
     },
     {
-      "rule": "Object.keys/values/entries → Record.keys/values/toEntries",
+      "rule": "Never use Object.keys/values/entries; use Record module",
       "example": {
         "description": "Converting to entries",
         "bad": "const entries = Object.entries(config)\nconst fromEntries = Object.fromEntries(entries)",
@@ -28,7 +28,7 @@
       }
     },
     {
-      "rule": "record[key] → Record.get(record, key) (returns Option)",
+      "rule": "Never use record[key]; use Record.get (returns Option)",
       "example": {
         "description": "Safe property access",
         "bad": "const price = prices[itemId]\nif (price !== undefined) {\n  calculateTotal(price)\n}",
@@ -36,7 +36,7 @@
       }
     },
     {
-      "rule": "Manual && / || for predicates → Predicate.and / Predicate.or / Predicate.not",
+      "rule": "Never use manual &&/|| for predicates; use Predicate.and/or/not",
       "example": {
         "description": "Struct predicate",
         "bad": "const isValidInput = (input: unknown) =>\n  typeof input === \"object\" &&\n  input !== null &&\n  typeof (input as any).name === \"string\" &&\n  typeof (input as any).age === \"number\"",
@@ -44,7 +44,7 @@
       }
     },
     {
-      "rule": "Struct spread for updates → Struct.evolve",
+      "rule": "Never use destructuring to omit fields; use Struct.omit",
       "example": {
         "description": "Omitting fields",
         "bad": "const { password, ssn, ...publicUser } = user",
@@ -52,7 +52,7 @@
       }
     },
     {
-      "rule": "tuple[0]/tuple[1] → Tuple.getFirst/getSecond",
+      "rule": "Never use tuple[0]/tuple[1]; use Tuple.getFirst/getSecond",
       "example": {
         "description": "Tuple transformation",
         "bad": "const transformed = [\n  pair[0].toUpperCase(),\n  pair[1] * 2\n] as const",
@@ -60,7 +60,7 @@
       }
     },
     {
-      "rule": "Nested function calls → flow for composing pipelines",
+      "rule": "Never use nested function calls; use flow for composing pipelines",
       "example": {
         "description": "Building reusable transformation pipeline",
         "bad": "// Repeated inline logic\nconst processUsers = (users: Array<User>) =>\n  users.filter((u) => u.active).map((u) => u.email)\n\nconst processOrders = (orders: Array<Order>) =>\n  orders.filter((o) => o.active).map((o) => o.total)",
@@ -68,7 +68,7 @@
       }
     },
     {
-      "rule": "Nested function calls → Function.compose",
+      "rule": "Never nest two function calls; use Function.compose",
       "example": {
         "description": "Composing two functions",
         "bad": "const parseAndValidate = (input: string) =>\n  validate(parse(input))",
@@ -76,7 +76,7 @@
       }
     },
     {
-      "rule": "No-op functions → Function.identity",
+      "rule": "Never use (x) => x; use Function.identity",
       "example": {
         "description": "Conditional transformation",
         "bad": "const transform = shouldTransform\n  ? myTransform\n  : (x) => x  // Anonymous identity function",
@@ -84,7 +84,7 @@
       }
     },
     {
-      "rule": "Arrow returning fixed value → Function.constant",
+      "rule": "Never use () => value; use Function.constant",
       "example": {
         "description": "Function that always returns same value",
         "bad": "const getDefaultUser = () => defaultUser\nconst alwaysZero = () => 0\nconst noop = () => undefined",
@@ -92,7 +92,7 @@
       }
     },
     {
-      "rule": "Method chaining → pipe for consistency",
+      "rule": "Never use native method chaining; use pipe with Effect's Array module",
       "example": {
         "description": "Data transformation pipeline",
         "bad": "// Method chaining (mixes native with Effect)\nconst result = users\n  .filter((u) => u.active)\n  .map((u) => u.email)\n  .slice(0, 10)",
@@ -100,7 +100,7 @@
       }
     },
     {
-      "rule": "filter + map → Array.filterMap in one pass",
+      "rule": "Never chain filter then map; use Array.filterMap in one pass",
       "example": {
         "description": "Filter and transform in single pass",
         "bad": "const validEmails = users\n  .filter((u) => isValidEmail(u.email))\n  .map((u) => u.email)",
@@ -108,7 +108,7 @@
       }
     },
     {
-      "rule": "Manual grouping → Array.groupBy",
+      "rule": "Never manually group with loops; use Array.groupBy",
       "example": {
         "description": "Grouping items by key",
         "bad": "const usersByRole: Record<string, User[]> = {}\nfor (const user of users) {\n  if (!usersByRole[user.role]) {\n    usersByRole[user.role] = []\n  }\n  usersByRole[user.role].push(user)\n}",
@@ -116,7 +116,7 @@
       }
     },
     {
-      "rule": "Set-based deduplication → Array.dedupe",
+      "rule": "Never use [...new Set()]; use Array.dedupe",
       "example": {
         "description": "Removing duplicates",
         "bad": "const uniqueIds = [...new Set(ids)]",

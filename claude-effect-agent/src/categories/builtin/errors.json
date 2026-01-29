@@ -4,7 +4,7 @@
   "description": "NEVER use throw, try/catch, or untyped Error classes. ALL errors MUST be typed using Schema.TaggedError. Use Effect.try/Effect.tryPromise to wrap code that may throw.",
   "rules": [
     {
-      "rule": "throw statements → Effect.fail()",
+      "rule": "Never use throw statements; use Effect.fail()",
       "example": {
         "description": "Conditional throw based on state",
         "bad": "function processOrder(order: Order) {\n  if (order.status === \"cancelled\") {\n    throw new Error(\"Cannot process cancelled order\")\n  }\n  if (order.total <= 0) {\n    throw new Error(\"Order total must be positive\")\n  }\n  return processValidOrder(order)\n}",
@@ -12,7 +12,7 @@
       }
     },
     {
-      "rule": "try/catch blocks → Effect.try()",
+      "rule": "Never use try/catch blocks; use Effect.try()",
       "example": {
         "description": "Multiple try/catch blocks",
         "bad": "async function processOrder(data: string) {\n  let order\n  try {\n    order = JSON.parse(data)\n  } catch (e) {\n    throw new Error(\"Invalid order JSON\")\n  }\n\n  try {\n    await saveOrder(order)\n  } catch (e) {\n    throw new Error(\"Failed to save order\")\n  }\n}",
@@ -20,7 +20,7 @@
       }
     },
     {
-      "rule": "try/catch blocks → Effect.tryPromise()",
+      "rule": "Never use try/catch with async; use Effect.tryPromise()",
       "example": {
         "description": "Wrapping async operation",
         "bad": "async function fetchUser(id: string): Promise<User> {\n  try {\n    const response = await fetch(`/users/${id}`)\n    return await response.json()\n  } catch (e) {\n    throw new Error(\"Failed to fetch user\")\n  }\n}",
@@ -28,7 +28,7 @@
       }
     },
     {
-      "rule": "Untyped errors → Schema.TaggedError",
+      "rule": "Never use untyped errors; use Schema.TaggedError",
       "example": {
         "description": "Multiple error types",
         "bad": "class ValidationError extends Error {\n  constructor(public field: string, public message: string) {\n    super(message)\n  }\n}\n\nclass NotFoundError extends Error {\n  constructor(public resource: string, public id: string) {\n    super(`${resource} ${id} not found`)\n  }\n}",
@@ -36,7 +36,7 @@
       }
     },
     {
-      "rule": "Error handling with catchTag",
+      "rule": "Never check error._tag manually; use Effect.catchTag",
       "example": {
         "description": "Recovering from specific errors",
         "bad": "const result = getUser(id).pipe(\n  Effect.catchAll((error) => {\n    if (error._tag === \"UserNotFound\") {\n      return Effect.succeed(defaultUser)\n    }\n    return Effect.fail(error)\n  })\n)",
@@ -44,7 +44,7 @@
       }
     },
     {
-      "rule": "Error handling with catchTags",
+      "rule": "Never use switch on error._tag; use Effect.catchTags",
       "example": {
         "description": "Handling multiple error types",
         "bad": "const result = processOrder(order).pipe(\n  Effect.catchAll((error) => {\n    switch (error._tag) {\n      case \"ValidationError\":\n        return Effect.fail(new BadRequest({ message: error.message }))\n      case \"NotFoundError\":\n        return Effect.succeed(defaultOrder)\n      default:\n        return Effect.fail(error)\n    }\n  })\n)",
@@ -52,7 +52,7 @@
       }
     },
     {
-      "rule": "Error fallback patterns",
+      "rule": "Never use catchAll for fallbacks; use Effect.orElse",
       "example": {
         "description": "Fallback to alternative",
         "bad": "const result = fetchFromPrimary().pipe(\n  Effect.catchAll(() => fetchFromBackup())\n)",
@@ -60,7 +60,7 @@
       }
     },
     {
-      "rule": "setTimeout race → Effect.timeout",
+      "rule": "Never use setTimeout for timeouts; use Effect.timeout",
       "example": {
         "description": "Timeout with typed error",
         "bad": "const withTimeout = async <T>(promise: Promise<T>, ms: number): Promise<T> => {\n  const timeout = new Promise<never>((_, reject) =>\n    setTimeout(() => reject(new Error(\"Timeout\")), ms)\n  )\n  return Promise.race([promise, timeout])\n}",
@@ -68,7 +68,7 @@
       }
     },
     {
-      "rule": "Manual retry loop → Effect.retry with Schedule",
+      "rule": "Never use manual retry loops; use Effect.retry with Schedule",
       "example": {
         "description": "Retry only for specific errors",
         "bad": "let attempts = 0\nwhile (attempts < 3) {\n  try {\n    return await fetchData()\n  } catch (e) {\n    if (e.code !== \"NETWORK_ERROR\") throw e\n    attempts++\n  }\n}",
@@ -76,7 +76,7 @@
       }
     },
     {
-      "rule": "Fail-fast errors → Error accumulation",
+      "rule": "Never use fail-fast Promise.all; use Effect.all with mode: \"either\"",
       "example": {
         "description": "Get Either results for each operation",
         "bad": "const results = await Promise.all(\n  items.map(processItem)\n)  // Fails on first error",
@@ -84,7 +84,7 @@
       }
     },
     {
-      "rule": "Full error inspection → Effect.sandbox with Cause",
+      "rule": "Never use try/catch for Effect errors; use Effect.sandbox with Cause",
       "example": {
         "description": "Handling defects and expected errors",
         "bad": "try {\n  await Effect.runPromise(program)\n} catch (e) {\n  // Can't distinguish between expected errors and defects\n  console.error(e)\n}",
@@ -92,7 +92,7 @@
       }
     },
     {
-      "rule": "Error transformation at boundaries → Effect.mapError",
+      "rule": "Never rethrow transformed errors; use Effect.mapError",
       "example": {
         "description": "Transform low-level to domain errors",
         "bad": "const result = await fetch(url).catch((e) => {\n  throw new Error(`API failed: ${e.message}`)\n})",

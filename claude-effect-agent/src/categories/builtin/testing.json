@@ -4,7 +4,7 @@
   "description": "ALL Effect tests MUST use @effect/vitest. NEVER use Effect.runPromise in tests. NEVER hand-craft test data - use Arbitrary.make(Schema). Combine service test layers with property testing for 100% coverage.",
   "rules": [
     {
-      "rule": "Effect.runPromise in tests → it.effect from @effect/vitest",
+      "rule": "Never use Effect.runPromise in tests; use it.effect from @effect/vitest",
       "example": {
         "description": "Test with service dependencies",
         "bad": "it(\"should process order\", async () => {\n  const result = await Effect.runPromise(\n    processOrder(order).pipe(\n      Effect.provide(TestLayer)\n    )\n  )\n  expect(result.status).toBe(\"completed\")\n})",
@@ -12,7 +12,7 @@
       }
     },
     {
-      "rule": "import { it } from \"vitest\" → import from @effect/vitest",
+      "rule": "Never import from vitest directly; use @effect/vitest",
       "example": {
         "description": "Test file imports",
         "bad": "import { describe, it, expect } from \"vitest\"\nimport { Effect } from \"effect\"\n\ndescribe(\"UserService\", () => {\n  it(\"should create user\", async () => {\n    const result = await Effect.runPromise(createUser(data))\n    expect(result).toBeDefined()\n  })\n})",
@@ -20,7 +20,7 @@
       }
     },
     {
-      "rule": "Hard-coded test data → Arbitrary.make(Schema)",
+      "rule": "Never use hard-coded test data; use Arbitrary.make(Schema)",
       "example": {
         "description": "Multiple test inputs",
         "bad": "const testOrders = [\n  { id: \"order-1\", total: 100, items: [\"a\", \"b\"] },\n  { id: \"order-2\", total: 200, items: [\"c\"] },\n  { id: \"order-3\", total: 50, items: [] },\n]\n\ntestOrders.forEach((order) => {\n  it(`should process order ${order.id}`, async () => {\n    const result = await processOrder(order)\n    expect(result).toBeDefined()\n  })\n})",
@@ -28,7 +28,7 @@
       }
     },
     {
-      "rule": "fast-check .filter() → Schema constraints",
+      "rule": "Never use fast-check .filter(); use Schema constraints",
       "example": {
         "description": "Complex Schema constraints",
         "bad": "const validUser = fc.record({\n  id: fc.string(),\n  name: fc.string(),\n  age: fc.integer(),\n  email: fc.string(),\n}).filter((u) =>\n  u.name.length > 0 &&\n  u.age >= 18 &&\n  u.email.includes(\"@\")\n)",
@@ -36,7 +36,7 @@
       }
     },
     {
-      "rule": "Manual property tests → it.prop with Arbitrary",
+      "rule": "Never write manual property tests; use it.prop with Arbitrary",
       "example": {
         "description": "Property test with Effect",
         "bad": "it(\"should process orders correctly\", async () => {\n  const orders = generateTestOrders(100)\n\n  for (const order of orders) {\n    const result = await Effect.runPromise(processOrder(order))\n    expect(result.status).toBe(\"completed\")\n  }\n})",
@@ -44,7 +44,7 @@
       }
     },
     {
-      "rule": "Manual fc.assert/fc.property → it.prop",
+      "rule": "Never use fc.assert/fc.property; use it.prop",
       "example": {
         "description": "Converting fc.assert pattern",
         "bad": "import * as fc from \"fast-check\"\n\nit(\"should be commutative\", () => {\n  fc.assert(\n    fc.property(fc.integer(), fc.integer(), (a, b) => {\n      expect(a + b).toBe(b + a)\n    })\n  )\n})",
@@ -52,7 +52,7 @@
       }
     },
     {
-      "rule": "Direct service usage in tests → it.layer with test Layer",
+      "rule": "Never use live services in tests; use it.layer with test Layer",
       "example": {
         "description": "Testing with service dependencies",
         "bad": "// Tests hit real database!\nit.effect(\"should get user\", () =>\n  Effect.gen(function* () {\n    const repo = yield* UserRepository\n    const user = yield* repo.findById(\"123\")\n    expect(user).toBeDefined()\n  }).pipe(Effect.provide(UserRepositoryLive))\n)",
@@ -60,7 +60,7 @@
       }
     },
     {
-      "rule": "Hard-coded values in test layers → Arbitrary-generated values",
+      "rule": "Never hard-code values in test layers; use Arbitrary-generated values",
       "example": {
         "description": "Test layer with hard-coded responses",
         "bad": "const UserApiTest = Layer.succeed(UserApi, {\n  // Hard-coded response - same value every test run\n  getUser: (id) => Effect.succeed({\n    id: \"test-123\",\n    name: \"Test User\",\n    email: \"test@test.com\"\n  }),\n  // Not implemented - this code path won't be tested\n  updateUser: () => Effect.fail(new Error(\"Not implemented\"))\n})",
@@ -68,7 +68,7 @@
       }
     },
     {
-      "rule": "Combine service test layers + Arbitrary for 100% coverage",
+      "rule": "Never test with partial coverage; combine test layers with Arbitrary",
       "example": {
         "description": "Full property-based integration test",
         "bad": "// Partial coverage: hard-coded data + real services\nit(\"should process order\", async () => {\n  const testOrder = { id: \"order-1\", total: 100, userId: \"user-1\" }\n  const result = await Effect.runPromise(\n    processOrder(testOrder).pipe(Effect.provide(RealServicesLayer))\n  )\n  expect(result.status).toBe(\"completed\")\n})",
@@ -76,7 +76,7 @@
       }
     },
     {
-      "rule": "Manual TestClock.layer → automatic in it.effect",
+      "rule": "Never provide TestClock.layer manually; it.effect includes it automatically",
       "example": {
         "description": "Time-based testing",
         "bad": "it(\"should timeout after delay\", async () => {\n  await Effect.runPromise(\n    Effect.gen(function* () {\n      const fiber = yield* Effect.fork(Effect.sleep(\"1 hour\"))\n      yield* TestClock.adjust(\"1 hour\")\n      yield* Fiber.join(fiber)\n    }).pipe(Effect.provide(TestClock.layer))\n  )\n})",
@@ -84,7 +84,7 @@
       }
     },
     {
-      "rule": "Call addEqualityTesters() for Effect type equality",
+      "rule": "Never skip addEqualityTesters(); call it for Effect type equality",
       "example": {
         "description": "Setup for Effect equality assertions",
         "bad": "// Effect types may not compare correctly in expect()\nimport { it, expect } from \"@effect/vitest\"\n\nit.effect(\"should match\", () =>\n  Effect.gen(function* () {\n    const result = yield* getOption()\n    expect(result).toEqual(Option.some(42))  // May fail incorrectly\n  })\n)",
@@ -92,7 +92,7 @@
       }
     },
     {
-      "rule": "Tests with resources → it.scoped",
+      "rule": "Never manage resources manually in tests; use it.scoped",
       "example": {
         "description": "Testing with acquireRelease resources",
         "bad": "it(\"should use database connection\", async () => {\n  const conn = await connect()\n  try {\n    const result = await conn.query(\"SELECT 1\")\n    expect(result).toBeDefined()\n  } finally {\n    await conn.close()  // Manual cleanup\n  }\n})",
@@ -100,7 +100,7 @@
       }
     },
     {
-      "rule": "Tests needing real environment → it.live",
+      "rule": "Never use it.effect when you need real time; use it.live",
       "example": {
         "description": "Testing with real clock/environment",
         "bad": "it.effect(\"should measure real time\", () =>\n  Effect.gen(function* () {\n    const start = Date.now()\n    yield* Effect.sleep(\"10 millis\")  // Uses TestClock - no real delay!\n    const elapsed = Date.now() - start\n    expect(elapsed).toBeGreaterThanOrEqual(10)  // Fails!\n  })\n)",
@@ -108,7 +108,7 @@
       }
     },
     {
-      "rule": "Inspecting error details → Effect.exit in it.effect",
+      "rule": "Never use try/catch for error assertions; use Effect.exit",
       "example": {
         "description": "Asserting on error type and data",
         "bad": "it(\"should fail with UserNotFound\", async () => {\n  try {\n    await Effect.runPromise(getUser(\"nonexistent\"))\n    fail(\"Expected error\")\n  } catch (e) {\n    expect(e._tag).toBe(\"UserNotFound\")\n  }\n})",
@@ -116,7 +116,7 @@
       }
     },
     {
-      "rule": "\"Not implemented\" in test layers → Arbitrary-generated responses",
+      "rule": "Never stub methods as \"not implemented\"; use Arbitrary-generated responses",
       "example": {
         "description": "Anti-pattern: stubbing methods as not implemented",
         "bad": "const TestLayer = Layer.succeed(MyService, {\n  getUser: (id) => Effect.succeed({ id, name: \"Hardcoded\" }),\n  updateUser: () => Effect.fail(new Error(\"Not implemented\")),  // Won't test this path!\n  deleteUser: () => Effect.fail(new Error(\"Not implemented\")),\n})",

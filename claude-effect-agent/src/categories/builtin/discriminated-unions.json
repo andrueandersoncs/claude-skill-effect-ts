@@ -4,7 +4,7 @@
   "description": "NEVER access ._tag directly. Use Schema.is() for type guards on Schema types, Match.tag for exhaustive handling. Direct ._tag access, type extraction, and array predicates using ._tag are all FORBIDDEN.",
   "rules": [
     {
-      "rule": "Direct ._tag equality check → Schema.is(Variant)",
+      "rule": "Never check ._tag directly; use Schema.is(Variant)",
       "example": {
         "description": "Switch on _tag property",
         "bad": "function getStatusMessage(order: Order): string {\n  switch (order._tag) {\n    case \"Pending\": return \"Awaiting shipment\"\n    case \"Shipped\": return `Tracking: ${order.trackingNumber}`\n    case \"Delivered\": return `Delivered ${order.deliveredAt}`\n  }\n}",
@@ -12,7 +12,7 @@
       }
     },
     {
-      "rule": "Type extraction from ._tag → Never do this",
+      "rule": "Never extract types from ._tag; use the union type directly",
       "example": {
         "description": "Extracting _tag as a type",
         "bad": "type ConflictTag = Conflict[\"_tag\"]\ntype EventType = AppEvent[\"_tag\"]\ntype OrderStatus = Order[\"_tag\"]\n\n// Using extracted tag\nfunction handleByTag(tag: EventType) { ... }",
@@ -20,7 +20,7 @@
       }
     },
     {
-      "rule": "._tag in array predicates → Schema.is(Variant) as predicate",
+      "rule": "Never use ._tag in array predicates; use Schema.is(Variant)",
       "example": {
         "description": "Partitioning by _tag",
         "bad": "const pending = orders.filter((o) => o._tag === \"Pending\")\nconst notPending = orders.filter((o) => o._tag !== \"Pending\")",
@@ -28,7 +28,7 @@
       }
     },
     {
-      "rule": "Match.tag for simple discriminated union handling",
+      "rule": "Never use if/else on ._tag; use Match.tag for discriminated unions",
       "example": {
         "description": "Simple event dispatch",
         "bad": "if (event._tag === \"UserCreated\") {\n  return notifyAdmin(event.userId)\n} else if (event._tag === \"UserDeleted\") {\n  return cleanupData(event.userId)\n} else {\n  return logEvent(event)\n}",
@@ -36,7 +36,7 @@
       }
     },
     {
-      "rule": "Schema.is() when you need class methods, Match.tag for simple cases",
+      "rule": "Never use Match.tag when you need class methods; use Schema.is()",
       "example": {
         "description": "Choosing between Schema.is() and Match.tag",
         "bad": "// Using Match.tag when you need class methods\nconst process = Match.type<Shape>().pipe(\n  Match.tag(\"Circle\", (c) => c.area),  // area is a class method - won't work!\n  Match.exhaustive\n)",
@@ -44,7 +44,7 @@
       }
     },
     {
-      "rule": "Schema.is() for validating unknown data",
+      "rule": "Never cast unknown to check ._tag; use Schema.is() for validation",
       "example": {
         "description": "Runtime validation of unknown input",
         "bad": "const handleUnknown = (input: unknown) => {\n  if (typeof input === \"object\" && input !== null && (input as any)._tag === \"Circle\") {\n    return `Valid circle`\n  }\n  return \"Invalid shape\"\n}",
@@ -52,7 +52,7 @@
       }
     },
     {
-      "rule": "Schema.TaggedError works with catchTag, Schema.is(), and Match.tag",
+      "rule": "Never use Data.TaggedError; use Schema.TaggedError for full compatibility",
       "example": {
         "description": "Error handling with Schema.TaggedError",
         "bad": "// Using Data.TaggedError (doesn't work with Schema.is)\nimport { Data } from \"effect\"\nclass UserNotFound extends Data.TaggedError(\"UserNotFound\")<{ userId: string }> {}\n\n// Or checking error._tag directly\nif (error._tag === \"UserNotFound\") {\n  return defaultUser\n}",

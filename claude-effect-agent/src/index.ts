@@ -23,22 +23,22 @@ async function main() {
     process.exit(1);
   }
 
-  // Load categories and flatten to patterns
+  // Load categories and flatten to rules
   const categories = await loadCategories();
-  const patterns = flattenCategories(categories);
+  const rules = flattenCategories(categories);
 
   console.log(`\n🔍 Effect Code Style Fixer (Parallel)`);
   console.log(`Target: ${target}`);
   console.log(`Max iterations: ${maxIterations}`);
   console.log(`Categories: ${categories.map((c) => c.id).join(", ")}`);
-  console.log(`Patterns: ${patterns.length} total`);
+  console.log(`Rules: ${rules.length} total`);
 
   for (let iteration = 1; iteration <= maxIterations; iteration++) {
     console.log(`\n${"━".repeat(50)}`);
     console.log(`Iteration ${iteration}`);
     console.log(`${"━".repeat(50)}`);
 
-    // Phase 1: Detection (parallel by pattern)
+    // Phase 1: Detection (parallel by rule)
     await runDetectionPhase(target);
 
     // Phase 2: Merge (sequential, in-process)

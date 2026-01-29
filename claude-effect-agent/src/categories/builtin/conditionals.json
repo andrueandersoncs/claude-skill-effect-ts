@@ -1,10 +1,10 @@
 {
   "id": "conditionals",
   "name": "Conditional Statements",
-  "description": "Replace all imperative conditional logic with pattern matching. ZERO if/else, switch/case, or ternary operators are acceptable in Effect code.",
+  "description": "ZERO if/else, switch/case, or ternary operators are acceptable in Effect code. Use Match module for all conditional logic.",
   "rules": [
     {
-      "rule": "if/else chains → Match.value + Match.when",
+      "rule": "Never use if/else chains; use Match.value with Match.when",
       "example": {
         "description": "Multi-condition object matching",
         "bad": "if (order.total > 1000 && order.isPremium) {\n  return 0.25\n} else if (order.total > 1000) {\n  return 0.15\n} else if (order.isPremium) {\n  return 0.10\n} else {\n  return 0\n}",
@@ -12,7 +12,7 @@
       }
     },
     {
-      "rule": "switch/case statements → Match.type + Match.when or Match.tag",
+      "rule": "Never use switch/case statements; use Match.type with Match.tag",
       "example": {
         "description": "Discriminated union event handling",
         "bad": "switch (event.type) {\n  case \"UserCreated\":\n    return notifyAdmin(event.userId)\n  case \"UserDeleted\":\n    return cleanupData(event.userId)\n  case \"OrderPlaced\":\n    return processOrder(event.orderId)\n  default:\n    throw new Error(\"Unknown event\")\n}",
@@ -20,7 +20,7 @@
       }
     },
     {
-      "rule": "Ternary operators (? :) → Match.value + Match.when",
+      "rule": "Never use ternary operators; use Match.value with Match.when",
       "example": {
         "description": "Nested ternary",
         "bad": "const level = score > 90 ? \"expert\" : score > 70 ? \"intermediate\" : \"beginner\"",
@@ -28,7 +28,7 @@
       }
     },
     {
-      "rule": "Null checks (if x != null) → Option.match",
+      "rule": "Never use null checks (if x != null); use Option.match",
       "example": {
         "description": "Effectful handling of nullable",
         "bad": "if (maybeUser != null) {\n  await sendEmail(maybeUser.email)\n} else {\n  console.log(\"No user to notify\")\n}",
@@ -36,7 +36,7 @@
       }
     },
     {
-      "rule": "Result/error flag checks → Either.match or Effect.match",
+      "rule": "Never use result/error flag checks; use Either.match or Effect.match",
       "example": {
         "description": "Effect success/failure handling",
         "bad": "try {\n  const user = await Effect.runPromise(getUser(id))\n  return { status: \"success\", user }\n} catch (error) {\n  return { status: \"error\", message: error.message }\n}",
@@ -44,7 +44,7 @@
       }
     },
     {
-      "rule": "Array empty checks → Array.match",
+      "rule": "Never use array empty checks; use Array.match",
       "example": {
         "description": "First element with fallback",
         "bad": "const first = items.length > 0 ? items[0] : defaultItem",
@@ -52,7 +52,7 @@
       }
     },
     {
-      "rule": "Conditional variable reassignment → Match.value",
+      "rule": "Never use conditional variable reassignment; use Match.value",
       "example": {
         "description": "Multi-condition assignment",
         "bad": "let result = defaultValue\nif (condition1) {\n  result = value1\n} else if (condition2) {\n  result = value2\n}",
@@ -60,7 +60,7 @@
       }
     },
     {
-      "rule": "Negative condition → Match.not",
+      "rule": "Never use negative conditions in if statements; use Match.not",
       "example": {
         "description": "Matching when condition is NOT true",
         "bad": "if (n > 0) {\n  return \"positive\"\n} else {\n  return \"not positive\"\n}",
@@ -68,7 +68,7 @@
       }
     },
     {
-      "rule": "Multiple OR conditions → Match.whenOr",
+      "rule": "Never use multiple OR conditions (||); use Match.whenOr",
       "example": {
         "description": "Matching any of several values",
         "bad": "if (day === \"Saturday\" || day === \"Sunday\") {\n  return true\n}\nreturn false",
@@ -76,7 +76,7 @@
       }
     },
     {
-      "rule": "Combined AND conditions → Match.whenAnd",
+      "rule": "Never use combined AND conditions (&&); use Match.whenAnd",
       "example": {
         "description": "Matching multiple conditions together",
         "bad": "if (user.role === \"admin\" && user.verified) {\n  return true\n}\nreturn false",
