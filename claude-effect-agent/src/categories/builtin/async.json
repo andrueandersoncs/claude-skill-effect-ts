@@ -1,19 +1,29 @@
 {
-  "id": "async-patterns",
-  "name": "Async/Promise Patterns",
+  "id": "async",
+  "name": "Async & Promise Patterns",
+  "description": "NEVER mix async/await with Effect. Convert all Promise-based code to Effect. Use Effect.gen with yield* for sequential async operations.",
   "patterns": [
     {
-      "id": "async-await-to-effect-gen",
-      "rule": "async/await mixed with Effect → Effect.gen with yield*",
+      "id": "async-function-to-effect-gen",
+      "rule": "async functions → Effect.gen with yield*",
       "example": {
         "description": "Converting async function",
-        "bad": "const fetchAndProcess = async (id: string) => {\n  const user = await getUser(id)\n  const orders = await getOrders(user.id)\n  return { user, orders }\n}\n\n// Mixed in Effect\nconst program = Effect.gen(function* () {\n  const result = await fetchAndProcess(\"123\") // DON'T DO THIS\n  return result\n})",
-        "good": "const fetchAndProcess = (id: string) =>\n  Effect.gen(function* () {\n    const user = yield* getUser(id)\n    const orders = yield* getOrders(user.id)\n    return { user, orders }\n  })\n\n// Pure Effect composition\nconst program = Effect.gen(function* () {\n  const result = yield* fetchAndProcess(\"123\")\n  return result\n})"
+        "bad": "const fetchAndProcess = async (id: string) => {\n  const user = await getUser(id)\n  const orders = await getOrders(user.id)\n  return { user, orders }\n}",
+        "good": "const fetchAndProcess = (id: string) =>\n  Effect.gen(function* () {\n    const user = yield* getUser(id)\n    const orders = yield* getOrders(user.id)\n    return { user, orders }\n  })"
       }
     },
     {
-      "id": "wrap-external-async",
-      "rule": "async/await mixed with Effect → Effect.gen with yield*",
+      "id": "await-in-effect-forbidden",
+      "rule": "async functions → Effect.gen with yield*",
+      "example": {
+        "description": "Mixing await inside Effect.gen (FORBIDDEN)",
+        "bad": "const program = Effect.gen(function* () {\n  const result = await fetchAndProcess(\"123\") // DON'T DO THIS\n  return result\n})",
+        "good": "const program = Effect.gen(function* () {\n  const result = yield* fetchAndProcess(\"123\")\n  return result\n})"
+      }
+    },
+    {
+      "id": "external-async-to-try-promise",
+      "rule": "async functions → Effect.gen with yield*",
       "example": {
         "description": "Wrapping external async library",
         "bad": "import { externalLib } from \"some-lib\"\n\nconst useLibrary = Effect.gen(function* () {\n  // Mixing async/await with Effect - BAD\n  const result = await externalLib.doSomething()\n  return result\n})",
@@ -39,7 +49,7 @@
       }
     },
     {
-      "id": "promise-all-named",
+      "id": "promise-all-named-to-effect-all",
       "rule": "Promise.all → Effect.all",
       "example": {
         "description": "Named parallel results",
@@ -48,8 +58,17 @@
       }
     },
     {
-      "id": "promise-chain-to-pipe",
-      "rule": "Promise chains → Effect.flatMap or pipe",
+      "id": "promise-race-to-effect-race",
+      "rule": "Promise.race → Effect.race or Effect.raceAll",
+      "example": {
+        "description": "Racing multiple operations",
+        "bad": "const result = await Promise.race([\n  fetchFromPrimary(),\n  fetchFromBackup()\n])",
+        "good": "const result = yield* Effect.race(\n  fetchFromPrimary(),\n  fetchFromBackup()\n)"
+      }
+    },
+    {
+      "id": "promise-then-to-pipe",
+      "rule": "Promise chains (.then) → pipe with Effect.flatMap",
       "example": {
         "description": "Sequential async operations",
         "bad": "getUser(id)\n  .then((user) => getOrders(user.id))\n  .then((orders) => processOrders(orders))\n  .then((result) => saveResult(result))\n  .catch((error) => handleError(error))",
@@ -57,8 +76,8 @@
       }
     },
     {
-      "id": "promise-chain-transform",
-      "rule": "Promise chains → Effect.flatMap or pipe",
+      "id": "promise-then-transform-to-map",
+      "rule": "Promise chains (.then) → pipe with Effect.flatMap",
       "example": {
         "description": "Promise chain with transformation",
         "bad": "fetchData()\n  .then((data) => data.items)\n  .then((items) => items.filter((i) => i.active))\n  .then((active) => active.map((i) => i.id))",
@@ -66,8 +85,8 @@
       }
     },
     {
-      "id": "await-to-yield-star",
-      "rule": "await in Effect.gen → yield* (except at boundaries)",
+      "id": "yield-without-star-forbidden",
+      "rule": "yield* in Effect.gen (not yield or await)",
       "example": {
         "description": "Correct generator usage",
         "bad": "const program = Effect.gen(function* () {\n  const user = await getUser(id)      // Wrong: using await\n  const orders = yield getOrders(id)  // Wrong: missing *\n  return { user, orders }\n})",
@@ -76,20 +95,47 @@
     },
     {
       "id": "boundary-main-entry",
-      "rule": "await in Effect.gen → yield* (except at boundaries)",
+      "rule": "Effect.runPromise only at application boundaries",
       "example": {
-        "description": "Boundary: main entry point",
+        "description": "Main entry point (boundary OK)",
         "bad": "// Trying to use Effect in async context badly\nasync function main() {\n  const result = yield* myEffect  // Can't use yield* outside Effect.gen\n}",
         "good": "// At application boundary, use runPromise\nconst main = async () => {\n  const result = await Effect.runPromise(\n    myEffect.pipe(Effect.provide(AppLive))\n  )\n  console.log(result)\n}\n\n// Or for CLI tools\nEffect.runPromise(\n  myEffect.pipe(Effect.provide(AppLive))\n).then(console.log).catch(console.error)"
       }
     },
     {
       "id": "boundary-http-handler",
-      "rule": "await in Effect.gen → yield* (except at boundaries)",
+      "rule": "Effect.runPromise only at application boundaries",
       "example": {
-        "description": "Boundary: HTTP handler",
+        "description": "HTTP handler (boundary OK)",
         "bad": "// Express handler mixing styles\napp.get(\"/users/:id\", async (req, res) => {\n  const user = yield* getUser(req.params.id)  // Won't work\n  res.json(user)\n})",
         "good": "// Convert Effect to Promise at HTTP boundary\napp.get(\"/users/:id\", async (req, res) => {\n  const result = await Effect.runPromise(\n    getUser(req.params.id).pipe(\n      Effect.provide(AppLive),\n      Effect.either\n    )\n  )\n\n  Either.match(result, {\n    onLeft: (error) => res.status(500).json({ error: error.message }),\n    onRight: (user) => res.json(user)\n  })\n})"
+      }
+    },
+    {
+      "id": "new-promise-to-effect-async",
+      "rule": "new Promise() → Effect.async for callback-based APIs",
+      "example": {
+        "description": "Converting callback-based API",
+        "bad": "const readFileAsync = (path: string) =>\n  new Promise((resolve, reject) => {\n    fs.readFile(path, (err, data) => {\n      if (err) reject(err)\n      else resolve(data)\n    })\n  })",
+        "good": "const readFileAsync = (path: string) =>\n  Effect.async<Buffer, NodeJS.ErrnoException>((resume) => {\n    fs.readFile(path, (err, data) => {\n      if (err) resume(Effect.fail(err))\n      else resume(Effect.succeed(data))\n    })\n  })"
+      }
+    },
+    {
+      "id": "settimeout-to-effect-sleep",
+      "rule": "setTimeout/setInterval → Effect.sleep, Schedule",
+      "example": {
+        "description": "Delayed execution",
+        "bad": "await new Promise((resolve) => setTimeout(resolve, 1000))\nconsole.log(\"Done waiting\")",
+        "good": "yield* Effect.sleep(\"1 second\")\nyield* Effect.log(\"Done waiting\")"
+      }
+    },
+    {
+      "id": "setinterval-to-schedule",
+      "rule": "setTimeout/setInterval → Effect.sleep, Schedule",
+      "example": {
+        "description": "Repeated execution",
+        "bad": "const interval = setInterval(() => {\n  pollForUpdates()\n}, 5000)",
+        "good": "yield* Effect.repeat(\n  pollForUpdates,\n  Schedule.spaced(\"5 seconds\")\n)"
       }
     }
   ]

@@ -1,0 +1,133 @@
+{
+  "id": "discriminated-unions",
+  "name": "Discriminated Union Handling",
+  "description": "NEVER access ._tag directly. Use Schema.is() for type guards on Schema types, Match.tag for exhaustive handling. Direct ._tag access, type extraction, and array predicates using ._tag are all FORBIDDEN.",
+  "patterns": [
+    {
+      "id": "tag-equality-to-schema-is",
+      "rule": "Direct ._tag equality check → Schema.is(Variant)",
+      "example": {
+        "description": "Type narrowing in conditionals",
+        "bad": "if (event._tag === \"UserCreated\") {\n  notifyAdmin(event.userId)\n}\n\nconst isCreated = event._tag === \"UserCreated\"",
+        "good": "if (Schema.is(UserCreated)(event)) {\n  // event is narrowed to UserCreated\n  notifyAdmin(event.userId)\n}\n\nconst isCreated = Schema.is(UserCreated)(event)"
+      }
+    },
+    {
+      "id": "tag-switch-to-match-tag",
+      "rule": "Direct ._tag equality check → Schema.is(Variant)",
+      "example": {
+        "description": "Switch on _tag property",
+        "bad": "function getStatusMessage(order: Order): string {\n  switch (order._tag) {\n    case \"Pending\": return \"Awaiting shipment\"\n    case \"Shipped\": return `Tracking: ${order.trackingNumber}`\n    case \"Delivered\": return `Delivered ${order.deliveredAt}`\n  }\n}",
+        "good": "const getOrderStatus = (order: Order) =>\n  Match.value(order).pipe(\n    Match.when(Schema.is(Pending), () => \"Awaiting shipment\"),\n    Match.when(Schema.is(Shipped), (o) => `Tracking: ${o.trackingNumber}`),\n    Match.when(Schema.is(Delivered), (o) => `Delivered ${o.deliveredAt}`),\n    Match.exhaustive\n  )"
+      }
+    },
+    {
+      "id": "tag-ternary-to-schema-is",
+      "rule": "Direct ._tag equality check → Schema.is(Variant)",
+      "example": {
+        "description": "Ternary with _tag check",
+        "bad": "const isPending = order._tag === \"Pending\" ? true : false\nconst status = order._tag === \"Shipped\" ? \"In Transit\" : \"Other\"",
+        "good": "const isPending = Schema.is(Pending)(order)\nconst status = Match.value(order).pipe(\n  Match.when(Schema.is(Shipped), () => \"In Transit\"),\n  Match.orElse(() => \"Other\")\n)"
+      }
+    },
+    {
+      "id": "tag-type-extraction-forbidden",
+      "rule": "Type extraction from ._tag → Never do this",
+      "example": {
+        "description": "Extracting _tag as a type",
+        "bad": "type ConflictTag = Conflict[\"_tag\"]\ntype EventType = AppEvent[\"_tag\"]\ntype OrderStatus = Order[\"_tag\"]\n\n// Using extracted tag\nfunction handleByTag(tag: EventType) { ... }",
+        "good": "// Don't extract _tag - use the union type directly with Match or Schema.is\n\n// For type narrowing, use Schema.is\nconst isUserCreated = Schema.is(UserCreated)\n\n// For exhaustive handling, use Match\nconst handleAll = Match.type<AppEvent>().pipe(\n  Match.tag(\"UserCreated\", handleUserCreated),\n  Match.tag(\"UserDeleted\", handleUserDeleted),\n  Match.exhaustive\n)\n\n// For function parameters, use the union type\nfunction handleEvent(event: AppEvent) {\n  return Match.value(event).pipe(\n    Match.tag(\"UserCreated\", ...),\n    Match.exhaustive\n  )\n}"
+      }
+    },
+    {
+      "id": "tag-array-some-to-schema-is",
+      "rule": "._tag in array predicates → Schema.is(Variant) as predicate",
+      "example": {
+        "description": "Array.some with _tag check",
+        "bad": "const hasConflict = conflicts.some((c) => c._tag === \"MergeConflict\")\nconst hasError = events.some((e) => e._tag === \"ErrorOccurred\")",
+        "good": "const hasConflict = conflicts.some(Schema.is(MergeConflict))\nconst hasError = events.some(Schema.is(ErrorOccurred))"
+      }
+    },
+    {
+      "id": "tag-array-filter-to-schema-is",
+      "rule": "._tag in array predicates → Schema.is(Variant) as predicate",
+      "example": {
+        "description": "Array.filter with _tag check",
+        "bad": "const mergeConflicts = conflicts.filter((c) => c._tag === \"MergeConflict\")\nconst pendingOrders = orders.filter((o) => o._tag === \"Pending\")",
+        "good": "const mergeConflicts = conflicts.filter(Schema.is(MergeConflict))\nconst pendingOrders = orders.filter(Schema.is(Pending))"
+      }
+    },
+    {
+      "id": "tag-array-count-to-schema-is",
+      "rule": "._tag in array predicates → Schema.is(Variant) as predicate",
+      "example": {
+        "description": "Counting by _tag",
+        "bad": "const countMerge = conflicts.filter((c) => c._tag === \"MergeConflict\").length\nconst errorCount = events.filter((e) => e._tag === \"Error\").length",
+        "good": "const countMerge = conflicts.filter(Schema.is(MergeConflict)).length\nconst errorCount = events.filter(Schema.is(Error)).length"
+      }
+    },
+    {
+      "id": "tag-array-find-to-schema-is",
+      "rule": "._tag in array predicates → Schema.is(Variant) as predicate",
+      "example": {
+        "description": "Finding by _tag",
+        "bad": "const firstPending = orders.find((o) => o._tag === \"Pending\")\nconst firstError = results.find((r) => r._tag === \"Failure\")",
+        "good": "const firstPending = Array.findFirst(orders, Schema.is(Pending))\nconst firstError = Array.findFirst(results, Schema.is(Failure))"
+      }
+    },
+    {
+      "id": "tag-array-partition-to-schema-is",
+      "rule": "._tag in array predicates → Schema.is(Variant) as predicate",
+      "example": {
+        "description": "Partitioning by _tag",
+        "bad": "const pending = orders.filter((o) => o._tag === \"Pending\")\nconst notPending = orders.filter((o) => o._tag !== \"Pending\")",
+        "good": "const [notPending, pending] = Array.partition(orders, Schema.is(Pending))"
+      }
+    },
+    {
+      "id": "tag-every-to-schema-is",
+      "rule": "._tag in array predicates → Schema.is(Variant) as predicate",
+      "example": {
+        "description": "Array.every with _tag check",
+        "bad": "const allCompleted = orders.every((o) => o._tag === \"Completed\")\nconst allSuccess = results.every((r) => r._tag === \"Success\")",
+        "good": "const allCompleted = orders.every(Schema.is(Completed))\nconst allSuccess = results.every(Schema.is(Success))"
+      }
+    },
+    {
+      "id": "match-tag-simple",
+      "rule": "Match.tag for simple discriminated union handling",
+      "example": {
+        "description": "Simple event dispatch",
+        "bad": "if (event._tag === \"UserCreated\") {\n  return notifyAdmin(event.userId)\n} else if (event._tag === \"UserDeleted\") {\n  return cleanupData(event.userId)\n} else {\n  return logEvent(event)\n}",
+        "good": "const handleEvent = Match.type<AppEvent>().pipe(\n  Match.tag(\"UserCreated\", (e) => notifyAdmin(e.userId)),\n  Match.tag(\"UserDeleted\", (e) => cleanupData(e.userId)),\n  Match.tag(\"OrderPlaced\", (e) => processOrder(e.orderId)),\n  Match.exhaustive\n)"
+      }
+    },
+    {
+      "id": "schema-is-vs-match-tag",
+      "rule": "Schema.is() when you need class methods, Match.tag for simple cases",
+      "example": {
+        "description": "Choosing between Schema.is() and Match.tag",
+        "bad": "// Using Match.tag when you need class methods\nconst process = Match.type<Shape>().pipe(\n  Match.tag(\"Circle\", (c) => c.area),  // area is a class method - won't work!\n  Match.exhaustive\n)",
+        "good": "// Match.tag - when you just need the data\nconst getShapeName = (shape: Shape) =>\n  Match.value(shape).pipe(\n    Match.tag(\"Circle\", () => \"circle\"),\n    Match.tag(\"Rectangle\", () => \"rectangle\"),\n    Match.exhaustive\n  )\n\n// Schema.is() - when you need class methods or rich type narrowing\nconst processShape = (shape: Shape) =>\n  Match.value(shape).pipe(\n    Match.when(Schema.is(Circle), (c) => c.area),      // Can use .area method\n    Match.when(Schema.is(Rectangle), (r) => r.area),   // Can use .area method\n    Match.exhaustive\n  )"
+      }
+    },
+    {
+      "id": "schema-is-unknown-validation",
+      "rule": "Schema.is() for validating unknown data",
+      "example": {
+        "description": "Runtime validation of unknown input",
+        "bad": "const handleUnknown = (input: unknown) => {\n  if (typeof input === \"object\" && input !== null && (input as any)._tag === \"Circle\") {\n    return `Valid circle`\n  }\n  return \"Invalid shape\"\n}",
+        "good": "const handleUnknown = (input: unknown) =>\n  Match.value(input).pipe(\n    Match.when(Schema.is(Circle), (c) => `Valid circle with radius ${c.radius}`),\n    Match.when(Schema.is(Rectangle), (r) => `Valid rectangle ${r.width}x${r.height}`),\n    Match.orElse(() => \"Invalid shape\")\n  )"
+      }
+    },
+    {
+      "id": "error-tag-to-catch-tag",
+      "rule": "Schema.TaggedError works with catchTag, Schema.is(), and Match.tag",
+      "example": {
+        "description": "Error handling with Schema.TaggedError",
+        "bad": "// Using Data.TaggedError (doesn't work with Schema.is)\nimport { Data } from \"effect\"\nclass UserNotFound extends Data.TaggedError(\"UserNotFound\")<{ userId: string }> {}\n\n// Or checking error._tag directly\nif (error._tag === \"UserNotFound\") {\n  return defaultUser\n}",
+        "good": "// Always use Schema.TaggedError for domain errors\nclass UserNotFound extends Schema.TaggedError<UserNotFound>()(\"UserNotFound\", {\n  userId: Schema.String\n}) {}\n\n// Works with Effect.catchTag\ngetUser(id).pipe(\n  Effect.catchTag(\"UserNotFound\", () => Effect.succeed(defaultUser))\n)\n\n// Works with Schema.is()\nif (Schema.is(UserNotFound)(error)) {\n  return defaultUser\n}\n\n// Works with Match.tag\nMatch.value(error).pipe(\n  Match.tag(\"UserNotFound\", (e) => Effect.succeed(defaultUser)),\n  Match.exhaustive\n)"
+      }
+    }
+  ]
+}
