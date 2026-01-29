@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir } from "fs/promises";
 import type { ChangeDescriptor, MergedDescriptor } from "../types.js";
 import { sanitizeFilename } from "../utils.js";
 
@@ -20,7 +20,7 @@ export async function runMergePhase(): Promise<string[]> {
 
   for (const file of jsonFiles) {
     try {
-      const content = await readFile(`.change-queue/${file}`, "utf-8");
+      const content = await Bun.file(`.change-queue/${file}`).text();
       const parsed = JSON.parse(content) as ChangeDescriptor;
       descriptors.push(parsed);
     } catch {
@@ -48,7 +48,7 @@ export async function runMergePhase(): Promise<string[]> {
     };
 
     const mergedPath = `.change-queue/merged/${sanitizeFilename(targetFile)}.json`;
-    await writeFile(mergedPath, JSON.stringify(merged, null, 2));
+    await Bun.write(mergedPath, JSON.stringify(merged, null, 2));
     mergedFiles.push(mergedPath);
 
     const ruleInfo = merged.rules.length > 0 ? ` [${merged.rules.length} rules]` : "";

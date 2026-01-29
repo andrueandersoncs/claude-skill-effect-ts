@@ -1,11 +1,7 @@
-import { readdir, readFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { homedir } from "node:os";
+import { readdir } from "fs/promises";
+import { existsSync } from "fs";
+import { join } from "path";
 import type { Category } from "./types.js";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export interface LoadCategoriesOptions {
   cwd?: string;
@@ -24,7 +20,7 @@ async function loadCategoriesFromDir(dir: string): Promise<Category[]> {
 
     for (const file of jsonFiles) {
       try {
-        const content = await readFile(join(dir, file), "utf-8");
+        const content = await Bun.file(join(dir, file)).text();
         const category = JSON.parse(content) as Category;
         categories.push(category);
       } catch (error) {
@@ -43,8 +39,8 @@ export async function loadCategories(options: LoadCategoriesOptions = {}): Promi
 
   const paths = [
     join(cwd, "effect-agent", "categories"),
-    join(homedir(), ".effect-agent", "categories"),
-    join(__dirname, "builtin"),
+    join(Bun.env.HOME ?? "", ".effect-agent", "categories"),
+    join(import.meta.dir, "builtin"),
   ];
 
   const seenIds = new Set<string>();

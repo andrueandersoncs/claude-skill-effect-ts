@@ -1,5 +1,5 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, rm } from "fs/promises";
 import {
   loadCategories,
   flattenCategories,
