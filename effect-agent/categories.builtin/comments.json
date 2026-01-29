@@ -1,0 +1,71 @@
+{
+  "id": "comments",
+  "name": "Redundant Comments",
+  "description": "Comments are a LAST RESORT. Code should be self-documenting through clear naming and Effect patterns. NEVER comment WHAT code does. ONLY comment WHY when the reason isn't obvious from context. PREFER better naming, smaller functions, or clearer types over comments.",
+  "rules": [
+    {
+      "rule": "Never add JSDoc comments that merely restate the type definition; the types are self-documenting",
+      "example": {
+        "description": "Branded type definition",
+        "bad": "/** Branded type for operation IDs */\nexport const OperationId = Schema.String.pipe(Schema.brand(\"OperationId\"));\nexport type OperationId = typeof OperationId.Type;",
+        "good": "export const OperationId = Schema.String.pipe(Schema.brand(\"OperationId\"));\nexport type OperationId = typeof OperationId.Type;"
+      }
+    },
+    {
+      "rule": "Never add comments describing WHAT code does; the code itself shows that",
+      "example": {
+        "description": "Function implementation",
+        "bad": "// Get the user from the database\nconst getUser = (id: UserId) =>\n  Effect.gen(function* () {\n    const db = yield* Database;\n    return yield* db.findUser(id);\n  });",
+        "good": "const getUser = (id: UserId) =>\n  Effect.gen(function* () {\n    const db = yield* Database;\n    return yield* db.findUser(id);\n  });"
+      }
+    },
+    {
+      "rule": "Never add section marker comments; use file organization and clear naming instead",
+      "example": {
+        "description": "Code organization",
+        "bad": "// ============ Types ============\nexport type User = { ... };\n\n// ============ Services ============\nexport class UserService extends Context.Tag(\"UserService\")<UserService, { ... }> {}",
+        "good": "export type User = { ... };\n\nexport class UserService extends Context.Tag(\"UserService\")<UserService, { ... }> {}"
+      }
+    },
+    {
+      "rule": "Never add comments that could be replaced by better variable or function names",
+      "example": {
+        "description": "Naming over commenting",
+        "bad": "// Users who have admin privileges\nconst u = users.filter((x) => x.role === \"admin\");",
+        "good": "const adminUsers = Array.filter(users, (user) => user.role === \"admin\");"
+      }
+    },
+    {
+      "rule": "Never add JSDoc @param/@returns that just repeat the type signature",
+      "example": {
+        "description": "Function documentation",
+        "bad": "/**\n * Creates a user.\n * @param name - The name of the user\n * @param email - The email of the user\n * @returns The created user\n */\nconst createUser = (name: string, email: Email): Effect.Effect<User, DatabaseError> => ...",
+        "good": "const createUser = (name: string, email: Email): Effect.Effect<User, DatabaseError> => ..."
+      }
+    },
+    {
+      "rule": "Never add inline comments for obvious Effect patterns; Effect code is self-documenting",
+      "example": {
+        "description": "Effect pipeline",
+        "bad": "const result = yield* pipe(\n  fetchUser(id),           // Get the user\n  Effect.flatMap(validate), // Validate it\n  Effect.map(transform)     // Transform the result\n);",
+        "good": "const result = yield* pipe(\n  fetchUser(id),\n  Effect.flatMap(validate),\n  Effect.map(transform)\n);"
+      }
+    },
+    {
+      "rule": "Never add TODO comments without actionable context; either fix it or remove it",
+      "example": {
+        "description": "TODO comments",
+        "bad": "// TODO: fix this\nconst processData = (data: Data) => ...\n\n// TODO\nconst validate = ...",
+        "good": "// TODO(#123): Handle rate limiting when upstream API returns 429\nconst processData = (data: Data) => ..."
+      }
+    },
+    {
+      "rule": "Only add comments explaining WHY when the reason isn't obvious from context",
+      "example": {
+        "description": "Legitimate why comment",
+        "bad": "// Set timeout to 30 seconds\nconst timeout = 30_000;",
+        "good": "// Upstream payment API has p99 latency of 25s during peak hours\nconst paymentTimeout = Duration.seconds(30);"
+      }
+    }
+  ]
+}
