@@ -2,18 +2,8 @@
   "id": "testing",
   "name": "Testing Violations",
   "description": "ALL Effect tests MUST use @effect/vitest. NEVER use Effect.runPromise in tests. NEVER hand-craft test data - use Arbitrary.make(Schema). Combine service test layers with property testing for 100% coverage.",
-  "patterns": [
+  "rules": [
     {
-      "id": "run-promise-to-it-effect",
-      "rule": "Effect.runPromise in tests → it.effect from @effect/vitest",
-      "example": {
-        "description": "Basic Effect test",
-        "bad": "import { it, expect } from \"vitest\"\n\nit(\"should get user\", async () => {\n  const result = await Effect.runPromise(getUser(\"123\"))\n  expect(result.name).toBe(\"Alice\")\n})",
-        "good": "import { it, expect } from \"@effect/vitest\"\n\nit.effect(\"should get user\", () =>\n  Effect.gen(function* () {\n    const result = yield* getUser(\"123\")\n    expect(result.name).toBe(\"Alice\")\n  })\n)"
-      }
-    },
-    {
-      "id": "run-promise-with-layer",
       "rule": "Effect.runPromise in tests → it.effect from @effect/vitest",
       "example": {
         "description": "Test with service dependencies",
@@ -22,7 +12,6 @@
       }
     },
     {
-      "id": "vitest-import-to-effect-vitest",
       "rule": "import { it } from \"vitest\" → import from @effect/vitest",
       "example": {
         "description": "Test file imports",
@@ -31,16 +20,6 @@
       }
     },
     {
-      "id": "hardcoded-to-arbitrary",
-      "rule": "Hard-coded test data → Arbitrary.make(Schema)",
-      "example": {
-        "description": "User test data",
-        "bad": "const testUser = {\n  id: \"user-123\",\n  name: \"Test User\",\n  email: \"test@example.com\",\n  age: 25,\n}\n\nit(\"should validate user\", () => {\n  expect(validateUser(testUser)).toBe(true)\n})",
-        "good": "import { Arbitrary } from \"effect\"\nimport * as fc from \"fast-check\"\n\nconst UserArbitrary = Arbitrary.make(User)\n\nit.prop(\"should validate all generated users\", [UserArbitrary], ([user]) => {\n  expect(validateUser(user)).toBe(true)\n})"
-      }
-    },
-    {
-      "id": "foreach-tests-to-prop",
       "rule": "Hard-coded test data → Arbitrary.make(Schema)",
       "example": {
         "description": "Multiple test inputs",
@@ -49,25 +28,6 @@
       }
     },
     {
-      "id": "fc-filter-to-schema-between",
-      "rule": "fast-check .filter() → Schema constraints",
-      "example": {
-        "description": "Filtering numeric range",
-        "bad": "const adultAge = fc.integer().filter((n) => n >= 18 && n <= 100)\n\nit.prop(\"processes adult ages\", [adultAge], ([age]) => {\n  expect(isValidAdultAge(age)).toBe(true)\n})",
-        "good": "const Age = Schema.Number.pipe(\n  Schema.int(),\n  Schema.between(18, 100)\n)\n\nconst AgeArbitrary = Arbitrary.make(Age)\n\nit.prop(\"processes adult ages\", [AgeArbitrary], ([age]) => {\n  expect(isValidAdultAge(age)).toBe(true)\n})"
-      }
-    },
-    {
-      "id": "fc-filter-string-length",
-      "rule": "fast-check .filter() → Schema constraints",
-      "example": {
-        "description": "Filtering string length",
-        "bad": "const nonEmptyString = fc.string().filter((s) => s.length > 0)\nconst shortString = fc.string().filter((s) => s.length <= 100)",
-        "good": "const NonEmptyName = Schema.String.pipe(Schema.minLength(1))\nconst ShortDescription = Schema.String.pipe(Schema.maxLength(100))\n\n// Arbitraries generate ONLY valid values\nconst NameArbitrary = Arbitrary.make(NonEmptyName)\nconst DescArbitrary = Arbitrary.make(ShortDescription)"
-      }
-    },
-    {
-      "id": "fc-record-to-schema-class",
       "rule": "fast-check .filter() → Schema constraints",
       "example": {
         "description": "Complex Schema constraints",
@@ -76,16 +36,6 @@
       }
     },
     {
-      "id": "manual-roundtrip-to-prop",
-      "rule": "Manual property tests → it.prop with Arbitrary",
-      "example": {
-        "description": "Round-trip testing",
-        "bad": "it(\"should encode and decode user\", () => {\n  const users = [\n    { id: \"1\", name: \"Alice\", age: 30 },\n    { id: \"2\", name: \"Bob\", age: 25 },\n  ]\n\n  users.forEach((user) => {\n    const encoded = Schema.encodeSync(User)(user)\n    const decoded = Schema.decodeSync(User)(encoded)\n    expect(decoded).toEqual(user)\n  })\n})",
-        "good": "it.prop(\n  \"should encode and decode any user\",\n  { user: Arbitrary.make(User) },\n  ({ user }) => {\n    const encoded = Schema.encodeSync(User)(user)\n    const decoded = Schema.decodeUnknownSync(User)(encoded)\n    expect(decoded).toEqual(user)\n  }\n)"
-      }
-    },
-    {
-      "id": "loop-test-to-prop-effect",
       "rule": "Manual property tests → it.prop with Arbitrary",
       "example": {
         "description": "Property test with Effect",
@@ -94,7 +44,6 @@
       }
     },
     {
-      "id": "manual-fc-assert-to-it-prop",
       "rule": "Manual fc.assert/fc.property → it.prop",
       "example": {
         "description": "Converting fc.assert pattern",
@@ -103,7 +52,6 @@
       }
     },
     {
-      "id": "service-layer-test",
       "rule": "Direct service usage in tests → it.layer with test Layer",
       "example": {
         "description": "Testing with service dependencies",
@@ -112,7 +60,6 @@
       }
     },
     {
-      "id": "hardcoded-mock-layer",
       "rule": "Hard-coded values in test layers → Arbitrary-generated values",
       "example": {
         "description": "Test layer with hard-coded responses",
@@ -121,7 +68,6 @@
       }
     },
     {
-      "id": "service-arbitrary-combo",
       "rule": "Combine service test layers + Arbitrary for 100% coverage",
       "example": {
         "description": "Full property-based integration test",
@@ -130,7 +76,6 @@
       }
     },
     {
-      "id": "manual-test-clock",
       "rule": "Manual TestClock.layer → automatic in it.effect",
       "example": {
         "description": "Time-based testing",
@@ -139,7 +84,6 @@
       }
     },
     {
-      "id": "missing-equality-testers",
       "rule": "Call addEqualityTesters() for Effect type equality",
       "example": {
         "description": "Setup for Effect equality assertions",
@@ -148,7 +92,6 @@
       }
     },
     {
-      "id": "scoped-resource-test",
       "rule": "Tests with resources → it.scoped",
       "example": {
         "description": "Testing with acquireRelease resources",
@@ -157,7 +100,6 @@
       }
     },
     {
-      "id": "live-real-time-test",
       "rule": "Tests needing real environment → it.live",
       "example": {
         "description": "Testing with real clock/environment",
@@ -166,16 +108,6 @@
       }
     },
     {
-      "id": "flaky-test-retry",
-      "rule": "Flaky external operations → it.flakyTest",
-      "example": {
-        "description": "Retrying unreliable operations",
-        "bad": "it.effect(\"should eventually succeed\", () =>\n  unreliableExternalCall()  // May fail due to timing/network\n)",
-        "good": "it.effect(\"should eventually succeed\", () =>\n  it.flakyTest(\n    unreliableExternalCall(),\n    \"5 seconds\"  // Max retry duration\n  )\n)"
-      }
-    },
-    {
-      "id": "exit-error-inspection",
       "rule": "Inspecting error details → Effect.exit in it.effect",
       "example": {
         "description": "Asserting on error type and data",
@@ -184,7 +116,6 @@
       }
     },
     {
-      "id": "not-implemented-antipattern",
       "rule": "\"Not implemented\" in test layers → Arbitrary-generated responses",
       "example": {
         "description": "Anti-pattern: stubbing methods as not implemented",

@@ -3,31 +3,33 @@ import { mkdir, rm } from "node:fs/promises";
 import {
   loadCategories,
   flattenCategories,
-  getPatternKey,
-  getPatternLabel,
-  type FlattenedPattern,
+  getRuleKey,
+  getRuleLabel,
+  slugify,
+  type FlattenedRule,
 } from "../categories/index.js";
 import { consumeQuery } from "../utils.js";
 
-function buildSystemPrompt(pattern: FlattenedPattern): string {
-  const patternKey = getPatternKey(pattern);
+function buildSystemPrompt(rule: FlattenedRule): string {
+  const ruleKey = getRuleKey(rule);
+  const ruleSlug = slugify(rule.rule);
 
   return `You are an Effect-TS code style expert. Your ONLY job is to detect ONE specific violation pattern.
 
-## Your Pattern: ${pattern.rule}
-## Category: ${pattern.categoryName}
+## Your Pattern: ${rule.rule}
+## Category: ${rule.categoryName}
 
 ### What to Look For:
-${pattern.example.description}
+${rule.example.description}
 
 ### Bad Code (detect this):
 \`\`\`typescript
-${pattern.example.bad}
+${rule.example.bad}
 \`\`\`
 
 ### Good Code (suggest this):
 \`\`\`typescript
-${pattern.example.good}
+${rule.example.good}
 \`\`\`
 
 ## Output Format
@@ -35,13 +37,13 @@ ${pattern.example.good}
 For EACH violation found, write a JSON file to .change-queue/ with this structure:
 \`\`\`json
 {
-  "category": "${pattern.categoryId}",
-  "pattern": "${pattern.patternId}",
+  "category": "${rule.categoryId}",
+  "rule": "${ruleSlug}",
   "targetFile": "/absolute/path/to/file.ts",
   "changes": [
     {
       "lineNumber": 42,
-      "violationType": "${pattern.rule}",
+      "violationType": "${rule.rule}",
       "currentCode": "the current code snippet",
       "proposedFix": "the proposed replacement code",
       "explanation": "why this change is needed"
@@ -52,21 +54,21 @@ For EACH violation found, write a JSON file to .change-queue/ with this structur
 
 ## Rules
 
-1. ONLY detect violations of this specific pattern: ${pattern.rule}
+1. ONLY detect violations of this specific pattern: ${rule.rule}
 2. DO NOT edit source files - only write to .change-queue/
 3. Write one JSON file per source file with violations
-4. Use filename format: .change-queue/${patternKey}-{source-filename}.json
+4. Use filename format: .change-queue/${ruleKey}-{source-filename}.json
 5. If no violations found, respond with: "NO_VIOLATIONS_FOUND"
 6. Use Glob to find .ts files, Grep to search for patterns, Read to examine code
 7. Use Write to create the change descriptor JSON files
 8. Be precise - only flag code that clearly matches the anti-pattern`;
 }
 
-function buildPrompt(pattern: FlattenedPattern, target: string): string {
+function buildPrompt(rule: FlattenedRule, target: string): string {
   return `Scan all TypeScript files in "${target}" for this specific violation:
 
-**Pattern**: ${pattern.rule}
-**Description**: ${pattern.example.description}
+**Pattern**: ${rule.rule}
+**Description**: ${rule.example.description}
 
 Steps:
 1. Use Glob to find all .ts files in "${target}"
@@ -78,25 +80,25 @@ Focus ONLY on this specific pattern. If no violations found, respond with: "NO_V
 }
 
 export async function runDetectionPhase(target: string): Promise<void> {
-  console.log("\n📡 Phase 1: Detection (parallel by pattern)");
+  console.log("\n📡 Phase 1: Detection (parallel by rule)");
 
-  // Load categories and flatten to patterns
+  // Load categories and flatten to rules
   const categories = await loadCategories();
-  const patterns = flattenCategories(categories);
+  const rules = flattenCategories(categories);
 
-  console.log(`  Loaded ${categories.length} categories with ${patterns.length} patterns`);
+  console.log(`  Loaded ${categories.length} categories with ${rules.length} rules`);
 
   // Clear and recreate change queue
   await rm(".change-queue", { recursive: true, force: true });
   await mkdir(".change-queue", { recursive: true });
 
-  const queries = patterns.map((pattern) =>
+  const queries = rules.map((rule) =>
     query({
-      prompt: buildPrompt(pattern, target),
+      prompt: buildPrompt(rule, target),
       options: {
         allowedTools: ["Read", "Glob", "Grep", "Write"],
         permissionMode: "acceptEdits",
-        systemPrompt: buildSystemPrompt(pattern),
+        systemPrompt: buildSystemPrompt(rule),
         cwd: process.cwd(),
         maxTurns: 20,
       },
@@ -104,11 +106,11 @@ export async function runDetectionPhase(target: string): Promise<void> {
   );
 
   const results = await Promise.all(
-    queries.map((q, i) => consumeQuery(q, getPatternLabel(patterns[i]!)))
+    queries.map((q, i) => consumeQuery(q, getRuleLabel(rules[i]!)))
   );
 
   const succeeded = results.filter((r) => r.success).length;
   const totalCost = results.reduce((sum, r) => sum + (r.cost ?? 0), 0);
 
-  console.log(`\n  Detection complete: ${succeeded}/${patterns.length} patterns ($${totalCost.toFixed(4)})`);
+  console.log(`\n  Detection complete: ${succeeded}/${rules.length} rules ($${totalCost.toFixed(4)})`);
 }

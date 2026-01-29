@@ -2,27 +2,8 @@
   "id": "async",
   "name": "Async & Promise Patterns",
   "description": "NEVER mix async/await with Effect. Convert all Promise-based code to Effect. Use Effect.gen with yield* for sequential async operations.",
-  "patterns": [
+  "rules": [
     {
-      "id": "async-function-to-effect-gen",
-      "rule": "async functions → Effect.gen with yield*",
-      "example": {
-        "description": "Converting async function",
-        "bad": "const fetchAndProcess = async (id: string) => {\n  const user = await getUser(id)\n  const orders = await getOrders(user.id)\n  return { user, orders }\n}",
-        "good": "const fetchAndProcess = (id: string) =>\n  Effect.gen(function* () {\n    const user = yield* getUser(id)\n    const orders = yield* getOrders(user.id)\n    return { user, orders }\n  })"
-      }
-    },
-    {
-      "id": "await-in-effect-forbidden",
-      "rule": "async functions → Effect.gen with yield*",
-      "example": {
-        "description": "Mixing await inside Effect.gen (FORBIDDEN)",
-        "bad": "const program = Effect.gen(function* () {\n  const result = await fetchAndProcess(\"123\") // DON'T DO THIS\n  return result\n})",
-        "good": "const program = Effect.gen(function* () {\n  const result = yield* fetchAndProcess(\"123\")\n  return result\n})"
-      }
-    },
-    {
-      "id": "external-async-to-try-promise",
       "rule": "async functions → Effect.gen with yield*",
       "example": {
         "description": "Wrapping external async library",
@@ -31,25 +12,6 @@
       }
     },
     {
-      "id": "promise-all-to-effect-all",
-      "rule": "Promise.all → Effect.all",
-      "example": {
-        "description": "Parallel operations",
-        "bad": "const [user, orders, settings] = await Promise.all([\n  getUser(id),\n  getOrders(id),\n  getSettings(id),\n])",
-        "good": "const [user, orders, settings] = yield* Effect.all([\n  getUser(id),\n  getOrders(id),\n  getSettings(id),\n])"
-      }
-    },
-    {
-      "id": "promise-all-concurrency",
-      "rule": "Promise.all → Effect.all",
-      "example": {
-        "description": "Parallel with concurrency limit",
-        "bad": "// No easy way to limit concurrency with Promise.all\nconst results = await Promise.all(items.map(processItem))",
-        "good": "// Effect.all with concurrency option\nconst results = yield* Effect.all(\n  Array.map(items, processItem),\n  { concurrency: 5 }\n)"
-      }
-    },
-    {
-      "id": "promise-all-named-to-effect-all",
       "rule": "Promise.all → Effect.all",
       "example": {
         "description": "Named parallel results",
@@ -58,7 +20,6 @@
       }
     },
     {
-      "id": "promise-race-to-effect-race",
       "rule": "Promise.race → Effect.race or Effect.raceAll",
       "example": {
         "description": "Racing multiple operations",
@@ -67,16 +28,6 @@
       }
     },
     {
-      "id": "promise-then-to-pipe",
-      "rule": "Promise chains (.then) → pipe with Effect.flatMap",
-      "example": {
-        "description": "Sequential async operations",
-        "bad": "getUser(id)\n  .then((user) => getOrders(user.id))\n  .then((orders) => processOrders(orders))\n  .then((result) => saveResult(result))\n  .catch((error) => handleError(error))",
-        "good": "pipe(\n  getUser(id),\n  Effect.flatMap((user) => getOrders(user.id)),\n  Effect.flatMap((orders) => processOrders(orders)),\n  Effect.flatMap((result) => saveResult(result)),\n  Effect.catchAll((error) => handleError(error))\n)"
-      }
-    },
-    {
-      "id": "promise-then-transform-to-map",
       "rule": "Promise chains (.then) → pipe with Effect.flatMap",
       "example": {
         "description": "Promise chain with transformation",
@@ -85,7 +36,6 @@
       }
     },
     {
-      "id": "yield-without-star-forbidden",
       "rule": "yield* in Effect.gen (not yield or await)",
       "example": {
         "description": "Correct generator usage",
@@ -94,16 +44,6 @@
       }
     },
     {
-      "id": "boundary-main-entry",
-      "rule": "Effect.runPromise only at application boundaries",
-      "example": {
-        "description": "Main entry point (boundary OK)",
-        "bad": "// Trying to use Effect in async context badly\nasync function main() {\n  const result = yield* myEffect  // Can't use yield* outside Effect.gen\n}",
-        "good": "// At application boundary, use runPromise\nconst main = async () => {\n  const result = await Effect.runPromise(\n    myEffect.pipe(Effect.provide(AppLive))\n  )\n  console.log(result)\n}\n\n// Or for CLI tools\nEffect.runPromise(\n  myEffect.pipe(Effect.provide(AppLive))\n).then(console.log).catch(console.error)"
-      }
-    },
-    {
-      "id": "boundary-http-handler",
       "rule": "Effect.runPromise only at application boundaries",
       "example": {
         "description": "HTTP handler (boundary OK)",
@@ -112,7 +52,6 @@
       }
     },
     {
-      "id": "new-promise-to-effect-async",
       "rule": "new Promise() → Effect.async for callback-based APIs",
       "example": {
         "description": "Converting callback-based API",
@@ -121,16 +60,6 @@
       }
     },
     {
-      "id": "settimeout-to-effect-sleep",
-      "rule": "setTimeout/setInterval → Effect.sleep, Schedule",
-      "example": {
-        "description": "Delayed execution",
-        "bad": "await new Promise((resolve) => setTimeout(resolve, 1000))\nconsole.log(\"Done waiting\")",
-        "good": "yield* Effect.sleep(\"1 second\")\nyield* Effect.log(\"Done waiting\")"
-      }
-    },
-    {
-      "id": "setinterval-to-schedule",
       "rule": "setTimeout/setInterval → Effect.sleep, Schedule",
       "example": {
         "description": "Repeated execution",

@@ -2,9 +2,8 @@
   "id": "services",
   "name": "Service & Layer Patterns",
   "description": "NEVER call external APIs, databases, or file systems directly. ALL effectful dependencies MUST be behind a Context.Tag service. Every service MUST have both a *Live and *Test layer implementation for full testability.",
-  "patterns": [
+  "rules": [
     {
-      "id": "direct-api-to-context-tag",
       "rule": "Direct external API calls → Context.Tag service",
       "example": {
         "description": "HTTP API call",
@@ -13,7 +12,6 @@
       }
     },
     {
-      "id": "direct-db-to-repository",
       "rule": "Direct database access → Context.Tag repository",
       "example": {
         "description": "Database operations",
@@ -22,7 +20,6 @@
       }
     },
     {
-      "id": "direct-fs-to-service",
       "rule": "Direct file I/O → Context.Tag service",
       "example": {
         "description": "File system operations",
@@ -31,7 +28,6 @@
       }
     },
     {
-      "id": "missing-test-layers",
       "rule": "Missing test Layers → *Live + *Test layers for every service",
       "example": {
         "description": "Complete layer setup",
@@ -40,16 +36,6 @@
       }
     },
     {
-      "id": "service-without-layer",
-      "rule": "Services without layers → Layer.effect or Layer.succeed",
-      "example": {
-        "description": "Simple stateless service",
-        "bad": "// Service defined but no layer\nclass Logger extends Context.Tag(\"Logger\")<\n  Logger,\n  { readonly log: (msg: string) => Effect.Effect<void> }\n>() {}\n\n// Using Effect.provideService directly (works but not composable)\nconst program = myEffect.pipe(\n  Effect.provideService(Logger, { log: (msg) => Effect.log(msg) })\n)",
-        "good": "class Logger extends Context.Tag(\"Logger\")<\n  Logger,\n  { readonly log: (msg: string) => Effect.Effect<void> }\n>() {}\n\n// Layer.succeed for simple implementations\nconst LoggerLive = Layer.succeed(Logger, {\n  log: (msg) => Effect.log(msg)\n})\n\n// Layer.effect when you need other services\nconst LoggerWithTimestamp = Layer.effect(\n  Logger,\n  Effect.gen(function* () {\n    const clock = yield* Clock\n    return {\n      log: (msg) =>\n        Effect.gen(function* () {\n          const now = yield* clock.currentTimeMillis\n          yield* Effect.log(`[${now}] ${msg}`)\n        })\n    }\n  })\n)\n\n// Layers compose\nconst AppLive = Layer.mergeAll(\n  LoggerLive,\n  UserRepositoryLive,\n  EmailServiceLive\n)"
-      }
-    },
-    {
-      "id": "inline-service-to-layer",
       "rule": "Services without layers → Layer.effect or Layer.succeed",
       "example": {
         "description": "Service with dependencies",
@@ -58,7 +44,6 @@
       }
     },
     {
-      "id": "direct-sdk-to-service",
       "rule": "Direct third-party SDK calls → Context.Tag service",
       "example": {
         "description": "Third-party SDK usage (Stripe, SendGrid, AWS, etc.)",
@@ -67,7 +52,6 @@
       }
     },
     {
-      "id": "layer-composition-bottom-up",
       "rule": "Composing layers → Layer.mergeAll, Layer.provide",
       "example": {
         "description": "Building application layer stack",
@@ -76,7 +60,6 @@
       }
     },
     {
-      "id": "stateful-test-layer-with-ref",
       "rule": "Stateful test mocks → Layer.effect with Ref",
       "example": {
         "description": "Repository test layer maintaining state",

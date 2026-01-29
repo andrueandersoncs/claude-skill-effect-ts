@@ -1,27 +1,35 @@
-import type { Category, FlattenedPattern } from "./types.js";
+import type { Category, FlattenedRule } from "./types.js";
 
-export function flattenCategories(categories: Category[]): FlattenedPattern[] {
-  const patterns: FlattenedPattern[] = [];
+export function slugify(rule: string): string {
+  return rule
+    .toLowerCase()
+    .replace(/[→\.\/\(\)]/g, " ")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function flattenCategories(categories: Category[]): FlattenedRule[] {
+  const rules: FlattenedRule[] = [];
 
   for (const category of categories) {
-    for (const pattern of category.patterns) {
-      patterns.push({
-        patternId: pattern.id,
+    for (const rule of category.rules) {
+      rules.push({
         categoryId: category.id,
         categoryName: category.name,
-        rule: pattern.rule,
-        example: pattern.example,
+        rule: rule.rule,
+        example: rule.example,
       });
     }
   }
 
-  return patterns;
+  return rules;
 }
 
-export function getPatternKey(pattern: FlattenedPattern): string {
-  return `${pattern.categoryId}-${pattern.patternId}`;
+export function getRuleKey(rule: FlattenedRule): string {
+  return `${rule.categoryId}-${slugify(rule.rule)}`;
 }
 
-export function getPatternLabel(pattern: FlattenedPattern): string {
-  return `${pattern.categoryName}/${pattern.patternId}`;
+export function getRuleLabel(rule: FlattenedRule): string {
+  return `${rule.categoryName}/${slugify(rule.rule)}`;
 }

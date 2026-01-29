@@ -2,27 +2,8 @@
   "id": "schema",
   "name": "Schema Violations",
   "description": "ALL data types MUST be defined as Schema. Use Schema.Class for entities with methods, Schema.TaggedClass for discriminated unions, tagged unions over optional properties. NEVER use Schema.Any/Schema.Unknown except for genuinely unconstrained values.",
-  "patterns": [
+  "rules": [
     {
-      "id": "interface-to-schema-class",
-      "rule": "Plain TypeScript interfaces → Schema.Class",
-      "example": {
-        "description": "Domain entity definition",
-        "bad": "interface User {\n  id: string\n  email: string\n  name: string\n  createdAt: Date\n}",
-        "good": "class User extends Schema.Class<User>(\"User\")({\n  id: Schema.String.pipe(Schema.brand(\"UserId\")),\n  email: Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\\.[^@]+$/)),\n  name: Schema.String.pipe(Schema.nonEmptyString()),\n  createdAt: Schema.Date,\n}) {\n  get emailDomain() {\n    return this.email.split(\"@\")[1]\n  }\n}"
-      }
-    },
-    {
-      "id": "type-alias-to-schema",
-      "rule": "Plain TypeScript interfaces → Schema.Class",
-      "example": {
-        "description": "Simple type alias",
-        "bad": "type Point = { x: number; y: number }",
-        "good": "const Point = Schema.Struct({\n  x: Schema.Number,\n  y: Schema.Number,\n})\ntype Point = Schema.Schema.Type<typeof Point>"
-      }
-    },
-    {
-      "id": "union-type-to-schema-union",
       "rule": "Plain TypeScript interfaces → Schema.Class",
       "example": {
         "description": "Union type",
@@ -31,16 +12,6 @@
       }
     },
     {
-      "id": "struct-to-class-methods",
-      "rule": "Schema.Struct for domain entities → Schema.Class (with methods)",
-      "example": {
-        "description": "Entity needing methods",
-        "bad": "const User = Schema.Struct({\n  id: Schema.String,\n  firstName: Schema.String,\n  lastName: Schema.String,\n})\n\n// Helper function outside schema\nconst getFullName = (user: User) => `${user.firstName} ${user.lastName}`",
-        "good": "class User extends Schema.Class<User>(\"User\")({\n  id: Schema.String,\n  firstName: Schema.String,\n  lastName: Schema.String,\n}) {\n  get fullName() {\n    return `${this.firstName} ${this.lastName}`\n  }\n}"
-      }
-    },
-    {
-      "id": "struct-to-class-computed",
       "rule": "Schema.Struct for domain entities → Schema.Class (with methods)",
       "example": {
         "description": "Entity with computed properties",
@@ -49,7 +20,6 @@
       }
     },
     {
-      "id": "optional-to-tagged-union-order",
       "rule": "Optional properties for state → Tagged unions",
       "example": {
         "description": "Order status with optional fields",
@@ -58,25 +28,6 @@
       }
     },
     {
-      "id": "optional-to-tagged-union-auth",
-      "rule": "Optional properties for state → Tagged unions",
-      "example": {
-        "description": "Authentication state",
-        "bad": "const AuthState = Schema.Struct({\n  isAuthenticated: Schema.Boolean,\n  user: Schema.optional(UserSchema),\n  error: Schema.optional(Schema.String),\n})",
-        "good": "class Anonymous extends Schema.TaggedClass<Anonymous>()(\"Anonymous\", {}) {}\n\nclass Authenticated extends Schema.TaggedClass<Authenticated>()(\"Authenticated\", {\n  user: UserSchema,\n  token: Schema.String,\n}) {}\n\nclass AuthError extends Schema.TaggedClass<AuthError>()(\"AuthError\", {\n  message: Schema.String,\n}) {}\n\nconst AuthState = Schema.Union(Anonymous, Authenticated, AuthError)"
-      }
-    },
-    {
-      "id": "any-unknown-type-weakening",
-      "rule": "Schema.Any/Schema.Unknown → Proper typed schemas (unless genuinely unconstrained)",
-      "example": {
-        "description": "Type weakening with Unknown",
-        "bad": "const ApiResponse = Schema.Struct({\n  status: Schema.Number,\n  data: Schema.Unknown, // What's in here?\n})\n\nconst Config = Schema.Struct({\n  settings: Schema.Any, // Lazy - define the shape!\n})",
-        "good": "// Define specific response schemas\nconst UserResponse = Schema.Struct({\n  status: Schema.Literal(200),\n  data: User,\n})\n\nconst ErrorResponse = Schema.Struct({\n  status: Schema.Number.pipe(Schema.greaterThan(299)),\n  error: Schema.String,\n})\n\nconst ApiResponse = Schema.Union(UserResponse, ErrorResponse)"
-      }
-    },
-    {
-      "id": "unknown-legitimate-cause",
       "rule": "Schema.Any/Schema.Unknown → Proper typed schemas (unless genuinely unconstrained)",
       "example": {
         "description": "Legitimate use of Schema.Unknown (exception cause)",
@@ -85,25 +36,6 @@
       }
     },
     {
-      "id": "json-parse-to-schema-parsejson",
-      "rule": "JSON.parse() → Schema.parseJson()",
-      "example": {
-        "description": "Parsing JSON string",
-        "bad": "const data = JSON.parse(jsonString)\n// data is 'any' - no validation",
-        "good": "const parseUser = Schema.decodeUnknownSync(\n  Schema.parseJson(User)\n)\nconst user = parseUser(jsonString)\n// user is fully typed and validated"
-      }
-    },
-    {
-      "id": "json-parse-effect",
-      "rule": "JSON.parse() → Schema.parseJson()",
-      "example": {
-        "description": "JSON parsing with Effect error handling",
-        "bad": "try {\n  const data = JSON.parse(jsonString)\n  processUser(data)\n} catch (e) {\n  console.error(\"Invalid JSON\")\n}",
-        "good": "const parseUser = Schema.decodeUnknown(Schema.parseJson(User))\n\npipe(\n  parseUser(jsonString),\n  Effect.map(processUser),\n  Effect.catchTag(\"ParseError\", (e) =>\n    Effect.logError(\"Invalid user JSON\", e)\n  )\n)"
-      }
-    },
-    {
-      "id": "json-parse-two-steps",
       "rule": "JSON.parse() → Schema.parseJson()",
       "example": {
         "description": "Separate JSON.parse then validate (WRONG)",
@@ -112,7 +44,6 @@
       }
     },
     {
-      "id": "missing-brand-ids",
       "rule": "Raw primitives for IDs → Schema.brand",
       "example": {
         "description": "Unbranded ID types",
@@ -121,7 +52,6 @@
       }
     },
     {
-      "id": "data-tagged-error-to-schema",
       "rule": "Data.TaggedError → Schema.TaggedError",
       "example": {
         "description": "Error type definition",
@@ -130,7 +60,6 @@
       }
     },
     {
-      "id": "plain-error-class",
       "rule": "Plain Error class → Schema.TaggedError",
       "example": {
         "description": "Domain error types",
@@ -139,25 +68,6 @@
       }
     },
     {
-      "id": "manual-conversion-to-transform",
-      "rule": "Manual type conversions → Schema.transform",
-      "example": {
-        "description": "Bidirectional string-to-number conversion",
-        "bad": "const parseNumber = (s: string): number => parseFloat(s)\nconst formatNumber = (n: number): string => String(n)\n\n// Manual conversion at every use site\nconst value = parseNumber(input)\nconst output = formatNumber(result)",
-        "good": "const NumberFromString = Schema.transform(\n  Schema.String,\n  Schema.Number,\n  {\n    decode: (s) => parseFloat(s),\n    encode: (n) => String(n)\n  }\n)\n\n// Use schema for automatic conversion\nconst value = Schema.decodeSync(NumberFromString)(input)  // \"42\" → 42\nconst output = Schema.encodeSync(NumberFromString)(result) // 42 → \"42\""
-      }
-    },
-    {
-      "id": "date-string-to-schema-date",
-      "rule": "Manual type conversions → Schema.transform",
-      "example": {
-        "description": "Date string to Date object",
-        "bad": "const parseDate = (s: string) => new Date(s)\nconst formatDate = (d: Date) => d.toISOString()\n\nconst data = {\n  createdAt: parseDate(json.createdAt)\n}",
-        "good": "// Use built-in DateFromString or define custom\nconst ApiResponse = Schema.Struct({\n  createdAt: Schema.DateFromString  // Automatic ISO string ↔ Date\n})\n\nconst data = Schema.decodeUnknownSync(ApiResponse)(json)"
-      }
-    },
-    {
-      "id": "cents-dollars-transform",
       "rule": "Manual type conversions → Schema.transform",
       "example": {
         "description": "Domain transformation (cents to dollars)",
@@ -166,7 +76,6 @@
       }
     },
     {
-      "id": "enum-to-literal",
       "rule": "TypeScript enum → Schema.Literal",
       "example": {
         "description": "Converting TypeScript enums",
@@ -175,7 +84,6 @@
       }
     },
     {
-      "id": "schema-filters-validation",
       "rule": "Manual validation → Schema filters",
       "example": {
         "description": "Validation constraints in schema",

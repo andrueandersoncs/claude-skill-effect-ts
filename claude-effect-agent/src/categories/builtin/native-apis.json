@@ -2,18 +2,8 @@
   "id": "native-apis",
   "name": "Native API Replacements",
   "description": "NEVER use native JavaScript APIs that have Effect equivalents. Use Effect's Array module (not array.find), Record module (not Object.keys), Struct module (not spread), Tuple module (not indexing), and Predicate module (not manual &&/||).",
-  "patterns": [
+  "rules": [
     {
-      "id": "array-find-to-findfirst",
-      "rule": "array.find() → Array.findFirst (returns Option)",
-      "example": {
-        "description": "Finding element in array",
-        "bad": "const admin = users.find((u) => u.role === \"admin\")\nif (admin) {\n  notifyAdmin(admin)\n}",
-        "good": "const admin = Array.findFirst(users, (u) => u.role === \"admin\")\nOption.match(admin, {\n  onNone: () => Effect.void,\n  onSome: (a) => notifyAdmin(a)\n})"
-      }
-    },
-    {
-      "id": "array-find-default",
       "rule": "array.find() → Array.findFirst (returns Option)",
       "example": {
         "description": "Finding with default",
@@ -22,25 +12,6 @@
       }
     },
     {
-      "id": "array-index-to-get",
-      "rule": "array[index] → Array.get(array, index) (returns Option)",
-      "example": {
-        "description": "Safe index access",
-        "bad": "const first = items[0]\nif (first) {\n  process(first)\n}",
-        "good": "pipe(\n  Array.get(items, 0),\n  Option.match({\n    onNone: () => Effect.void,\n    onSome: (item) => process(item)\n  })\n)"
-      }
-    },
-    {
-      "id": "array-index-fallback",
-      "rule": "array[index] → Array.get(array, index) (returns Option)",
-      "example": {
-        "description": "Index with fallback",
-        "bad": "const item = items[index] ?? defaultItem",
-        "good": "const item = pipe(\n  Array.get(items, index),\n  Option.getOrElse(() => defaultItem)\n)"
-      }
-    },
-    {
-      "id": "array-head-last",
       "rule": "array[index] → Array.get(array, index) (returns Option)",
       "example": {
         "description": "Head and tail access",
@@ -49,25 +20,6 @@
       }
     },
     {
-      "id": "object-keys-to-record",
-      "rule": "Object.keys/values/entries → Record.keys/values/toEntries",
-      "example": {
-        "description": "Iterating object keys",
-        "bad": "Object.keys(config).forEach((key) => {\n  console.log(key, config[key])\n})",
-        "good": "pipe(\n  Record.toEntries(config),\n  Array.forEach(([key, value]) => console.log(key, value))\n)"
-      }
-    },
-    {
-      "id": "object-values-keys",
-      "rule": "Object.keys/values/entries → Record.keys/values/toEntries",
-      "example": {
-        "description": "Getting all values",
-        "bad": "const allValues = Object.values(priceMap)\nconst allKeys = Object.keys(priceMap)",
-        "good": "const allValues = Record.values(priceMap)\nconst allKeys = Record.keys(priceMap)"
-      }
-    },
-    {
-      "id": "object-entries-from-entries",
       "rule": "Object.keys/values/entries → Record.keys/values/toEntries",
       "example": {
         "description": "Converting to entries",
@@ -76,7 +28,6 @@
       }
     },
     {
-      "id": "record-index-to-get",
       "rule": "record[key] → Record.get(record, key) (returns Option)",
       "example": {
         "description": "Safe property access",
@@ -85,34 +36,6 @@
       }
     },
     {
-      "id": "record-key-default",
-      "rule": "record[key] → Record.get(record, key) (returns Option)",
-      "example": {
-        "description": "Property with default",
-        "bad": "const value = config[key] ?? defaultValue",
-        "good": "const value = pipe(\n  Record.get(config, key),\n  Option.getOrElse(() => defaultValue)\n)"
-      }
-    },
-    {
-      "id": "predicate-and-or",
-      "rule": "Manual && / || for predicates → Predicate.and / Predicate.or / Predicate.not",
-      "example": {
-        "description": "Combining predicates",
-        "bad": "const isValidUser = (u: User) =>\n  u.age >= 18 && u.verified && !u.banned",
-        "good": "const isAdult = (u: User) => u.age >= 18\nconst isVerified = (u: User) => u.verified\nconst isBanned = (u: User) => u.banned\n\nconst isValidUser = Predicate.and(\n  isAdult,\n  Predicate.and(isVerified, Predicate.not(isBanned))\n)"
-      }
-    },
-    {
-      "id": "predicate-or",
-      "rule": "Manual && / || for predicates → Predicate.and / Predicate.or / Predicate.not",
-      "example": {
-        "description": "Alternative conditions",
-        "bad": "const canAccess = (u: User) =>\n  u.role === \"admin\" || u.permissions.includes(\"read\")",
-        "good": "const isAdmin = (u: User) => u.role === \"admin\"\nconst hasReadPermission = (u: User) => u.permissions.includes(\"read\")\n\nconst canAccess = Predicate.or(isAdmin, hasReadPermission)"
-      }
-    },
-    {
-      "id": "predicate-struct",
       "rule": "Manual && / || for predicates → Predicate.and / Predicate.or / Predicate.not",
       "example": {
         "description": "Struct predicate",
@@ -121,25 +44,6 @@
       }
     },
     {
-      "id": "spread-to-evolve",
-      "rule": "Struct spread for updates → Struct.evolve",
-      "example": {
-        "description": "Updating specific fields",
-        "bad": "const updated = {\n  ...user,\n  age: user.age + 1,\n  name: user.name.toUpperCase()\n}",
-        "good": "const updated = Struct.evolve(user, {\n  age: (age) => age + 1,\n  name: (name) => name.toUpperCase()\n})"
-      }
-    },
-    {
-      "id": "destructure-to-pick",
-      "rule": "Struct spread for updates → Struct.evolve",
-      "example": {
-        "description": "Picking fields",
-        "bad": "const { firstName, lastName } = user\nconst namePart = { firstName, lastName }",
-        "good": "const namePart = Struct.pick(user, \"firstName\", \"lastName\")"
-      }
-    },
-    {
-      "id": "rest-spread-to-omit",
       "rule": "Struct spread for updates → Struct.evolve",
       "example": {
         "description": "Omitting fields",
@@ -148,16 +52,6 @@
       }
     },
     {
-      "id": "tuple-index-to-get",
-      "rule": "tuple[0]/tuple[1] → Tuple.getFirst/getSecond",
-      "example": {
-        "description": "Tuple element access",
-        "bad": "const pair = [\"key\", 42] as const\nconst key = pair[0]\nconst value = pair[1]",
-        "good": "const pair = Tuple.make(\"key\", 42)\nconst key = Tuple.getFirst(pair)\nconst value = Tuple.getSecond(pair)"
-      }
-    },
-    {
-      "id": "tuple-transform",
       "rule": "tuple[0]/tuple[1] → Tuple.getFirst/getSecond",
       "example": {
         "description": "Tuple transformation",
@@ -166,7 +60,6 @@
       }
     },
     {
-      "id": "flow-compose-pipeline",
       "rule": "Nested function calls → flow for composing pipelines",
       "example": {
         "description": "Building reusable transformation pipeline",
@@ -175,7 +68,6 @@
       }
     },
     {
-      "id": "compose-two-functions",
       "rule": "Nested function calls → Function.compose",
       "example": {
         "description": "Composing two functions",
@@ -184,7 +76,6 @@
       }
     },
     {
-      "id": "identity-passthrough",
       "rule": "No-op functions → Function.identity",
       "example": {
         "description": "Conditional transformation",
@@ -193,7 +84,6 @@
       }
     },
     {
-      "id": "constant-fixed-value",
       "rule": "Arrow returning fixed value → Function.constant",
       "example": {
         "description": "Function that always returns same value",
@@ -202,7 +92,6 @@
       }
     },
     {
-      "id": "pipe-vs-method-chain",
       "rule": "Method chaining → pipe for consistency",
       "example": {
         "description": "Data transformation pipeline",
@@ -211,7 +100,6 @@
       }
     },
     {
-      "id": "filtermap-combined",
       "rule": "filter + map → Array.filterMap in one pass",
       "example": {
         "description": "Filter and transform in single pass",
@@ -220,7 +108,6 @@
       }
     },
     {
-      "id": "groupby-to-array-groupby",
       "rule": "Manual grouping → Array.groupBy",
       "example": {
         "description": "Grouping items by key",
@@ -229,7 +116,6 @@
       }
     },
     {
-      "id": "dedupe-unique",
       "rule": "Set-based deduplication → Array.dedupe",
       "example": {
         "description": "Removing duplicates",

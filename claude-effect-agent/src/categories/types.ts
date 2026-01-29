@@ -4,8 +4,7 @@ export interface Example {
   description: string;
 }
 
-export interface Pattern {
-  id: string;
+export interface Rule {
   rule: string;
   example: Example;
 }
@@ -13,11 +12,11 @@ export interface Pattern {
 export interface Category {
   id: string;
   name: string;
-  patterns: Pattern[];
+  description: string;
+  rules: Rule[];
 }
 
-export interface FlattenedPattern {
-  patternId: string;
+export interface FlattenedRule {
   categoryId: string;
   categoryName: string;
   rule: string;
