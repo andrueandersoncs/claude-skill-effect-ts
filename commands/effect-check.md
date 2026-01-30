@@ -125,6 +125,14 @@ Example prompt for task-worker:
 Task ID: [TASK_ID]
 Project root: [PROJECT_ROOT]
 
+⛔ MANDATORY: Create worktree FIRST, before reading ANY files:
+  cd [PROJECT_ROOT]
+  git worktree add ../worktree-task-[TASK_ID] -b task-[TASK_ID]
+
+⛔ ALL file paths MUST use worktree: ../worktree-task-[TASK_ID]/
+  ✅ CORRECT: Read ../worktree-task-[TASK_ID]/[FILE_PATH]
+  ❌ WRONG: Read [FILE_PATH]
+
 Fix this [CATEGORY] violation:
 
 File: [FILE_PATH]
@@ -135,7 +143,7 @@ Snippet: [snippet]
 
 Rule documentation: ${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/[category]/rule-NNN/rule-NNN.md
 
-Apply the idiomatic Effect-TS fix in your worktree.
+Apply the idiomatic Effect-TS fix in your worktree. Commit to your task branch.
 ```
 
 ### Phase 4: Parallel Tournament Merge

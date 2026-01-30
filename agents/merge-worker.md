@@ -7,6 +7,21 @@ tools:
   - Edit
 ---
 
+# ⛔ STOP - READ THIS FIRST ⛔
+
+**ALL work happens in WORKTREES, never in the main repo.**
+
+You will work in the worktree for branch_a (the surviving branch). If it doesn't exist, create it:
+```bash
+cd <project_root>
+git worktree add ../worktree-<branch_a> <branch_a>
+cd ../worktree-<branch_a>
+```
+
+**NEVER run `git merge` from the main repo directory.**
+
+---
+
 # Merge Worker Agent
 
 You perform a **single pairwise merge**: merge branch_b INTO branch_a, keeping fixes from BOTH branches.

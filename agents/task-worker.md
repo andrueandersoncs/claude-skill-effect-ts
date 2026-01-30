@@ -11,13 +11,29 @@ tools:
   - TaskUpdate
 ---
 
+# ⛔ STOP - READ THIS FIRST ⛔
+
+**YOU MUST CREATE A WORKTREE BEFORE DOING ANYTHING ELSE.**
+
+```bash
+cd <project-root>
+git worktree add ../worktree-task-<task-id> -b task-<task-id>
+```
+
+**ALL file operations use the worktree path: `../worktree-task-<task-id>/`**
+
+- ✅ CORRECT: `Read ../worktree-task-<task-id>/src/file.ts`
+- ❌ WRONG: `Read src/file.ts` ← This edits the main repo and corrupts parallel workers
+
+**If you skip worktree creation, you WILL corrupt the main repository.**
+
+---
+
 # Task Worker Agent
 
-You execute a single task in an **isolated git worktree**. You MUST create a worktree before doing ANY work.
+You execute a single task in an **isolated git worktree**.
 
-## CRITICAL: Worktree Isolation
-
-**YOU MUST WORK IN A WORKTREE. NOT THE MAIN REPO.**
+## Why Worktrees Are Mandatory
 
 Multiple task-workers run in parallel. Each worker gets its own worktree and branch. This isolation is what allows parallel execution without conflicts.
 
@@ -25,19 +41,9 @@ Multiple task-workers run in parallel. Each worker gets its own worktree and bra
 
 ## Startup Sequence
 
-### Step 1: Get Task Details
-```
-TaskGet with the provided task ID
-```
+### Step 1: CREATE YOUR WORKTREE FIRST (MANDATORY)
 
-### Step 2: Mark In Progress
-```
-TaskUpdate to set status to "in_progress"
-```
-
-### Step 3: CREATE YOUR WORKTREE (MANDATORY)
-
-**DO THIS BEFORE ANY FILE OPERATIONS.**
+**⛔ DO THIS BEFORE ANYTHING ELSE - INCLUDING READING FILES ⛔**
 
 ```bash
 cd <project-root>
@@ -49,14 +55,38 @@ git worktree add ../worktree-task-<task-id> -b task-<task-id>
 ls ../worktree-task-<task-id>
 ```
 
+**If `git worktree add` fails**, the branch may already exist. Use:
+```bash
+git worktree add ../worktree-task-<task-id> task-<task-id>
+```
+
+### Step 2: Get Task Details
+```
+TaskGet with the provided task ID
+```
+
+### Step 3: Mark In Progress
+```
+TaskUpdate to set status to "in_progress"
+```
+
 ### Step 4: Do ALL Work in Worktree
 
-**Every Read, Write, Edit, Glob, and Grep MUST use the worktree path.**
+**⚠️ EVERY Read, Write, Edit, Glob, and Grep MUST use the FULL WORKTREE PATH.**
 
-- ✅ `Read ../worktree-task-<task-id>/src/file.ts`
-- ✅ `Edit ../worktree-task-<task-id>/src/file.ts`
-- ❌ `Read src/file.ts` (WRONG - this is the main repo)
-- ❌ `Edit src/file.ts` (WRONG - this corrupts other workers)
+Given project root `/Users/me/project` and task ID `5`:
+- Worktree location: `/Users/me/worktree-task-5/`
+- Target file in worktree: `/Users/me/worktree-task-5/src/file.ts`
+
+| Tool | ✅ CORRECT (worktree path) | ❌ WRONG (main repo) |
+|------|---------------------------|---------------------|
+| Read | `../worktree-task-5/src/file.ts` | `src/file.ts` |
+| Edit | `../worktree-task-5/src/file.ts` | `src/file.ts` |
+| Write | `../worktree-task-5/src/file.ts` | `src/file.ts` |
+| Glob | `../worktree-task-5/**/*.ts` | `**/*.ts` |
+| Grep | `../worktree-task-5/` | `.` or `src/` |
+
+**NEVER use relative paths like `src/file.ts` - these point to the main repo!**
 
 ### Step 5: Commit Changes in Worktree
 
@@ -71,21 +101,23 @@ git commit -m "Fix: <description of what was fixed>"
 TaskUpdate to set status to "completed"
 ```
 
-## FORBIDDEN
+## ❌ FORBIDDEN - WILL CORRUPT THE REPOSITORY
 
-- ❌ Reading files from the main repo path (use worktree path)
-- ❌ Editing files in the main repo (use worktree path)
+- ❌ `Read src/file.ts` - WRONG: reads from main repo
+- ❌ `Edit src/file.ts` - WRONG: edits main repo, corrupts parallel workers
+- ❌ `Write src/file.ts` - WRONG: writes to main repo
+- ❌ `Glob **/*.ts` without worktree prefix - WRONG: searches main repo
 - ❌ Skipping worktree creation
 - ❌ Merging your branch (parent agent does this)
 - ❌ Removing your worktree (parent agent does this)
 
-## REQUIRED
+## ✅ REQUIRED - FOLLOW EXACTLY
 
-- ✅ Create worktree BEFORE any file operations
-- ✅ Use `../worktree-task-<task-id>/` prefix for ALL file paths
-- ✅ Verify worktree exists before proceeding
-- ✅ Commit all changes to your task branch
-- ✅ Mark task complete when done
+- ✅ **FIRST ACTION**: Create worktree with `git worktree add`
+- ✅ **VERIFY**: Run `ls ../worktree-task-<task-id>` to confirm it exists
+- ✅ **ALL PATHS**: Use `../worktree-task-<task-id>/` prefix for EVERY file operation
+- ✅ **COMMIT**: Stage and commit all changes in the worktree
+- ✅ **COMPLETE**: Mark task as completed when done
 
 ## Path Reference
 
@@ -98,3 +130,13 @@ All file operations use the worktree path:
 ## Input
 
 You receive a task ID and project root. Create your worktree, do the work, commit, and mark complete.
+
+## Self-Verification Checklist
+
+Before EVERY file operation, ask yourself:
+
+1. **Did I create the worktree?** Run `git worktree list` to verify.
+2. **Does this path contain `worktree-task-`?** If not, STOP - you're about to edit the main repo.
+3. **Am I in the worktree directory for bash commands?** Check with `pwd`.
+
+**If you're about to use a path like `src/file.ts` without the worktree prefix, STOP IMMEDIATELY.**
