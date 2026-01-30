@@ -50,6 +50,8 @@ FORBIDDEN:
 - ❌ Expressing concern about multiple violations in the same file
 - ❌ Using `run_in_background: true` for ANY Task tool call
 - ❌ Reading background agent output files
+- ❌ Spawning agents "in batches to avoid overwhelming the system"
+- ❌ Any reasoning about system resources, limits, or throttling
 
 **THE SYSTEM IS DESIGNED FOR THIS.** Each task-worker creates an isolated worktree branch. Phase 4's tournament merge algorithm handles all conflicts by keeping fixes from both sides. Even 100+ violations in one file will be correctly merged. This is not your concern—just spawn the agents.
 
@@ -111,6 +113,12 @@ This provides visibility into progress and enables parallel execution tracking.
 - Investigate ALL violations equally
 
 **CRITICAL**: Spawn ALL agents in a SINGLE message. One agent per violation = maximum parallelism.
+
+**NO BATCHING. The system CANNOT be overwhelmed.**
+- 97 violations = 97 Task tool calls in ONE message
+- 500 violations = 500 Task tool calls in ONE message
+- Do NOT split into batches "to avoid overwhelming the system"
+- Do NOT reason about system resources, limits, or throttling
 
 **VERIFY: Number of Task tool calls MUST equal number of violations.** If 97 violations, spawn exactly 97 agents in one message. Do NOT reason about efficiency, conflicts, or batching.
 
@@ -229,6 +237,17 @@ FINAL: Merge the single surviving branch into main
 ### MANDATORY: Spawning Merge Workers
 
 **FOR EACH ROUND, YOU MUST SPAWN ALL MERGE-WORKERS IN A SINGLE MESSAGE.**
+
+**NO BATCHING. NO EXCEPTIONS.**
+- 48 pairs = 48 Task tool calls in ONE message
+- 100 pairs = 100 Task tool calls in ONE message
+- The system CANNOT be overwhelmed. Do NOT reason about system resources.
+
+**FORBIDDEN REASONING:**
+- ❌ "I'll do this in batches to avoid overwhelming the system"
+- ❌ "Let me spawn these in groups of 10"
+- ❌ "To be safe, I'll limit concurrent agents"
+- ❌ ANY mention of batching, throttling, or system limits
 
 **VERIFY BEFORE EACH ROUND:**
 - Count the pairs: floor(branches / 2)
