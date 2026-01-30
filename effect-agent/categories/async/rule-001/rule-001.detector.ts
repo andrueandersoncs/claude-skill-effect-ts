@@ -4,22 +4,15 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
+import { Array as EffectArray, Match, Option } from "effect";
 import * as ts from "typescript";
-import { Array as EffectArray, Match, Option, Function as Fn, Schema } from "effect";
-import type { Violation } from "../../../detectors/types";
+import type { Violation } from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-001",
 	category: "async",
 	name: "callback-api",
 };
-
-// Schema for checking if node is a function type
-const FunctionNode = Schema.Union(
-	Schema.instanceOf(ts.FunctionDeclaration),
-	Schema.instanceOf(ts.FunctionExpression),
-	Schema.instanceOf(ts.ArrowFunction),
-);
 
 export const detect = (
 	filePath: string,
@@ -75,13 +68,13 @@ export const detect = (
 				Match.when(
 					(names) => names.some((name) => paramName.includes(name)),
 					() => {
-						const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-							node.getStart(),
-						);
+						const { line, character } =
+							sourceFile.getLineAndCharacterOfPosition(node.getStart());
 						return Option.some({
 							ruleId: meta.id,
 							category: meta.category,
-							message: "Callback-style APIs should be wrapped with Effect.async()",
+							message:
+								"Callback-style APIs should be wrapped with Effect.async()",
 							filePath,
 							line: line + 1,
 							column: character + 1,
