@@ -9,38 +9,36 @@ import * as ts from "typescript";
 
 // ✅ Good: Define union schema with type refinements
 const FunctionNode = Schema.Union(
-	Schema.declare(
-		(u): u is ts.FunctionDeclaration =>
-			ts.isFunctionDeclaration(u as ts.Node),
+	Schema.declare((u): u is ts.FunctionDeclaration =>
+		ts.isFunctionDeclaration(u as ts.Node),
 	),
-	Schema.declare(
-		(u): u is ts.FunctionExpression =>
-			ts.isFunctionExpression(u as ts.Node),
+	Schema.declare((u): u is ts.FunctionExpression =>
+		ts.isFunctionExpression(u as ts.Node),
 	),
-	Schema.declare((u): u is ts.ArrowFunction => ts.isArrowFunction(u as ts.Node)),
+	Schema.declare((u): u is ts.ArrowFunction =>
+		ts.isArrowFunction(u as ts.Node),
+	),
 );
 
 // ✅ Good: Define union schema for loop statements
 const LoopStatement = Schema.Union(
 	Schema.declare((u): u is ts.ForStatement => ts.isForStatement(u as ts.Node)),
-	Schema.declare(
-		(u): u is ts.WhileStatement => ts.isWhileStatement(u as ts.Node),
+	Schema.declare((u): u is ts.WhileStatement =>
+		ts.isWhileStatement(u as ts.Node),
 	),
 	Schema.declare((u): u is ts.DoStatement => ts.isDoStatement(u as ts.Node)),
 );
 
 // ✅ Good: Define union schema for declarations
 const DeclarationNode = Schema.Union(
-	Schema.declare(
-		(u): u is ts.VariableDeclaration =>
-			ts.isVariableDeclaration(u as ts.Node),
+	Schema.declare((u): u is ts.VariableDeclaration =>
+		ts.isVariableDeclaration(u as ts.Node),
 	),
-	Schema.declare(
-		(u): u is ts.FunctionDeclaration =>
-			ts.isFunctionDeclaration(u as ts.Node),
+	Schema.declare((u): u is ts.FunctionDeclaration =>
+		ts.isFunctionDeclaration(u as ts.Node),
 	),
-	Schema.declare(
-		(u): u is ts.ClassDeclaration => ts.isClassDeclaration(u as ts.Node),
+	Schema.declare((u): u is ts.ClassDeclaration =>
+		ts.isClassDeclaration(u as ts.Node),
 	),
 );
 
@@ -54,10 +52,7 @@ const handleFunctionNode = (node: ts.Node) =>
 // ✅ Good: Use Match.when with Schema.is for loop handling
 const handleLoopStatement = (node: ts.Node) =>
 	Match.value(node).pipe(
-		Match.when(
-			Schema.is(LoopStatement),
-			(loop) => `Found loop at ${loop.pos}`,
-		),
+		Match.when(Schema.is(LoopStatement), (loop) => `Found loop at ${loop.pos}`),
 		Match.orElse(() => "Not a loop statement"),
 	);
 

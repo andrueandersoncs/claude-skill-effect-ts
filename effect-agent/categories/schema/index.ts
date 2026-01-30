@@ -60,6 +60,19 @@ export {
 	Shipped,
 } from "./rule-013/rule-013.js";
 
+// rule-014: schema-field-composition
+export {
+	Violation as Rule014Violation,
+	ViolationWithSuggestion,
+	ViolationWithoutSuggestion,
+	Person as Rule014Person,
+	Employee as Rule014Employee,
+	Customer as Rule014Customer,
+	AdminUser,
+	GuestUser,
+	User as Rule014User,
+} from "./rule-014/rule-014.js";
+
 /**
  * Rule metadata for this category
  */
@@ -141,6 +154,12 @@ export const rules = [
 		category: "schema",
 		name: "tagged-union-state",
 		rule: "Never use optional properties for state; use tagged unions",
+	},
+	{
+		id: "rule-014",
+		category: "schema",
+		name: "schema-field-composition",
+		rule: "Never duplicate Schema fields across multiple definitions; use `.fields` spread, `.extend()`, `.pick()`, `.omit()`, or TaggedClass",
 	},
 ] as const;
 

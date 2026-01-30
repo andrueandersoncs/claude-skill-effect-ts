@@ -20,10 +20,6 @@ const meta = Schema.decodeUnknownSync(MetaSchema)({
 	name: "callback-api",
 });
 
-// Schema for valid severity and certainty values
-const SeveritySchema = Schema.Literal("error", "warning", "info");
-const CertaintySchema = Schema.Literal("definite", "potential");
-
 // Schema for detecting new Promise() patterns
 const IsPromiseExpression = Schema.Struct({
 	isNewExpr: Schema.Literal(true),
@@ -33,9 +29,15 @@ const IsPromiseExpression = Schema.Struct({
 
 // Schema for function node types
 const FunctionNode = Schema.Union(
-	Schema.declare((u): u is ts.FunctionDeclaration => ts.isFunctionDeclaration(u as ts.Node)),
-	Schema.declare((u): u is ts.FunctionExpression => ts.isFunctionExpression(u as ts.Node)),
-	Schema.declare((u): u is ts.ArrowFunction => ts.isArrowFunction(u as ts.Node)),
+	Schema.declare((u): u is ts.FunctionDeclaration =>
+		ts.isFunctionDeclaration(u as ts.Node),
+	),
+	Schema.declare((u): u is ts.FunctionExpression =>
+		ts.isFunctionExpression(u as ts.Node),
+	),
+	Schema.declare((u): u is ts.ArrowFunction =>
+		ts.isArrowFunction(u as ts.Node),
+	),
 );
 
 // Schema for violation construction with runtime validation
@@ -58,13 +60,6 @@ const ViolationSchema = Schema.Struct({
 	),
 	suggestion: Schema.optional(Schema.String),
 });
-
-// Predicate to check if node is a function type
-// @rule-suppress rule-005 - Type predicates cannot be wrapped with Effect.fn() as they must return boolean synchronously
-const isFunctionNode = (node: ts.Node): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction =>
-	ts.isFunctionDeclaration(node) ||
-	ts.isFunctionExpression(node) ||
-	ts.isArrowFunction(node);
 
 // Schema for valid violation objects that matches Violation interface
 const ValidViolationWithSuggestion = Schema.Struct({
@@ -107,9 +102,7 @@ const ValidViolationWithoutSuggestion = Schema.Struct({
 });
 
 // Helper to create validated violations using Schema
-const createViolation = (
-	data: Omit<Violation, never>,
-): Violation => {
+const createViolation = (data: Omit<Violation, never>): Violation => {
 	const decoded = Schema.decodeSync(ViolationSchema)(data);
 	// Validate and return the violation based on whether suggestion is present
 	return Option.fromNullable(decoded.suggestion).pipe(
@@ -174,9 +167,8 @@ export const detect = (
 					onNone: () => schemaCheck,
 				}).pipe(
 					Option.flatMap(() => {
-						const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-							node.getStart(),
-						);
+						const { line, character } =
+							sourceFile.getLineAndCharacterOfPosition(node.getStart());
 						return Option.some(
 							createViolation({
 								ruleId: meta.id,
@@ -218,35 +210,35 @@ export const detect = (
 							"handler",
 						];
 
-						const hasCallbackName = EffectArray.findFirst(callbackNames, (name) => {
-							// Use regex to check if paramName contains the callback name
-							const regex = new RegExp(name);
-							return regex.test(paramName);
-						});
+						const hasCallbackName = EffectArray.findFirst(
+							callbackNames,
+							(name) => {
+								// Use regex to check if paramName contains the callback name
+								const regex = new RegExp(name);
+								return regex.test(paramName);
+							},
+						);
 
 						return Match.value(hasCallbackName).pipe(
-							Match.when(
-								Option.isSome,
-								() => {
-									const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-										node.getStart(),
-									);
-									return Option.some(
-										createViolation({
-											ruleId: meta.id,
-											category: meta.category,
-											message: "Callback-style APIs should be wrapped with Effect.async()",
-											filePath,
-											line: line + 1,
-											column: character + 1,
-											snippet: node.getText(sourceFile).slice(0, 100),
-											severity: "info",
-											certainty: "potential",
-											suggestion: "Wrap callback-based APIs with Effect.async()",
-										}),
-									);
-								},
-							),
+							Match.when(Option.isSome, () => {
+								const { line, character } =
+									sourceFile.getLineAndCharacterOfPosition(node.getStart());
+								return Option.some(
+									createViolation({
+										ruleId: meta.id,
+										category: meta.category,
+										message:
+											"Callback-style APIs should be wrapped with Effect.async()",
+										filePath,
+										line: line + 1,
+										column: character + 1,
+										snippet: node.getText(sourceFile).slice(0, 100),
+										severity: "info",
+										certainty: "potential",
+										suggestion: "Wrap callback-based APIs with Effect.async()",
+									}),
+								);
+							}),
 							Match.orElse(() => Option.none()),
 						);
 					}),
