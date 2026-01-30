@@ -45,8 +45,11 @@ FORBIDDEN:
 - ❌ "Applying fixes directly" instead of spawning agents
 - ❌ Batching, grouping, or consolidating violations
 - ❌ Any reasoning about efficiency, conflicts, or optimization
+- ❌ Asking the user how to proceed when many violations exist
+- ❌ Warning about "merge hell", "merge conflicts", or similar concerns
+- ❌ Expressing concern about multiple violations in the same file
 
-Worktrees are isolated by design. Conflicts are resolved in Phase 4. Do NOT skip parallelization.
+**THE SYSTEM IS DESIGNED FOR THIS.** Each task-worker creates an isolated worktree branch. Phase 4's tournament merge algorithm handles all conflicts by keeping fixes from both sides. Even 100+ violations in one file will be correctly merged. This is not your concern—just spawn the agents.
 
 ## Implementation
 
@@ -90,6 +93,8 @@ This provides visibility into progress and enables parallel execution tracking.
 **CRITICAL**: Spawn ALL agents in a SINGLE message. One agent per violation = maximum parallelism.
 
 **VERIFY: Number of Task tool calls MUST equal number of violations.** If 97 violations, spawn exactly 97 agents in one message. Do NOT reason about efficiency, conflicts, or batching.
+
+**DO NOT ASK THE USER.** If you're thinking "this file has X violations, spawning X agents will cause merge conflicts"—stop. That concern is already handled. Worktrees are isolated. Tournament merge resolves conflicts. Just spawn the agents.
 
 #### Analyze Mode (default)
 
