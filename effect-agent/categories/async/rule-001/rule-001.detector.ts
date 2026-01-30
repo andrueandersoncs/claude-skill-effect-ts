@@ -8,17 +8,37 @@ import { Match, Option, Schema } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.js";
 
-const meta = {
+const MetaSchema = Schema.Struct({
+	id: Schema.Literal("rule-001"),
+	category: Schema.Literal("async"),
+	name: Schema.Literal("callback-api"),
+});
+
+const meta = Schema.decodeUnknownSync(MetaSchema)({
 	id: "rule-001",
 	category: "async",
 	name: "callback-api",
-};
+});
 
 // Schema for detecting new Promise() patterns
 const IsPromiseExpression = Schema.Struct({
 	isNewExpr: Schema.Literal(true),
 	isIdentifierExpr: Schema.Literal(true),
 	isPromiseText: Schema.Literal(true),
+});
+
+// Schema for violation construction with runtime validation
+const ViolationSchema = Schema.Struct({
+	ruleId: Schema.String,
+	category: Schema.String,
+	message: Schema.String,
+	filePath: Schema.String,
+	line: Schema.Number,
+	column: Schema.Number,
+	snippet: Schema.String,
+	severity: Schema.Union(Schema.Literal("error"), Schema.Literal("warning"), Schema.Literal("info")),
+	certainty: Schema.Union(Schema.Literal("definite"), Schema.Literal("potential")),
+	suggestion: Schema.String,
 });
 
 // Predicate to check if node is a function type
@@ -46,7 +66,7 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				return Option.some({
+				const violationData = Schema.decodeUnknownSync(ViolationSchema)({
 					ruleId: meta.id,
 					category: meta.category,
 					message: "new Promise() should be replaced with Effect.async()",
@@ -54,10 +74,11 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, 100),
-					severity: "error" as const,
-					certainty: "definite" as const,
+					severity: "error",
+					certainty: "definite",
 					suggestion: "Use Effect.async() for callback-based APIs",
 				});
+				return Option.some(violationData);
 			}),
 			Match.orElse(() => Option.none()),
 		);
@@ -90,7 +111,7 @@ export const detect = (
 									const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 										node.getStart(),
 									);
-									return Option.some({
+									const violationData = Schema.decodeUnknownSync(ViolationSchema)({
 										ruleId: meta.id,
 										category: meta.category,
 										message: "Callback-style APIs should be wrapped with Effect.async()",
@@ -102,6 +123,7 @@ export const detect = (
 										certainty: "potential",
 										suggestion: "Wrap callback-based APIs with Effect.async()",
 									});
+									return Option.some(violationData);
 								},
 							),
 							Match.orElse(() => Option.none()),
