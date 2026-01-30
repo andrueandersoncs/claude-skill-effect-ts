@@ -40,9 +40,9 @@ const FunctionNode = Schema.Union(
 	),
 );
 
-// Base schema for shared violation fields
+// Base schema for shared violation fields with branded ruleId for type safety
 const BaseViolationFields = Schema.Struct({
-	ruleId: Schema.String,
+	ruleId: Schema.String.pipe(Schema.brand("RuleId")),
 	category: Schema.String,
 	message: Schema.String,
 	filePath: Schema.String,
