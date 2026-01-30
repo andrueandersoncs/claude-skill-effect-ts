@@ -40,9 +40,9 @@ const FunctionNode = Schema.Union(
 	),
 );
 
-// Schema for violation construction with runtime validation
-const ViolationSchema = Schema.Struct({
-	ruleId: Schema.String,
+// Base schema for shared violation fields with branded ruleId for type safety
+const BaseViolationFields = Schema.Struct({
+	ruleId: Schema.String.pipe(Schema.brand("RuleId")),
 	category: Schema.String,
 	message: Schema.String,
 	filePath: Schema.String,
@@ -58,47 +58,22 @@ const ViolationSchema = Schema.Struct({
 		Schema.Literal("definite"),
 		Schema.Literal("potential"),
 	),
+});
+
+// Schema for violation construction with runtime validation
+const ViolationSchema = Schema.Struct({
+	...BaseViolationFields.fields,
 	suggestion: Schema.optional(Schema.String),
 });
 
 // Schema for valid violation objects that matches Violation interface
 const ValidViolationWithSuggestion = Schema.Struct({
-	ruleId: Schema.String,
-	category: Schema.String,
-	message: Schema.String,
-	filePath: Schema.String,
-	line: Schema.Number,
-	column: Schema.Number,
-	snippet: Schema.String,
-	severity: Schema.Union(
-		Schema.Literal("error"),
-		Schema.Literal("warning"),
-		Schema.Literal("info"),
-	),
-	certainty: Schema.Union(
-		Schema.Literal("definite"),
-		Schema.Literal("potential"),
-	),
+	...BaseViolationFields.fields,
 	suggestion: Schema.String,
 });
 
 const ValidViolationWithoutSuggestion = Schema.Struct({
-	ruleId: Schema.String,
-	category: Schema.String,
-	message: Schema.String,
-	filePath: Schema.String,
-	line: Schema.Number,
-	column: Schema.Number,
-	snippet: Schema.String,
-	severity: Schema.Union(
-		Schema.Literal("error"),
-		Schema.Literal("warning"),
-		Schema.Literal("info"),
-	),
-	certainty: Schema.Union(
-		Schema.Literal("definite"),
-		Schema.Literal("potential"),
-	),
+	...BaseViolationFields.fields,
 });
 
 // Use Schema.transform to handle optional field omission per rule-010
