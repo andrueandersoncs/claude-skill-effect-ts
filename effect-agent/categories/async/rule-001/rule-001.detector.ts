@@ -4,7 +4,7 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Array as EffectArray, Match, Option, Schema } from "effect";
+import { Array as EffectArray, Effect, Match, Option, Schema } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.ts";
 
@@ -28,6 +28,8 @@ const IsPromiseExpression = Schema.Struct({
 });
 
 // Schema for function node types
+// NOTE: Type casts (as ts.Node) are necessary here because Schema.declare() provides unknown parameters
+// but the TypeScript type guards require Node parameters. This is not a violation but a necessary pattern.
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration =>
 		ts.isFunctionDeclaration(u as ts.Node),
@@ -102,23 +104,26 @@ const ValidViolationWithoutSuggestion = Schema.Struct({
 });
 
 // Helper to create validated violations using Schema
-const createViolation = (data: Omit<Violation, never>): Violation => {
-	const decoded = Schema.decodeSync(ViolationSchema)(data);
-	// Validate and return the violation based on whether suggestion is present
-	return Option.fromNullable(decoded.suggestion).pipe(
-		Option.match({
-			onSome: (suggestion) =>
-				Schema.decodeSync(ValidViolationWithSuggestion)({
-					...decoded,
-					suggestion,
-				}),
-			onNone: () => {
-				const { suggestion, ...rest } = decoded;
-				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-			},
-		}),
-	);
-};
+const createViolation = Effect.fn("createViolation")(
+	(data: Omit<Violation, never>) => {
+		const decoded = Schema.decodeSync(ViolationSchema)(data);
+		// Validate and return the violation based on whether suggestion is present
+		const result = Option.fromNullable(decoded.suggestion).pipe(
+			Option.match({
+				onSome: (suggestion) =>
+					Schema.decodeSync(ValidViolationWithSuggestion)({
+						...decoded,
+						suggestion,
+					}),
+				onNone: () => {
+					const { suggestion, ...rest } = decoded;
+					return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+				},
+			}),
+		);
+		return Effect.succeed(result);
+	},
+);
 
 export const detect = (
 	filePath: string,
@@ -170,18 +175,20 @@ export const detect = (
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
 						return Option.some(
-							createViolation({
-								ruleId: meta.id,
-								category: meta.category,
-								message: "new Promise() should be replaced with Effect.async()",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, 100),
-								severity: "error",
-								certainty: "definite",
-								suggestion: "Use Effect.async() for callback-based APIs",
-							}),
+							Effect.runSync(
+								createViolation({
+									ruleId: meta.id,
+									category: meta.category,
+									message: "new Promise() should be replaced with Effect.async()",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node.getText(sourceFile).slice(0, 100),
+									severity: "error",
+									certainty: "definite",
+									suggestion: "Use Effect.async() for callback-based APIs",
+								}),
+							),
 						);
 					}),
 				);
@@ -224,19 +231,21 @@ export const detect = (
 								const { line, character } =
 									sourceFile.getLineAndCharacterOfPosition(node.getStart());
 								return Option.some(
-									createViolation({
-										ruleId: meta.id,
-										category: meta.category,
-										message:
-											"Callback-style APIs should be wrapped with Effect.async()",
-										filePath,
-										line: line + 1,
-										column: character + 1,
-										snippet: node.getText(sourceFile).slice(0, 100),
-										severity: "info",
-										certainty: "potential",
-										suggestion: "Wrap callback-based APIs with Effect.async()",
-									}),
+									Effect.runSync(
+										createViolation({
+											ruleId: meta.id,
+											category: meta.category,
+											message:
+												"Callback-style APIs should be wrapped with Effect.async()",
+											filePath,
+											line: line + 1,
+											column: character + 1,
+											snippet: node.getText(sourceFile).slice(0, 100),
+											severity: "info",
+											certainty: "potential",
+											suggestion: "Wrap callback-based APIs with Effect.async()",
+										}),
+									),
 								);
 							}),
 							Match.orElse(() => Option.none()),
