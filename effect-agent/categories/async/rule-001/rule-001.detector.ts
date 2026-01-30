@@ -4,7 +4,7 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Array as EffectArray, Match, Option, Schema } from "effect";
+import { Array as EffectArray, Match, Option, Schema, Struct } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.ts";
 
@@ -26,6 +26,23 @@ const IsPromiseExpression = Schema.Struct({
 	isIdentifierExpr: Schema.Literal(true),
 	isPromiseText: Schema.Literal(true),
 });
+
+// Composable pipeline for schema validation
+const validatePromiseExpression = (expr: ts.Identifier) =>
+	Match.value({
+		isNewExpr: true,
+		isIdentifierExpr: true,
+		isPromiseText: expr.text === "Promise",
+	}).pipe(
+		Match.when(Schema.is(IsPromiseExpression), () =>
+			Option.some({
+				isNewExpr: true,
+				isIdentifierExpr: true,
+				isPromiseText: true,
+			}),
+		),
+		Match.orElse(() => Option.none()),
+	);
 
 // Schema for function node types
 // Using type predicates with proper narrowing for TypeScript AST nodes
@@ -117,7 +134,7 @@ const createViolation = (data: Omit<Violation, never>): Violation => {
 					suggestion,
 				}),
 			onNone: () => {
-				const { suggestion, ...rest } = decoded;
+				const rest = Struct.omit(decoded, "suggestion");
 				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
 			},
 		}),
@@ -146,22 +163,7 @@ export const detect = (
 
 				// Also support the Schema validation approach (from task-4) as a fallback
 				const schemaCheck = Match.value(newExpr.expression).pipe(
-					Match.when(ts.isIdentifier, (expr) =>
-						Match.value({
-							isNewExpr: true,
-							isIdentifierExpr: true,
-							isPromiseText: expr.text === "Promise",
-						}).pipe(
-							Match.when(Schema.is(IsPromiseExpression), () =>
-								Option.some({
-									isNewExpr: true,
-									isIdentifierExpr: true,
-									isPromiseText: true,
-								}),
-							),
-							Match.orElse(() => Option.none()),
-						),
-					),
+					Match.when(ts.isIdentifier, validatePromiseExpression),
 					Match.orElse(() => Option.none()),
 				);
 
