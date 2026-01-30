@@ -1,146 +1,146 @@
 ---
 name: effect-check
-description: Run Effect-TS compliance checks in parallel across all rule categories
+description: Run Effect-TS compliance checks - detectors flag issues, then LLM agents analyze violations in parallel
 argument-hint: "<file-path>"
 allowed-tools:
   - Bash
   - Read
+  - Task
 ---
 
 # Effect-TS Compliance Checker
 
-Run static analysis to detect Effect-TS anti-patterns using the TypeScript Compiler API.
+Two-phase analysis: fast AST-based detection followed by LLM-powered analysis.
 
-## Instructions
+## Process Overview
 
-1. **Get the target file path** from the command argument
-2. **Run the detector** using Bash with the detection script
-3. **Format and present** the results
+1. **Phase 1: Detection** - Run AST-based detectors to flag violations (fast)
+2. **Phase 2: Task Creation** - Create one task per violation for tracking
+3. **Phase 3: Analysis** - Spawn category-checker agents in parallel (one per violation)
+4. **Phase 4: Report** - Aggregate and present results
+
+**Always use task lists.** Create specific, independent tasks to maximize parallelization.
 
 ## Implementation
 
-### Step 1: Run the Detector
+### Phase 1: Run Detectors
 
-Execute the detection script on the target file:
+Execute the detection script:
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:all <file-path> --json 2>/dev/null
 ```
 
-The `detect:all` script runs all category detectors and outputs JSON with:
+Parse the JSON output to get:
 - `filesAnalyzed`: Number of files checked
 - `violations`: Array of violation objects
 - `errors`: Any analysis errors
 
-### Step 2: Parse and Format Results
+### Phase 2: Create Task List
 
-Each violation in the JSON output contains:
-- `ruleId`: The specific rule violated
-- `category`: Category (async, errors, imperative, etc.)
-- `message`: Description of the violation
-- `filePath`: File where violation was found
-- `line`: Line number
-- `column`: Column number
-- `snippet`: Code snippet showing the violation
-- `severity`: "error" | "warning" | "info"
-- `certainty`: "definite" | "potential"
-- `suggestion`: How to fix it
-
-### Step 3: Present Report
-
-Format the output as:
+Create one task per violation for tracking progress:
 
 ```
+For EACH violation, create a task:
+- Subject: "Analyze [category]/[ruleId] at [file]:[line]"
+- Description: Include violation details (message, snippet, severity)
+```
+
+This provides visibility into progress and enables parallel execution tracking.
+
+### Phase 3: Spawn Violation Analyzers
+
+For EACH violation, spawn a `category-checker` agent. **Maximize parallelism - no grouping.**
+
+```
+For EACH violation, use Task tool with:
+- subagent_type: "effect-ts:category-checker"
+- model: "haiku" (fast, cost-effective)
+- prompt: Include the single violation details
+```
+
+**CRITICAL**: Spawn ALL agents in a SINGLE message. One agent per violation = maximum parallelism.
+
+Example prompt for each agent:
+```
+Analyze this [CATEGORY] violation:
+
+File: [FILE_PATH]
+Line: [LINE]:[COLUMN]
+Rule: [ruleId]
+Message: [message]
+Snippet: [snippet]
+Severity: [severity]
+Certainty: [certainty]
+
+Read the source file, understand the context, and provide:
+1. Why this pattern is problematic in Effect-TS
+2. Idiomatic Effect-TS fix (copy-paste ready)
+```
+
+### Phase 4: Aggregate Results
+
+Collect results from all category-checker agents and present a unified report. Mark tasks as completed as agents finish.
+
+## Output Format
+
+```markdown
 ## Effect-TS Compliance Report
 
 **File:** [FILE_PATH]
-**Violations Found:** [COUNT]
+**Files Analyzed:** [COUNT]
 
 ---
 
-### ❌ Errors ([COUNT])
-
-[FOR EACH ERROR-SEVERITY VIOLATION]:
-**[LINE]:[COLUMN]** `[category/ruleId]` [certainty]
-> [message]
-```
-[snippet]
-```
-💡 [suggestion]
-
----
-
-### ⚠️ Warnings ([COUNT])
-
-[FOR EACH WARNING-SEVERITY VIOLATION]:
-**[LINE]:[COLUMN]** `[category/ruleId]` [certainty]
-> [message]
-```
-[snippet]
-```
-💡 [suggestion]
-
----
-
-### ℹ️ Info ([COUNT])
-
-[FOR EACH INFO-SEVERITY VIOLATION]:
-**[LINE]:[COLUMN]** `[category/ruleId]` [certainty]
-> [message]
-💡 [suggestion]
-
----
-
-## Summary by Category
+## Phase 1: Detector Summary
 
 | Category | Errors | Warnings | Info |
 |----------|--------|----------|------|
 | [category] | [count] | [count] | [count] |
 
-## Certainty Breakdown
-- **Definite violations:** [COUNT] (must fix)
-- **Potential violations:** [COUNT] (review recommended)
+**Total:** [X] errors, [Y] warnings, [Z] info
+
+---
+
+## Phase 3: Detailed Analysis
+
+[INCLUDE EACH CATEGORY-CHECKER AGENT'S OUTPUT]
+
+---
+
+## Action Items
+
+### Must Fix (Errors)
+1. [file:line] - [brief description]
+2. ...
+
+### Should Fix (Warnings)
+1. [file:line] - [brief description]
+2. ...
+
+### Consider (Info)
+1. [file:line] - [brief description]
+2. ...
 ```
 
-## Categories Checked
+## Rule Documentation
 
-The detector checks 11 categories:
+Each rule has documentation at:
+```
+${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/<category>/rule-NNN/rule-NNN.md
+```
 
-| Category | Detects |
-|----------|---------|
-| `async` | async/await, Promises, setTimeout/setInterval |
-| `code-style` | Non-null assertions, type casts, function keyword |
-| `comments` | TODO comments, redundant comments |
-| `conditionals` | if/else, switch/case, ternary operators |
-| `discriminated-unions` | Direct ._tag access |
-| `errors` | try/catch, throw, untyped Error |
-| `imperative` | for/while loops, mutation operators |
-| `native-apis` | Object.keys, JSON.parse, Array methods |
-| `schema` | Interfaces/types without Schema |
-| `services` | Direct fetch/fs calls |
-| `testing` | Effect.runPromise in tests |
+Category READMEs at:
+```
+${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/<category>/README.md
+```
 
-## Severity Levels
+## Quick Mode
 
-- **Error**: Must fix - clearly violates Effect-TS patterns
-- **Warning**: Should fix - likely a problem
-- **Info**: Consider fixing - suggestions for improvement
-
-## Certainty Levels
-
-- **Definite**: 100% certain violations (e.g., `for` loops, `try/catch`)
-- **Potential**: Likely violations that may need context (e.g., interfaces)
-
-## Options
-
-You can filter results by passing additional flags:
+For quick detection without LLM analysis, run the detector directly:
 
 ```bash
-# Only errors, no potential violations
-bun run detect -s error --no-potential <file>
-
-# Specific categories only
-bun run detect -c imperative,conditionals <file>
+cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:errors <file>
 ```
 
 ## Usage
