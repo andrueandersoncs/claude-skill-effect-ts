@@ -4,8 +4,8 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
+import { Function as Fn, Match, Option } from "effect";
 import * as ts from "typescript";
-import { Match, Option, Function as Fn } from "effect";
 import type { Violation } from "../../../detectors/types";
 
 const meta = {
@@ -67,19 +67,19 @@ export const detect = (
 				Match.when(
 					(names) => names.some((name) => paramName.includes(name)),
 					() => {
-						const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-							node.getStart(),
-						);
+						const { line, character } =
+							sourceFile.getLineAndCharacterOfPosition(node.getStart());
 						return Option.some({
 							ruleId: meta.id,
 							category: meta.category,
-							message: "Callback-style APIs should be wrapped with Effect.async()",
+							message:
+								"Callback-style APIs should be wrapped with Effect.async()",
 							filePath,
 							line: line + 1,
 							column: character + 1,
 							snippet: node.getText(sourceFile).slice(0, 100),
-							severity: "info" as const,
-							certainty: "potential" as const,
+							severity: "info",
+							certainty: "potential",
 							suggestion: "Wrap callback-based APIs with Effect.async()",
 						});
 					},
