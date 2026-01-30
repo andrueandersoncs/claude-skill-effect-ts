@@ -6,7 +6,7 @@
  */
 
 // rule-001: branded-ids
-export { User as Rule001User, getOrder } from "./rule-001/rule-001.js";
+export { getOrder, User as Rule001User } from "./rule-001/rule-001.js";
 
 // rule-002: no-plain-error
 export { UserNotFound as Rule002UserNotFound } from "./rule-002/rule-002.js";
@@ -18,16 +18,22 @@ export * from "./rule-003/rule-003.js";
 export { Order as Rule004Order } from "./rule-004/rule-004.js";
 
 // rule-005: schema-class
-export { User as Rule005User, Order as Rule005Order } from "./rule-005/rule-005.js";
+export {
+	Order as Rule005Order,
+	User as Rule005User,
+} from "./rule-005/rule-005.js";
 
 // rule-006: schema-constructor
-export { user, order } from "./rule-006/rule-006.js";
+export { order, user } from "./rule-006/rule-006.js";
 
 // rule-007: schema-filters
 export { User as Rule007User } from "./rule-007/rule-007.js";
 
 // rule-008: schema-literal
-export { Status as Rule008Status, StatusFromEnum } from "./rule-008/rule-008.js";
+export {
+	Status as Rule008Status,
+	StatusFromEnum,
+} from "./rule-008/rule-008.js";
 
 // rule-009: schema-tagged-error
 export { UserNotFound as Rule009UserNotFound } from "./rule-009/rule-009.js";
@@ -37,10 +43,10 @@ export { Dollars, price } from "./rule-010/rule-010.js";
 
 // rule-011: schema-union
 export {
-	Status as Rule011Status,
-	Success,
 	Failure,
 	Result,
+	Status as Rule011Status,
+	Success,
 } from "./rule-011/rule-011.js";
 
 // rule-012: schema-unknown-legitimate
@@ -48,10 +54,10 @@ export { AppError, UserCreated } from "./rule-012/rule-012.js";
 
 // rule-013: tagged-union-state
 export {
-	Pending,
-	Shipped,
 	Delivered,
 	Order as Rule013Order,
+	Pending,
+	Shipped,
 } from "./rule-013/rule-013.js";
 
 /**

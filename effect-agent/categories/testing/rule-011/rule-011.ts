@@ -7,7 +7,12 @@
 import { expect, layer } from "@effect/vitest";
 import { Arbitrary, Array, Context, Effect, Layer, Option, pipe } from "effect";
 import * as fc from "effect/FastCheck";
-import { Order, type PaymentError, User, type UserId } from "../../_fixtures.js";
+import {
+	Order,
+	type PaymentError,
+	User,
+	type UserId,
+} from "../../_fixtures.js";
 
 // Define test services
 class UserApi extends Context.Tag("UserApi")<

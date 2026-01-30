@@ -14,6 +14,7 @@ export * from "./rule-007/rule-007.js";
 export * from "./rule-008/rule-008.js";
 export * from "./rule-009/rule-009.js";
 export * from "./rule-010/rule-010.js";
+export * from "./rule-011/rule-011.js";
 
 /**
  * Rule metadata for this category
@@ -78,6 +79,12 @@ export const rules = [
 		category: "conditionals",
 		name: "ternary-to-match",
 		rule: "Never use ternary operators; define Schema types for each range and use Match.when with Schema.is",
+	},
+	{
+		id: "rule-011",
+		category: "conditionals",
+		name: "type-predicate-union-schema",
+		rule: "Never use type predicate functions with || chains; define a Schema.Union and use Match.when with Schema.is",
 	},
 ] as const;
 

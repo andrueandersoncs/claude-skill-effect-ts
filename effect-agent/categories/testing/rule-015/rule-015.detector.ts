@@ -32,8 +32,7 @@ export const detect = (
 	const visit = (node: ts.Node) => {
 		// Detect TestClock usage - either as Effect.TestClock or TestClock.method()
 		if (
-			(ts.isPropertyAccessExpression(node) &&
-				node.name.text === "TestClock") ||
+			(ts.isPropertyAccessExpression(node) && node.name.text === "TestClock") ||
 			(ts.isPropertyAccessExpression(node) &&
 				ts.isIdentifier(node.expression) &&
 				node.expression.text === "TestClock")

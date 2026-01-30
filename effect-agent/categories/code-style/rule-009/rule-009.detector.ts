@@ -20,7 +20,7 @@ export const detect = (
 	const violations: Violation[] = [];
 	const fullText = sourceFile.getFullText();
 
-	// Detect @ts-expect-error and @ts-ignore comments
+	// Detect @ts-expect-error and @ts-expect-error comments
 	const tsIgnoreRegex = /@ts-ignore|@ts-expect-error/g;
 	let ignoreMatch = tsIgnoreRegex.exec(fullText);
 

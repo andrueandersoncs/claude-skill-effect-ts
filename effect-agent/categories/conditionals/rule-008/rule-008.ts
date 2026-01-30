@@ -5,7 +5,12 @@
 // @original-name: result-effect-match
 
 import { Effect, Schema } from "effect";
-import { getUser, User, UserNotFound, type UserId } from "../../_fixtures.js";
+import {
+	getUser,
+	User,
+	type UserId,
+	type UserNotFound,
+} from "../../_fixtures.js";
 
 class ErrorResult extends Schema.TaggedClass<ErrorResult>()("ErrorResult", {
 	status: Schema.Literal("error"),
