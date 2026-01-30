@@ -4,7 +4,7 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Array as EffectArray, Function as Fn, Match, Option, Schema } from "effect";
+import { Match, Option, Schema } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.js";
 
@@ -32,8 +32,6 @@ export const detect = (
 	sourceFile: ts.SourceFile,
 ): Violation[] => {
 	const collectViolations = (node: ts.Node): Violation[] => {
-		let nodeViolations: Violation[] = [];
-
 		// Detect new Promise()
 		const promiseCheck = Match.value({
 			isNewExpr: ts.isNewExpression(node),
@@ -64,9 +62,9 @@ export const detect = (
 			Match.orElse(() => Option.none()),
 		);
 
-		nodeViolations = Option.match(promiseCheck, {
-			onSome: (v) => EffectArray.append(nodeViolations, v),
-			onNone: () => nodeViolations,
+		const promiseViolations = Option.match(promiseCheck, {
+			onSome: (v) => [v],
+			onNone: () => [],
 		});
 
 		// Detect callback patterns (functions with callback parameter names)
@@ -115,19 +113,22 @@ export const detect = (
 			Match.orElse(() => Option.none<Violation>()),
 		);
 
-		nodeViolations = Option.match(functionCheckResult, {
-			onSome: (v) => EffectArray.append(nodeViolations, v),
-			onNone: () => nodeViolations,
+		const functionViolations = Option.match(functionCheckResult, {
+			onSome: (v) => [v],
+			onNone: () => [],
 		});
 
-		// Recursively collect violations from child nodes
-		let childViolations: Violation[] = [];
-		ts.forEachChild(node, (child) => {
-			const violations = collectViolations(child);
-			childViolations = [...childViolations, ...violations];
-		});
+		// Recursively collect violations from child nodes using a functional approach
+		const childViolations = (() => {
+			const violations: Violation[] = [];
+			ts.forEachChild(node, (child) => {
+				const childResults = collectViolations(child);
+				violations.push(...childResults);
+			});
+			return violations;
+		})();
 
-		return [...nodeViolations, ...childViolations];
+		return [...promiseViolations, ...functionViolations, ...childViolations];
 	};
 
 	return collectViolations(sourceFile);
