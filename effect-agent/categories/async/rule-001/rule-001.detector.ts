@@ -33,32 +33,40 @@ export const detect = (
 ): Violation[] => {
 	const collectViolations = (node: ts.Node): Violation[] => {
 		// Detect new Promise()
-		const promiseCheck = Match.value({
-			isNewExpr: ts.isNewExpression(node),
-			isIdentifierExpr:
-				ts.isNewExpression(node) && ts.isIdentifier(node.expression),
-			isPromiseText:
-				ts.isNewExpression(node) &&
-				ts.isIdentifier(node.expression) &&
-				node.expression.text === "Promise",
-		}).pipe(
-			Match.when(Schema.is(IsPromiseExpression), () => {
-				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-					node.getStart(),
-				);
-				return Option.some({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "new Promise() should be replaced with Effect.async()",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, 100),
-					severity: "error" as const,
-					certainty: "definite" as const,
-					suggestion: "Use Effect.async() for callback-based APIs",
-				});
-			}),
+		const promiseCheck = Match.value(node).pipe(
+			Match.when(ts.isNewExpression, (newExpr) =>
+				Match.value(newExpr.expression).pipe(
+					Match.when(ts.isIdentifier, (expr) =>
+						Match.value({
+							isNewExpr: true,
+							isIdentifierExpr: true,
+							isPromiseText: expr.text === "Promise",
+						}).pipe(
+							Match.when(Schema.is(IsPromiseExpression), () => {
+								const { line, character } =
+									sourceFile.getLineAndCharacterOfPosition(
+										node.getStart(),
+									);
+								return Option.some({
+									ruleId: meta.id,
+									category: meta.category,
+									message:
+										"new Promise() should be replaced with Effect.async()",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node.getText(sourceFile).slice(0, 100),
+									severity: "error" as const,
+									certainty: "definite" as const,
+									suggestion: "Use Effect.async() for callback-based APIs",
+								});
+							}),
+							Match.orElse(() => Option.none()),
+						),
+					),
+					Match.orElse(() => Option.none()),
+				),
+			),
 			Match.orElse(() => Option.none()),
 		);
 
