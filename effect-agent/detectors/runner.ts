@@ -7,9 +7,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import {
-	allDetectors,
+	getAllDetectors,
 	getCategoryNames,
 	getDetector,
+	initializeDetectors,
 } from "./categories/index.js";
 import type {
 	CategoryDetector,
@@ -38,7 +39,7 @@ const matchGlob = (pattern: string, filePath: string): boolean => {
 			return filePath.endsWith(ext);
 		}
 		// Pattern like **/foo.ts - match exact filename anywhere
-		return filePath.endsWith("/" + suffix) || filePath === suffix;
+		return filePath.endsWith(`/${suffix}`) || filePath === suffix;
 	}
 
 	// Pattern like **/*.d.ts - handle multiple extensions
@@ -53,9 +54,7 @@ const matchGlob = (pattern: string, filePath: string): boolean => {
 		if (parts.length === 1) {
 			// Just check if the path contains the part
 			const part = parts[0].replace(/^\/|\/$/g, "");
-			return (
-				filePath.includes("/" + part + "/") || filePath.startsWith(part + "/")
-			);
+			return filePath.includes(`/${part}/`) || filePath.startsWith(`${part}/`);
 		}
 	}
 
@@ -175,7 +174,7 @@ export const detectDirectory = (
 			? finalConfig.categories
 					.map(getDetector)
 					.filter((d): d is CategoryDetector => d !== undefined)
-			: allDetectors;
+			: getAllDetectors();
 
 	// Check if target is a file or directory
 	const stat = fs.statSync(target);
@@ -316,7 +315,9 @@ export const formatSummary = (result: DetectorResult): string => {
 /**
  * CLI entry point
  */
-export const main = () => {
+export const main = async () => {
+	// Initialize per-rule detectors
+	await initializeDetectors();
 	const args = process.argv.slice(2);
 
 	// Parse arguments
@@ -393,5 +394,5 @@ const isMain =
 	process.argv[1]?.endsWith("runner.ts") ||
 	process.argv[1]?.endsWith("runner.js");
 if (isMain) {
-	main();
+	main().catch(console.error);
 }

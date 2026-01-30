@@ -1,0 +1,97 @@
+/**
+ * rule-008: or-else-fallback
+ *
+ * Rule: Never use catchAll for fallbacks; use Effect.orElse
+ */
+
+import * as ts from "typescript";
+import type { Violation } from "../../../detectors/types.js";
+
+const meta = {
+	id: "rule-008",
+	category: "errors",
+	name: "or-else-fallback",
+};
+
+export const detect = (
+	filePath: string,
+	sourceFile: ts.SourceFile,
+): Violation[] => {
+	const violations: Violation[] = [];
+
+	const visit = (node: ts.Node) => {
+		// Detect catchAll that returns Effect.succeed (fallback pattern)
+		if (
+			ts.isCallExpression(node) &&
+			ts.isPropertyAccessExpression(node.expression)
+		) {
+			const method = node.expression.name.text;
+
+			if (method === "catchAll") {
+				if (node.arguments.length > 0) {
+					const handlerText = node.arguments[0].getText(sourceFile);
+
+					// Check if it just returns a success (fallback)
+					if (
+						handlerText.includes("Effect.succeed") &&
+						!handlerText.includes("Effect.fail") &&
+						!handlerText.includes("yield*")
+					) {
+						const { line, character } =
+							sourceFile.getLineAndCharacterOfPosition(node.getStart());
+						violations.push({
+							ruleId: meta.id,
+							category: meta.category,
+							message:
+								"catchAll returning succeed; use Effect.orElse for fallbacks",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, 80),
+							severity: "info",
+							certainty: "potential",
+							suggestion:
+								"Use Effect.orElse(() => fallbackEffect) or Effect.orElseSucceed(() => defaultValue)",
+						});
+					}
+				}
+			}
+		}
+
+		// Detect try/catch with return fallback value
+		if (ts.isTryStatement(node) && node.catchClause) {
+			const catchBlock = node.catchClause.block;
+			const statements = catchBlock.statements;
+
+			if (statements.length === 1) {
+				const stmt = statements[0];
+				if (ts.isReturnStatement(stmt) && stmt.expression) {
+					// Simple return of fallback value
+					const returnText = stmt.expression.getText(sourceFile);
+					if (!returnText.includes("throw") && !returnText.includes("Error")) {
+						const { line, character } =
+							sourceFile.getLineAndCharacterOfPosition(node.getStart());
+						violations.push({
+							ruleId: meta.id,
+							category: meta.category,
+							message: "try/catch with fallback return; use Effect.orElse",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, 80),
+							severity: "info",
+							certainty: "potential",
+							suggestion:
+								"Use effect.pipe(Effect.orElseSucceed(() => fallbackValue)) for fallback handling",
+						});
+					}
+				}
+			}
+		}
+
+		ts.forEachChild(node, visit);
+	};
+
+	visit(sourceFile);
+	return violations;
+};

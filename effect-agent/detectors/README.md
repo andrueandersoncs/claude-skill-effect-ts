@@ -105,7 +105,7 @@ const result = detectDirectory("./src", {
 });
 
 // Detect on single file
-const { violations, error } = detectFile("./src/index.ts", allDetectors);
+const { violations, error } = detectFile("./src/index.ts", getAllDetectors());
 
 // Format for display
 console.log(formatViolations(result.violations));
