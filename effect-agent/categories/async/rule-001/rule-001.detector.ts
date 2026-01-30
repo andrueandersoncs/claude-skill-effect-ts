@@ -21,11 +21,12 @@ const IsPromiseExpression = Schema.Struct({
 	isPromiseText: Schema.Literal(true),
 });
 
-// Predicate to check if node is a function type
-const isFunctionNode = (node: ts.Node): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction =>
-	ts.isFunctionDeclaration(node) ||
-	ts.isFunctionExpression(node) ||
-	ts.isArrowFunction(node);
+// Schema for function node types
+const FunctionNode = Schema.Union(
+	Schema.declare((u): u is ts.FunctionDeclaration => ts.isFunctionDeclaration(u as ts.Node)),
+	Schema.declare((u): u is ts.FunctionExpression => ts.isFunctionExpression(u as ts.Node)),
+	Schema.declare((u): u is ts.ArrowFunction => ts.isArrowFunction(u as ts.Node)),
+);
 
 export const detect = (
 	filePath: string,
@@ -69,7 +70,7 @@ export const detect = (
 
 		// Detect callback patterns (functions with callback parameter names)
 		const functionCheckResult = Match.value(node).pipe(
-			Match.when(isFunctionNode, (typedNode) => {
+			Match.when(Schema.is(FunctionNode), (typedNode) => {
 				return Option.fromNullable(typedNode.parameters.at(-1)).pipe(
 					Option.flatMap((lastParam) => {
 						const paramName = lastParam.name.getText(sourceFile).toLowerCase();
