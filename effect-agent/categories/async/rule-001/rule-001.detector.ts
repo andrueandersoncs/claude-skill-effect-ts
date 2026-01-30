@@ -4,7 +4,7 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Array as EffectArray, Match, Option, Schema } from "effect";
+import { Array as EffectArray, Function, Match, Option, Schema, Struct, flow, pipe } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.ts";
 
@@ -27,22 +27,43 @@ const IsPromiseExpression = Schema.Struct({
 	isPromiseText: Schema.Literal(true),
 });
 
+// Composable pipeline for schema validation
+const validatePromiseExpression = (expr: ts.Identifier) =>
+	Match.value({
+		isNewExpr: true,
+		isIdentifierExpr: true,
+		isPromiseText: expr.text === "Promise",
+	}).pipe(
+		Match.when(Schema.is(IsPromiseExpression), () =>
+			Option.some({
+				isNewExpr: true,
+				isIdentifierExpr: true,
+				isPromiseText: true,
+			}),
+		),
+		Match.orElse(() => Option.none()),
+	);
+
 // Schema for function node types
+// Using type predicates with proper narrowing for TypeScript AST nodes
+const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
+	ts.isFunctionDeclaration(u as ts.Node);
+
+const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
+	ts.isFunctionExpression(u as ts.Node);
+
+const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
+	ts.isArrowFunction(u as ts.Node);
+
 const FunctionNode = Schema.Union(
-	Schema.declare((u): u is ts.FunctionDeclaration =>
-		ts.isFunctionDeclaration(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.FunctionExpression =>
-		ts.isFunctionExpression(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.ArrowFunction =>
-		ts.isArrowFunction(u as ts.Node),
-	),
+	Schema.declare(isFunctionDeclaration),
+	Schema.declare(isFunctionExpression),
+	Schema.declare(isArrowFunction),
 );
 
-// Schema for violation construction with runtime validation
-const ViolationSchema = Schema.Struct({
-	ruleId: Schema.String,
+// Base schema for shared violation fields with branded ruleId for type safety
+const BaseViolationFields = Schema.Struct({
+	ruleId: Schema.String.pipe(Schema.brand("RuleId")),
 	category: Schema.String,
 	message: Schema.String,
 	filePath: Schema.String,
@@ -58,48 +79,62 @@ const ViolationSchema = Schema.Struct({
 		Schema.Literal("definite"),
 		Schema.Literal("potential"),
 	),
+});
+
+// Schema for violation construction with runtime validation
+const ViolationSchema = Schema.Struct({
+	...BaseViolationFields.fields,
 	suggestion: Schema.optional(Schema.String),
 });
 
 // Schema for valid violation objects that matches Violation interface
 const ValidViolationWithSuggestion = Schema.Struct({
-	ruleId: Schema.String,
-	category: Schema.String,
-	message: Schema.String,
-	filePath: Schema.String,
-	line: Schema.Number,
-	column: Schema.Number,
-	snippet: Schema.String,
-	severity: Schema.Union(
-		Schema.Literal("error"),
-		Schema.Literal("warning"),
-		Schema.Literal("info"),
-	),
-	certainty: Schema.Union(
-		Schema.Literal("definite"),
-		Schema.Literal("potential"),
-	),
+	...BaseViolationFields.fields,
 	suggestion: Schema.String,
 });
 
 const ValidViolationWithoutSuggestion = Schema.Struct({
-	ruleId: Schema.String,
-	category: Schema.String,
-	message: Schema.String,
-	filePath: Schema.String,
-	line: Schema.Number,
-	column: Schema.Number,
-	snippet: Schema.String,
-	severity: Schema.Union(
-		Schema.Literal("error"),
-		Schema.Literal("warning"),
-		Schema.Literal("info"),
-	),
-	certainty: Schema.Union(
-		Schema.Literal("definite"),
-		Schema.Literal("potential"),
-	),
+	...BaseViolationFields.fields,
 });
+
+// Use Schema.transform to handle optional field omission per rule-010
+const RemoveSuggestionSchema = Schema.transform(
+	ViolationSchema,
+	ValidViolationWithoutSuggestion,
+	{
+		decode(input) {
+			const { suggestion: _unused, ...rest } = input as Record<string, unknown>;
+			return rest as Schema.To<typeof ValidViolationWithoutSuggestion>;
+		},
+		encode(output) {
+			return output as Schema.To<typeof ViolationSchema>;
+		},
+		strict: true,
+	},
+);
+
+// Helper to validate promise objects using Schema
+const validateIsPromiseExpression = (obj: {
+	isNewExpr: boolean;
+	isIdentifierExpr: boolean;
+	isPromiseText: boolean;
+}): Option.Option<{
+	isNewExpr: boolean;
+	isIdentifierExpr: boolean;
+	isPromiseText: boolean;
+}> =>
+	Match.value(obj).pipe(
+		Match.when(Schema.is(IsPromiseExpression), () =>
+			Option.some({
+				isNewExpr: true,
+				isIdentifierExpr: true,
+				isPromiseText: true,
+			}),
+		),
+		Match.orElse(() => Option.none()),
+	);
+
+// Validate violations using Schema.transform for bidirectional conversion
 
 // Helper to create validated violations using Schema
 const createViolation = (data: Omit<Violation, never>): Violation => {
@@ -113,12 +148,11 @@ const createViolation = (data: Omit<Violation, never>): Violation => {
 					suggestion,
 				}),
 			onNone: () => {
-				const { suggestion, ...rest } = decoded;
+				const rest = Struct.omit(decoded, "suggestion");
 				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
 			},
 		}),
 	);
-};
 
 export const detect = (
 	filePath: string,
@@ -142,20 +176,15 @@ export const detect = (
 
 				// Also support the Schema validation approach (from task-4) as a fallback
 				const schemaCheck = Match.value(newExpr.expression).pipe(
-					Match.when(ts.isIdentifier, (expr) =>
-						Match.value({
-							isNewExpr: true,
-							isIdentifierExpr: true,
-							isPromiseText: expr.text === "Promise",
-						}).pipe(
-							Match.when(Schema.is(IsPromiseExpression), () =>
-								Option.some({
-									isNewExpr: true,
-									isIdentifierExpr: true,
-									isPromiseText: true,
-								}),
-							),
-							Match.orElse(() => Option.none()),
+					Match.when(
+						ts.isIdentifier,
+						flow(
+							(expr: ts.Identifier) => ({
+								isNewExpr: true,
+								isIdentifierExpr: true,
+								isPromiseText: expr.text === "Promise",
+							}),
+							validateIsPromiseExpression,
 						),
 					),
 					Match.orElse(() => Option.none()),
@@ -163,8 +192,8 @@ export const detect = (
 
 				// Use whichever check succeeds
 				return Option.match(directCheck, {
-					onSome: () => directCheck,
-					onNone: () => schemaCheck,
+					onSome: Function.constant(directCheck),
+					onNone: Function.constant(schemaCheck),
 				}).pipe(
 					Option.flatMap(() => {
 						const { line, character } =
@@ -253,14 +282,10 @@ export const detect = (
 		});
 
 		// Recursively collect violations from child nodes using a functional approach
-		const childViolations = (() => {
-			let violations: Violation[] = [];
-			ts.forEachChild(node, (child) => {
-				const childResults = collectViolations(child);
-				violations = [...violations, ...childResults];
-			});
-			return violations;
-		})();
+		// Use node.getChildren() to get an array of children and flatMap over them
+		const childViolations = node
+			.getChildren(sourceFile)
+			.flatMap(collectViolations);
 
 		return [...promiseViolations, ...functionViolations, ...childViolations];
 	};
