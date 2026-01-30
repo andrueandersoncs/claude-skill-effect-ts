@@ -4,7 +4,7 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Array as EffectArray, Match, Option, Schema } from "effect";
+import { Array as EffectArray, Match, Option, Schema, Struct } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.ts";
 
@@ -113,7 +113,7 @@ const createViolation = (data: Omit<Violation, never>): Violation => {
 					suggestion,
 				}),
 			onNone: () => {
-				const { suggestion, ...rest } = decoded;
+				const rest = Struct.omit(decoded, "suggestion");
 				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
 			},
 		}),
