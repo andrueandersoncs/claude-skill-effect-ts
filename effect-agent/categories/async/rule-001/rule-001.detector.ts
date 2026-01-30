@@ -4,7 +4,7 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Array as EffectArray, Match, Option, Schema } from "effect";
+import { Array as EffectArray, Match, Option, Ref, Schema } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.ts";
 
@@ -253,14 +253,10 @@ export const detect = (
 		});
 
 		// Recursively collect violations from child nodes using a functional approach
-		const childViolations = (() => {
-			let violations: Violation[] = [];
-			ts.forEachChild(node, (child) => {
-				const childResults = collectViolations(child);
-				violations = [...violations, ...childResults];
-			});
-			return violations;
-		})();
+		// Use node.getChildren() to get an array of children and flatMap over them
+		const childViolations = node
+			.getChildren(sourceFile)
+			.flatMap(collectViolations);
 
 		return [...promiseViolations, ...functionViolations, ...childViolations];
 	};
