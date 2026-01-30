@@ -6,7 +6,7 @@
 
 import { Match, Option, Schema } from "effect";
 import * as ts from "typescript";
-import type { Violation } from "../../../detectors/types.js";
+import type { Violation } from "../../../detectors/types.ts";
 
 const meta = {
 	id: "rule-001",
