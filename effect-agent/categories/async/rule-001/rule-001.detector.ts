@@ -52,36 +52,52 @@ export const detect = (
 			node.parameters.length > 0
 		) {
 			const lastParam = node.parameters.at(-1);
-			const paramName = lastParam.name.getText(sourceFile).toLowerCase();
-			const callbackNames = [
-				"callback",
-				"cb",
-				"done",
-				"next",
-				"resolve",
-				"reject",
-				"handler",
-			];
-
-			const violation = Match.value(callbackNames).pipe(
+			const violation = Match.value(Option.fromNullable(lastParam)).pipe(
 				Match.when(
-					(names) => names.some((name) => paramName.includes(name)),
-					() => {
-						const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-							node.getStart(),
+					Option.isSome,
+					(paramOpt) => {
+						const paramName = paramOpt.value.name
+							.getText(sourceFile)
+							.toLowerCase();
+						const callbackNames = [
+							"callback",
+							"cb",
+							"done",
+							"next",
+							"resolve",
+							"reject",
+							"handler",
+						];
+
+						return Match.value(callbackNames).pipe(
+							Match.when(
+								(names) =>
+									names.some((name) => paramName.includes(name)),
+								() => {
+									const { line, character } =
+										sourceFile.getLineAndCharacterOfPosition(
+											node.getStart(),
+										);
+									return Option.some({
+										ruleId: meta.id,
+										category: meta.category,
+										message:
+											"Callback-style APIs should be wrapped with Effect.async()",
+										filePath,
+										line: line + 1,
+										column: character + 1,
+										snippet: node
+											.getText(sourceFile)
+											.slice(0, 100),
+										severity: "info" as const,
+										certainty: "potential" as const,
+										suggestion:
+											"Wrap callback-based APIs with Effect.async()",
+									});
+								},
+							),
+							Match.orElse(() => Option.none()),
 						);
-						return Option.some({
-							ruleId: meta.id,
-							category: meta.category,
-							message: "Callback-style APIs should be wrapped with Effect.async()",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, 100),
-							severity: "info" as const,
-							certainty: "potential" as const,
-							suggestion: "Wrap callback-based APIs with Effect.async()",
-						});
 					},
 				),
 				Match.orElse(() => Option.none()),
