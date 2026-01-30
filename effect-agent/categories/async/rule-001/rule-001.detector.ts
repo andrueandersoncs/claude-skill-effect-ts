@@ -4,7 +4,7 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Array as EffectArray, Function as Fn, Match, Option } from "effect";
+import { Array as EffectArray, Function as Fn, Match, Option, Schema } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.js";
 
@@ -14,6 +14,13 @@ const meta = {
 	name: "callback-api",
 };
 
+// Schema for detecting new Promise() patterns
+const IsPromiseExpression = Schema.Struct({
+	isNewExpr: Schema.Literal(true),
+	isIdentifierExpr: Schema.Literal(true),
+	isPromiseText: Schema.Literal(true),
+});
+
 export const detect = (
 	filePath: string,
 	sourceFile: ts.SourceFile,
@@ -22,27 +29,39 @@ export const detect = (
 		let nodeViolations: Violation[] = [];
 
 		// Detect new Promise()
-		if (
-			ts.isNewExpression(node) &&
-			ts.isIdentifier(node.expression) &&
-			node.expression.text === "Promise"
-		) {
-			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-				node.getStart(),
-			);
-			nodeViolations = EffectArray.append(nodeViolations, {
-				ruleId: meta.id,
-				category: meta.category,
-				message: "new Promise() should be replaced with Effect.async()",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, 100),
-				severity: "error",
-				certainty: "definite",
-				suggestion: "Use Effect.async() for callback-based APIs",
-			});
-		}
+		const promiseCheck = Match.value({
+			isNewExpr: ts.isNewExpression(node),
+			isIdentifierExpr:
+				ts.isNewExpression(node) && ts.isIdentifier(node.expression),
+			isPromiseText:
+				ts.isNewExpression(node) &&
+				ts.isIdentifier(node.expression) &&
+				node.expression.text === "Promise",
+		}).pipe(
+			Match.when(Schema.is(IsPromiseExpression), () => {
+				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+					node.getStart(),
+				);
+				return Option.some({
+					ruleId: meta.id,
+					category: meta.category,
+					message: "new Promise() should be replaced with Effect.async()",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, 100),
+					severity: "error" as const,
+					certainty: "definite" as const,
+					suggestion: "Use Effect.async() for callback-based APIs",
+				});
+			}),
+			Match.orElse(() => Option.none()),
+		);
+
+		nodeViolations = Option.match(promiseCheck, {
+			onSome: (v) => EffectArray.append(nodeViolations, v),
+			onNone: () => nodeViolations,
+		});
 
 		// Detect callback patterns (functions with callback parameter names)
 		if (
@@ -52,7 +71,7 @@ export const detect = (
 			node.parameters.length > 0
 		) {
 			const lastParam = node.parameters.at(-1);
-			if (!lastParam) return [];
+			if (!lastParam) return nodeViolations;
 			const paramName = lastParam.name.getText(sourceFile).toLowerCase();
 			const callbackNames = [
 				"callback",
@@ -98,10 +117,10 @@ export const detect = (
 		let childViolations: Violation[] = [];
 		ts.forEachChild(node, (child) => {
 			const violations = collectViolations(child);
-			childViolations = EffectArray.concat(childViolations, violations);
+			childViolations = [...childViolations, ...violations];
 		});
 
-		return EffectArray.concat(nodeViolations, childViolations);
+		return [...nodeViolations, ...childViolations];
 	};
 
 	return collectViolations(sourceFile);
