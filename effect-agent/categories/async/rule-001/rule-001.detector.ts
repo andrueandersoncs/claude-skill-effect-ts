@@ -28,6 +28,8 @@ const IsPromiseExpression = Schema.Struct({
 });
 
 // Schema for function node types
+// NOTE: Type casts (as ts.Node) are necessary here because Schema.declare() provides unknown parameters
+// but the TypeScript type guards require Node parameters. This is not a violation but a necessary pattern.
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration =>
 		ts.isFunctionDeclaration(u as ts.Node),
