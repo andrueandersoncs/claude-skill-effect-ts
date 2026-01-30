@@ -5,7 +5,7 @@
  */
 
 import * as ts from "typescript";
-import { Match, Option, Function as Fn } from "effect";
+import { Array as EffectArray, Match, Option, Function as Fn } from "effect";
 import type { Violation } from "../../../detectors/types";
 
 const meta = {
@@ -49,7 +49,7 @@ export const detect = (
 			(ts.isFunctionDeclaration(node) ||
 				ts.isFunctionExpression(node) ||
 				ts.isArrowFunction(node)) &&
-			node.parameters.length > 0
+			EffectArray.isNonEmptyArray(node.parameters)
 		) {
 			const lastParam = node.parameters.at(-1);
 			const paramName = lastParam.name.getText(sourceFile).toLowerCase();
