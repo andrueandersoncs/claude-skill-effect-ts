@@ -4,7 +4,7 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Array as EffectArray, Match, Option } from "effect";
+import { Array as EffectArray, Function as Fn, Match, Option } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.js";
 
