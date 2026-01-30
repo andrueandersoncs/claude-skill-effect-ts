@@ -5,7 +5,7 @@
  */
 
 import * as ts from "typescript";
-import { Match, Option, Function as Fn } from "effect";
+import { Match, Option, Function as Fn, Array as EffectArray } from "effect";
 import type { Violation } from "../../../detectors/types";
 
 const meta = {
@@ -96,12 +96,13 @@ export const detect = (
 		}
 
 		// Recursively collect violations from child nodes
-		const childViolations: Violation[] = [];
+		let childViolations: Violation[] = [];
 		ts.forEachChild(node, (child) => {
-			childViolations.push(...collectViolations(child));
+			const violations = collectViolations(child);
+			childViolations = EffectArray.concat(childViolations, violations);
 		});
 
-		return [...nodeViolations, ...childViolations];
+		return EffectArray.concat(nodeViolations, childViolations);
 	};
 
 	return collectViolations(sourceFile);
