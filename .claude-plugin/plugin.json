@@ -1,6 +1,6 @@
 {
   "name": "effect-ts",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Comprehensive Effect-TS development assistance with skills for all major Effect domains, commands for common patterns, agents for code review and migration, and parallel rule-based compliance checking. Strong emphasis on service-oriented testing for 100% coverage.",
   "author": {
     "name": "Andrue Anderson"
