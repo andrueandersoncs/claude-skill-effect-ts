@@ -1,0 +1,18 @@
+// Rule: Never use it.effect when you need real time; use it.live
+// Example: Testing with real clock/environment
+// @rule-id: rule-008
+// @category: testing
+// @original-name: it-live
+
+import { expect, it } from "@effect/vitest";
+import { Effect } from "effect";
+
+// ✅ Good: it.live uses real clock, logger, etc.
+it.live("should measure real time", () =>
+	Effect.gen(function* () {
+		const start = Date.now();
+		yield* Effect.sleep("10 millis"); // Real 10ms delay
+		const elapsed = Date.now() - start;
+		expect(elapsed).toBeGreaterThanOrEqual(10); // Passes
+	}),
+);

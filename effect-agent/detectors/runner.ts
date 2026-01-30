@@ -53,7 +53,9 @@ const matchGlob = (pattern: string, filePath: string): boolean => {
 		if (parts.length === 1) {
 			// Just check if the path contains the part
 			const part = parts[0].replace(/^\/|\/$/g, "");
-			return filePath.includes("/" + part + "/") || filePath.startsWith(part + "/");
+			return (
+				filePath.includes("/" + part + "/") || filePath.startsWith(part + "/")
+			);
 		}
 	}
 
