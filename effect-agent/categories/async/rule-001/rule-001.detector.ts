@@ -101,6 +101,22 @@ const ValidViolationWithoutSuggestion = Schema.Struct({
 	),
 });
 
+// Use Schema.transform to handle optional field omission per rule-010
+const RemoveSuggestionSchema = Schema.transform(
+	ViolationSchema,
+	ValidViolationWithoutSuggestion,
+	{
+		decode(input) {
+			const { suggestion: _unused, ...rest } = input as Record<string, unknown>;
+			return rest as Schema.To<typeof ValidViolationWithoutSuggestion>;
+		},
+		encode(output) {
+			return output as Schema.To<typeof ViolationSchema>;
+		},
+		strict: true,
+	},
+);
+
 // Helper to create validated violations using Schema
 const createViolation = (data: Omit<Violation, never>): Violation => {
 	const decoded = Schema.decodeSync(ViolationSchema)(data);
@@ -112,10 +128,8 @@ const createViolation = (data: Omit<Violation, never>): Violation => {
 					...decoded,
 					suggestion,
 				}),
-			onNone: () => {
-				const { suggestion, ...rest } = decoded;
-				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-			},
+			onNone: () =>
+				Schema.decodeSync(RemoveSuggestionSchema)(decoded),
 		}),
 	);
 };
