@@ -8,10 +8,14 @@ import { Email, FetchError, User, UserId } from "../_fixtures.js"
 const fetchUser = (id: UserId) =>
   Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
-      try: () => fetch(`/users/${id}`).then((r) => r.json()),
+      try: () => fetch(`/users/${id}`),
       catch: (e) => new FetchError({ cause: e }),
     })
-    return yield* Schema.decodeUnknown(User)(response)
+    const json = yield* Effect.tryPromise({
+      try: () => response.json(),
+      catch: (e) => new FetchError({ cause: e }),
+    })
+    return yield* Schema.decodeUnknown(User)(json)
   })
 
 export { fetchUser }

@@ -26,34 +26,55 @@ const processUser = (id: UserId) =>
 const UserApiLive = Layer.succeed(UserApi, {
   getUser: (id) =>
     Effect.gen(function* () {
+      const url = `https://api.example.com/users/${id}`
       const response = yield* Effect.tryPromise({
-        try: () => fetch(`https://api.example.com/users/${id}`).then((r) => r.json()),
-        catch: (e) => new ApiError({ url: `https://api.example.com/users/${id}`, cause: e }),
+        try: () => fetch(url),
+        catch: (e) => new ApiError({ url, cause: e }),
       })
-      return yield* Schema.decodeUnknown(User)(response).pipe(
-        Effect.mapError((e) => new ApiError({ url: `https://api.example.com/users/${id}`, cause: e }))
+      const json = yield* Effect.tryPromise({
+        try: () => response.json(),
+        catch: (e) => new ApiError({ url, cause: e }),
+      })
+      return yield* Schema.decodeUnknown(User)(json).pipe(
+        Effect.mapError((e) => new ApiError({ url, cause: e }))
       )
     }),
   updateUser: (user) =>
-    Effect.tryPromise({
-      try: () =>
-        fetch(`https://api.example.com/users/${user.id}`, {
-          method: "PUT",
-          body: JSON.stringify(user),
-        }).then(() => undefined),
-      catch: (e) => new ApiError({ url: `https://api.example.com/users/${user.id}`, cause: e }),
+    Effect.gen(function* () {
+      const url = `https://api.example.com/users/${user.id}`
+      const response = yield* Effect.tryPromise({
+        try: () =>
+          fetch(url, {
+            method: "PUT",
+            body: JSON.stringify(user),
+          }),
+        catch: (e) => new ApiError({ url, cause: e }),
+      })
+      yield* Effect.tryPromise({
+        try: () => response.json(),
+        catch: (e) => new ApiError({ url, cause: e }),
+      })
     }),
 })
 
 // Test layer implementation with Arbitrary
 const UserApiTest = Layer.effect(
   UserApi,
-  Effect.sync(() => {
+  Effect.gen(function* () {
     const UserArb = Arbitrary.make(User)
     return {
       getUser: (_id: UserId): Effect.Effect<User, ApiError> =>
-        Effect.succeed(
-          pipe(fc.sample(UserArb, 1), Array.head, Option.getOrThrow)
+        pipe(
+          Effect.sync(() => fc.sample(UserArb, 1)),
+          Effect.flatMap((samples) =>
+            pipe(
+              Array.head(samples),
+              Option.match({
+                onNone: () => Effect.die("Failed to generate arbitrary user"),
+                onSome: Effect.succeed,
+              })
+            )
+          )
         ),
       updateUser: (_user: User): Effect.Effect<void, ApiError> => Effect.void,
     }
