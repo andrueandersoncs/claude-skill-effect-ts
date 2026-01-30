@@ -22,27 +22,39 @@ export const detect = (
 		const nodeViolations: Violation[] = [];
 
 		// Detect new Promise()
-		if (
-			ts.isNewExpression(node) &&
-			ts.isIdentifier(node.expression) &&
-			node.expression.text === "Promise"
-		) {
-			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-				node.getStart(),
-			);
-			nodeViolations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "new Promise() should be replaced with Effect.async()",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, 100),
-				severity: "error",
-				certainty: "definite",
-				suggestion: "Use Effect.async() for callback-based APIs",
-			});
-		}
+		const promiseViolation = Match.value(node).pipe(
+			Match.when(
+				(n): n is ts.NewExpression =>
+					ts.isNewExpression(n) &&
+					ts.isIdentifier(n.expression) &&
+					n.expression.text === "Promise",
+				(n) => {
+					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+						n.getStart(),
+					);
+					return Option.some({
+						ruleId: meta.id,
+						category: meta.category,
+						message: "new Promise() should be replaced with Effect.async()",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: n.getText(sourceFile).slice(0, 100),
+						severity: "error",
+						certainty: "definite",
+						suggestion: "Use Effect.async() for callback-based APIs",
+					});
+				},
+			),
+			Match.orElse(() => Option.none()),
+		);
+
+		Option.match(promiseViolation, {
+			onSome: (v) => {
+				nodeViolations.push(v);
+			},
+			onNone: Fn.constVoid,
+		});
 
 		// Detect callback patterns (functions with callback parameter names)
 		if (
