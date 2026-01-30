@@ -119,10 +119,10 @@ export const detect = (
 
 		// Recursively collect violations from child nodes using a functional approach
 		const childViolations = (() => {
-			const violations: Violation[] = [];
+			let violations: Violation[] = [];
 			ts.forEachChild(node, (child) => {
 				const childResults = collectViolations(child);
-				violations.push(...childResults);
+				violations = [...violations, ...childResults];
 			});
 			return violations;
 		})();
