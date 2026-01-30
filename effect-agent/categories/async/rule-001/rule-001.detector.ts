@@ -42,7 +42,7 @@ const FunctionNode = Schema.Union(
 
 // Schema for violation construction with runtime validation
 const ViolationSchema = Schema.Struct({
-	ruleId: Schema.String,
+	ruleId: Schema.String.pipe(Schema.brand("RuleId")),
 	category: Schema.String,
 	message: Schema.String,
 	filePath: Schema.String,
@@ -63,7 +63,7 @@ const ViolationSchema = Schema.Struct({
 
 // Schema for valid violation objects that matches Violation interface
 const ValidViolationWithSuggestion = Schema.Struct({
-	ruleId: Schema.String,
+	ruleId: Schema.String.pipe(Schema.brand("RuleId")),
 	category: Schema.String,
 	message: Schema.String,
 	filePath: Schema.String,
@@ -83,7 +83,7 @@ const ValidViolationWithSuggestion = Schema.Struct({
 });
 
 const ValidViolationWithoutSuggestion = Schema.Struct({
-	ruleId: Schema.String,
+	ruleId: Schema.String.pipe(Schema.brand("RuleId")),
 	category: Schema.String,
 	message: Schema.String,
 	filePath: Schema.String,
