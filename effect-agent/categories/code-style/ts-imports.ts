@@ -7,6 +7,13 @@
 // ✅ Good: Importing from .ts extension
 import { Item } from "../_fixtures.ts"
 
-const example: Item = { id: "1", value: 42 }
+const example: Item = {
+  id: "1",
+  key: "item-key",
+  value: 42,
+  price: 9.99,
+  quantity: 1,
+  active: true,
+}
 
 export { example }

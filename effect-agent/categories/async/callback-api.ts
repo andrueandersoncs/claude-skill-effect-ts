@@ -10,10 +10,15 @@ const readFileAsync = (path: string) =>
     fs.readFile(path, (err, data) =>
       resume(
         Match.value({ err, data }).pipe(
-          Match.when({ err: Predicate.isNotNull }, ({ err }) =>
-            Effect.fail(err!)
+          Match.when(
+            { err: Predicate.isNotNull<NodeJS.ErrnoException> },
+            ({ err }) => Effect.fail(err)
           ),
-          Match.orElse(({ data }) => Effect.succeed(data!))
+          Match.when(
+            { data: Predicate.isNotNull<Buffer> },
+            ({ data }) => Effect.succeed(data)
+          ),
+          Match.orElse(() => Effect.fail(new Error("Unknown error") as NodeJS.ErrnoException))
         )
       )
     )

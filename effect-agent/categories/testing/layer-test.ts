@@ -23,17 +23,17 @@ class UserRepository extends Context.Tag("UserRepository")<
   }
 >() {}
 
-// Test layer with in-memory store
+// Test layer with in-memory store using HashMap
 const UserRepositoryTest = Layer.effect(
   UserRepository,
   Effect.gen(function* () {
-    const store = yield* Ref.make<Map<string, User>>(new Map())
+    const store = yield* Ref.make(HashMap.empty<UserId, User>())
     return {
       findById: (id) =>
         Ref.get(store).pipe(
           Effect.flatMap((users) =>
             pipe(
-              Option.fromNullable(users.get(id)),
+              HashMap.get(users, id),
               Option.match({
                 onNone: () => Effect.fail(new UserNotFound({ userId: id })),
                 onSome: Effect.succeed,
@@ -41,8 +41,7 @@ const UserRepositoryTest = Layer.effect(
             )
           )
         ),
-      save: (user) =>
-        Ref.update(store, (m) => new Map(m).set(user.id, user)),
+      save: (user) => Ref.update(store, HashMap.set(user.id, user)),
     }
   })
 )

@@ -11,16 +11,22 @@ import {
   Option,
   pipe,
   Ref,
+  Schema,
 } from "effect"
 import * as fc from "effect/FastCheck"
 import { Database, DatabaseError, Email, User, UserId, UserNotFound } from "../_fixtures.js"
+
+class UserNotFoundByEmail extends Schema.TaggedError<UserNotFoundByEmail>()(
+  "UserNotFoundByEmail",
+  { email: Email }
+) {}
 
 // ✅ Good: Context.Tag repository for database access
 class UserRepository extends Context.Tag("UserRepository")<
   UserRepository,
   {
     readonly findById: (id: UserId) => Effect.Effect<User, UserNotFound>
-    readonly findByEmail: (email: Email) => Effect.Effect<User, UserNotFound>
+    readonly findByEmail: (email: Email) => Effect.Effect<User, UserNotFoundByEmail>
     readonly save: (user: User) => Effect.Effect<void, DatabaseError>
     readonly delete: (id: UserId) => Effect.Effect<void, DatabaseError>
   }
@@ -38,7 +44,7 @@ const UserRepositoryLive = Layer.effect(
         ),
       findByEmail: (email) =>
         db.query<User>("SELECT * FROM users WHERE email = ?", [email]).pipe(
-          Effect.mapError(() => new UserNotFound({ userId: email as UserId }))
+          Effect.mapError(() => new UserNotFoundByEmail({ email }))
         ),
       save: (user) =>
         db.query("INSERT INTO users VALUES (?)", [user]).pipe(
@@ -81,8 +87,7 @@ const UserRepositoryTest = Layer.effect(
               Array.fromIterable,
               Array.findFirst((u) => u.email === email),
               Option.match({
-                onNone: () =>
-                  Effect.fail(new UserNotFound({ userId: email as UserId })),
+                onNone: () => Effect.fail(new UserNotFoundByEmail({ email })),
                 onSome: Effect.succeed,
               })
             )

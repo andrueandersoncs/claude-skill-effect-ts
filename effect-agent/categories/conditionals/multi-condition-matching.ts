@@ -3,10 +3,10 @@
 
 import { Function, Match, Schema } from "effect"
 
-interface Order {
-  total: number
-  isPremium: boolean
-}
+class Order extends Schema.Class<Order>("Order")({
+  total: Schema.Number,
+  isPremium: Schema.Boolean,
+}) {}
 
 const HighValue = Schema.Struct({
   total: Schema.Number.pipe(Schema.greaterThan(1000)),

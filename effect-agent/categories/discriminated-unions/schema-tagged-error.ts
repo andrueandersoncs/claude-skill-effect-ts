@@ -12,10 +12,11 @@ const withCatchTag = getUser(id).pipe(
   Effect.catchTag("UserNotFound", () => Effect.succeed(defaultUser))
 )
 
-// ✅ Good: Schema.is works with Schema.TaggedError
-const withSchemaIs = Schema.is(UserNotFound)(error)
-  ? defaultUser
-  : Effect.die("Unknown error")
+// ✅ Good: Schema.is works with Schema.TaggedError inside Match
+const withSchemaIs = Match.value(error).pipe(
+  Match.when(Schema.is(UserNotFound), () => defaultUser),
+  Match.orElse(() => Effect.die("Unknown error"))
+)
 
 // ✅ Good: Match.tag works with Schema.TaggedError
 const handleError = (e: UserNotFound) =>
