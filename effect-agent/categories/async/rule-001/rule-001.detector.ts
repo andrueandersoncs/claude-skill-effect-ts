@@ -4,7 +4,7 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Array as EffectArray, Match, Option, Ref, Schema } from "effect";
+import { Array as EffectArray, Match, Option, Schema, Struct } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.ts";
 
@@ -27,17 +27,38 @@ const IsPromiseExpression = Schema.Struct({
 	isPromiseText: Schema.Literal(true),
 });
 
+// Composable pipeline for schema validation
+const validatePromiseExpression = (expr: ts.Identifier) =>
+	Match.value({
+		isNewExpr: true,
+		isIdentifierExpr: true,
+		isPromiseText: expr.text === "Promise",
+	}).pipe(
+		Match.when(Schema.is(IsPromiseExpression), () =>
+			Option.some({
+				isNewExpr: true,
+				isIdentifierExpr: true,
+				isPromiseText: true,
+			}),
+		),
+		Match.orElse(() => Option.none()),
+	);
+
 // Schema for function node types
+// Using type predicates with proper narrowing for TypeScript AST nodes
+const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
+	ts.isFunctionDeclaration(u as ts.Node);
+
+const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
+	ts.isFunctionExpression(u as ts.Node);
+
+const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
+	ts.isArrowFunction(u as ts.Node);
+
 const FunctionNode = Schema.Union(
-	Schema.declare((u): u is ts.FunctionDeclaration =>
-		ts.isFunctionDeclaration(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.FunctionExpression =>
-		ts.isFunctionExpression(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.ArrowFunction =>
-		ts.isArrowFunction(u as ts.Node),
-	),
+	Schema.declare(isFunctionDeclaration),
+	Schema.declare(isFunctionExpression),
+	Schema.declare(isArrowFunction),
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
@@ -94,27 +115,22 @@ const RemoveSuggestionSchema = Schema.transform(
 
 // Validate violations using Schema.transform for bidirectional conversion
 // Helper to create validated violations using Schema
-const createViolation = (data: Omit<Violation, never>): Violation =>
-	Schema.decodeSync(
-		Schema.transform(
-			ViolationSchema,
-			Schema.Union(ValidViolationWithSuggestion, ValidViolationWithoutSuggestion),
-			{
-				decode: (data) =>
-					Option.fromNullable(data.suggestion).pipe(
-						Option.match({
-							onSome: (suggestion) => ({ ...data, suggestion }),
-							onNone: () => {
-								const { suggestion, ...rest } = data;
-								return rest;
-							},
-						}),
-					),
-				encode: (data) => data,
-				strict: true,
+const createViolation = (data: Omit<Violation, never>): Violation => {
+	const decoded = Schema.decodeSync(ViolationSchema)(data);
+	// Validate and return the violation based on whether suggestion is present
+	return Option.fromNullable(decoded.suggestion).pipe(
+		Option.match({
+			onSome: (suggestion) =>
+				Schema.decodeSync(ValidViolationWithSuggestion)({
+					...decoded,
+					suggestion,
+				}),
+			onNone: () => {
+				const rest = Struct.omit(decoded, "suggestion");
+				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
 			},
-		),
-	)(data);
+		}),
+	);
 
 export const detect = (
 	filePath: string,
@@ -138,22 +154,7 @@ export const detect = (
 
 				// Also support the Schema validation approach (from task-4) as a fallback
 				const schemaCheck = Match.value(newExpr.expression).pipe(
-					Match.when(ts.isIdentifier, (expr) =>
-						Match.value({
-							isNewExpr: true,
-							isIdentifierExpr: true,
-							isPromiseText: expr.text === "Promise",
-						}).pipe(
-							Match.when(Schema.is(IsPromiseExpression), () =>
-								Option.some({
-									isNewExpr: true,
-									isIdentifierExpr: true,
-									isPromiseText: true,
-								}),
-							),
-							Match.orElse(() => Option.none()),
-						),
-					),
+					Match.when(ts.isIdentifier, validatePromiseExpression),
 					Match.orElse(() => Option.none()),
 				);
 
