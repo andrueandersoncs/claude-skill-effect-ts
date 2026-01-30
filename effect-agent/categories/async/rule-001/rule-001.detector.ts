@@ -101,31 +101,38 @@ const ValidViolationWithoutSuggestion = Schema.Struct({
 	),
 });
 
-// Schema transformation for violations based on suggestion presence
-const ViolationTransform = Schema.transform(
+// Use Schema.transform to handle optional field omission per rule-010
+const RemoveSuggestionSchema = Schema.transform(
 	ViolationSchema,
-	Schema.Union(ValidViolationWithSuggestion, ValidViolationWithoutSuggestion),
+	ValidViolationWithoutSuggestion,
 	{
-		decode: (data) =>
-			Option.fromNullable(data.suggestion).pipe(
-				Option.match({
-					onSome: (suggestion) => ({
-						...data,
-						suggestion,
-					}),
-					onNone: () => {
-						const { suggestion, ...rest } = data;
-						return rest;
-					},
-				}),
-			),
-		encode: (data) => data,
+		decode(input) {
+			const { suggestion: _unused, ...rest } = input as Record<string, unknown>;
+			return rest as Schema.To<typeof ValidViolationWithoutSuggestion>;
+		},
+		encode(output) {
+			return output as Schema.To<typeof ViolationSchema>;
+		},
+		strict: true,
 	},
 );
 
 // Helper to create validated violations using Schema
-const createViolation = (data: Omit<Violation, never>): Violation =>
-	Schema.decodeSync(ViolationTransform)(data);
+const createViolation = (data: Omit<Violation, never>): Violation => {
+	const decoded = Schema.decodeSync(ViolationSchema)(data);
+	// Validate and return the violation based on whether suggestion is present
+	return Option.fromNullable(decoded.suggestion).pipe(
+		Option.match({
+			onSome: (suggestion) =>
+				Schema.decodeSync(ValidViolationWithSuggestion)({
+					...decoded,
+					suggestion,
+				}),
+			onNone: () =>
+				Schema.decodeSync(RemoveSuggestionSchema)(decoded),
+		}),
+	);
+};
 
 export const detect = (
 	filePath: string,
