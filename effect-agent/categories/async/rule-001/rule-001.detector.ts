@@ -4,7 +4,7 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Array as EffectArray, Effect, Match, Option, Schema } from "effect";
+import { Array as EffectArray, Match, Option, Schema, Struct } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.ts";
 
@@ -27,19 +27,38 @@ const IsPromiseExpression = Schema.Struct({
 	isPromiseText: Schema.Literal(true),
 });
 
+// Composable pipeline for schema validation
+const validatePromiseExpression = (expr: ts.Identifier) =>
+	Match.value({
+		isNewExpr: true,
+		isIdentifierExpr: true,
+		isPromiseText: expr.text === "Promise",
+	}).pipe(
+		Match.when(Schema.is(IsPromiseExpression), () =>
+			Option.some({
+				isNewExpr: true,
+				isIdentifierExpr: true,
+				isPromiseText: true,
+			}),
+		),
+		Match.orElse(() => Option.none()),
+	);
+
 // Schema for function node types
-// NOTE: Type casts (as ts.Node) are necessary here because Schema.declare() provides unknown parameters
-// but the TypeScript type guards require Node parameters. This is not a violation but a necessary pattern.
+// Using type predicates with proper narrowing for TypeScript AST nodes
+const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
+	ts.isFunctionDeclaration(u as ts.Node);
+
+const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
+	ts.isFunctionExpression(u as ts.Node);
+
+const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
+	ts.isArrowFunction(u as ts.Node);
+
 const FunctionNode = Schema.Union(
-	Schema.declare((u): u is ts.FunctionDeclaration =>
-		ts.isFunctionDeclaration(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.FunctionExpression =>
-		ts.isFunctionExpression(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.ArrowFunction =>
-		ts.isArrowFunction(u as ts.Node),
-	),
+	Schema.declare(isFunctionDeclaration),
+	Schema.declare(isFunctionExpression),
+	Schema.declare(isArrowFunction),
 );
 
 // Schema for violation construction with runtime validation
@@ -104,26 +123,23 @@ const ValidViolationWithoutSuggestion = Schema.Struct({
 });
 
 // Helper to create validated violations using Schema
-const createViolation = Effect.fn("createViolation")(
-	(data: Omit<Violation, never>) => {
-		const decoded = Schema.decodeSync(ViolationSchema)(data);
-		// Validate and return the violation based on whether suggestion is present
-		const result = Option.fromNullable(decoded.suggestion).pipe(
-			Option.match({
-				onSome: (suggestion) =>
-					Schema.decodeSync(ValidViolationWithSuggestion)({
-						...decoded,
-						suggestion,
-					}),
-				onNone: () => {
-					const { suggestion, ...rest } = decoded;
-					return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-				},
-			}),
-		);
-		return Effect.succeed(result);
-	},
-);
+const createViolation = (data: Omit<Violation, never>): Violation => {
+	const decoded = Schema.decodeSync(ViolationSchema)(data);
+	// Validate and return the violation based on whether suggestion is present
+	return Option.fromNullable(decoded.suggestion).pipe(
+		Option.match({
+			onSome: (suggestion) =>
+				Schema.decodeSync(ValidViolationWithSuggestion)({
+					...decoded,
+					suggestion,
+				}),
+			onNone: () => {
+				const rest = Struct.omit(decoded, "suggestion");
+				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+			},
+		}),
+	);
+};
 
 export const detect = (
 	filePath: string,
@@ -147,22 +163,7 @@ export const detect = (
 
 				// Also support the Schema validation approach (from task-4) as a fallback
 				const schemaCheck = Match.value(newExpr.expression).pipe(
-					Match.when(ts.isIdentifier, (expr) =>
-						Match.value({
-							isNewExpr: true,
-							isIdentifierExpr: true,
-							isPromiseText: expr.text === "Promise",
-						}).pipe(
-							Match.when(Schema.is(IsPromiseExpression), () =>
-								Option.some({
-									isNewExpr: true,
-									isIdentifierExpr: true,
-									isPromiseText: true,
-								}),
-							),
-							Match.orElse(() => Option.none()),
-						),
-					),
+					Match.when(ts.isIdentifier, validatePromiseExpression),
 					Match.orElse(() => Option.none()),
 				);
 
@@ -175,20 +176,18 @@ export const detect = (
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
 						return Option.some(
-							Effect.runSync(
-								createViolation({
-									ruleId: meta.id,
-									category: meta.category,
-									message: "new Promise() should be replaced with Effect.async()",
-									filePath,
-									line: line + 1,
-									column: character + 1,
-									snippet: node.getText(sourceFile).slice(0, 100),
-									severity: "error",
-									certainty: "definite",
-									suggestion: "Use Effect.async() for callback-based APIs",
-								}),
-							),
+							createViolation({
+								ruleId: meta.id,
+								category: meta.category,
+								message: "new Promise() should be replaced with Effect.async()",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, 100),
+								severity: "error",
+								certainty: "definite",
+								suggestion: "Use Effect.async() for callback-based APIs",
+							}),
 						);
 					}),
 				);
@@ -231,21 +230,19 @@ export const detect = (
 								const { line, character } =
 									sourceFile.getLineAndCharacterOfPosition(node.getStart());
 								return Option.some(
-									Effect.runSync(
-										createViolation({
-											ruleId: meta.id,
-											category: meta.category,
-											message:
-												"Callback-style APIs should be wrapped with Effect.async()",
-											filePath,
-											line: line + 1,
-											column: character + 1,
-											snippet: node.getText(sourceFile).slice(0, 100),
-											severity: "info",
-											certainty: "potential",
-											suggestion: "Wrap callback-based APIs with Effect.async()",
-										}),
-									),
+									createViolation({
+										ruleId: meta.id,
+										category: meta.category,
+										message:
+											"Callback-style APIs should be wrapped with Effect.async()",
+										filePath,
+										line: line + 1,
+										column: character + 1,
+										snippet: node.getText(sourceFile).slice(0, 100),
+										severity: "info",
+										certainty: "potential",
+										suggestion: "Wrap callback-based APIs with Effect.async()",
+									}),
 								);
 							}),
 							Match.orElse(() => Option.none()),
