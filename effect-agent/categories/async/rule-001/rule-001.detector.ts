@@ -14,6 +14,10 @@ const meta = {
 	name: "callback-api",
 };
 
+// Schema for valid severity and certainty values
+const SeveritySchema = Schema.Literal("error", "warning", "info");
+const CertaintySchema = Schema.Literal("definite", "potential");
+
 // Schema for detecting new Promise() patterns
 const IsPromiseExpression = Schema.Struct({
 	isNewExpr: Schema.Literal(true),
@@ -54,8 +58,8 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, 100),
-					severity: "error" as const,
-					certainty: "definite" as const,
+					severity: Schema.decodeSync(SeveritySchema)("error"),
+					certainty: Schema.decodeSync(CertaintySchema)("definite"),
 					suggestion: "Use Effect.async() for callback-based APIs",
 				});
 			}),
@@ -98,8 +102,8 @@ export const detect = (
 										line: line + 1,
 										column: character + 1,
 										snippet: node.getText(sourceFile).slice(0, 100),
-										severity: "info" as const,
-										certainty: "potential" as const,
+										severity: Schema.decodeSync(SeveritySchema)("info"),
+										certainty: Schema.decodeSync(CertaintySchema)("potential"),
 										suggestion: "Wrap callback-based APIs with Effect.async()",
 									});
 								},
