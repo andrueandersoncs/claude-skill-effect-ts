@@ -4,7 +4,7 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Array as EffectArray, Match, Option, Schema } from "effect";
+import { Array as EffectArray, Match, Option, Schema, flow, pipe } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.ts";
 
@@ -101,6 +101,27 @@ const ValidViolationWithoutSuggestion = Schema.Struct({
 	),
 });
 
+// Helper to validate promise objects using Schema
+const validateIsPromiseExpression = (obj: {
+	isNewExpr: boolean;
+	isIdentifierExpr: boolean;
+	isPromiseText: boolean;
+}): Option.Option<{
+	isNewExpr: boolean;
+	isIdentifierExpr: boolean;
+	isPromiseText: boolean;
+}> =>
+	Match.value(obj).pipe(
+		Match.when(Schema.is(IsPromiseExpression), () =>
+			Option.some({
+				isNewExpr: true,
+				isIdentifierExpr: true,
+				isPromiseText: true,
+			}),
+		),
+		Match.orElse(() => Option.none()),
+	);
+
 // Helper to create validated violations using Schema
 const createViolation = (data: Omit<Violation, never>): Violation => {
 	const decoded = Schema.decodeSync(ViolationSchema)(data);
@@ -142,20 +163,15 @@ export const detect = (
 
 				// Also support the Schema validation approach (from task-4) as a fallback
 				const schemaCheck = Match.value(newExpr.expression).pipe(
-					Match.when(ts.isIdentifier, (expr) =>
-						Match.value({
-							isNewExpr: true,
-							isIdentifierExpr: true,
-							isPromiseText: expr.text === "Promise",
-						}).pipe(
-							Match.when(Schema.is(IsPromiseExpression), () =>
-								Option.some({
-									isNewExpr: true,
-									isIdentifierExpr: true,
-									isPromiseText: true,
-								}),
-							),
-							Match.orElse(() => Option.none()),
+					Match.when(
+						ts.isIdentifier,
+						flow(
+							(expr: ts.Identifier) => ({
+								isNewExpr: true,
+								isIdentifierExpr: true,
+								isPromiseText: expr.text === "Promise",
+							}),
+							validateIsPromiseExpression,
 						),
 					),
 					Match.orElse(() => Option.none()),
