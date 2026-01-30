@@ -27,6 +27,23 @@ const IsPromiseExpression = Schema.Struct({
 	isPromiseText: Schema.Literal(true),
 });
 
+// Composable pipeline for schema validation
+const validatePromiseExpression = (expr: ts.Identifier) =>
+	Match.value({
+		isNewExpr: true,
+		isIdentifierExpr: true,
+		isPromiseText: expr.text === "Promise",
+	}).pipe(
+		Match.when(Schema.is(IsPromiseExpression), () =>
+			Option.some({
+				isNewExpr: true,
+				isIdentifierExpr: true,
+				isPromiseText: true,
+			}),
+		),
+		Match.orElse(() => Option.none()),
+	);
+
 // Schema for function node types
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration =>
@@ -142,22 +159,7 @@ export const detect = (
 
 				// Also support the Schema validation approach (from task-4) as a fallback
 				const schemaCheck = Match.value(newExpr.expression).pipe(
-					Match.when(ts.isIdentifier, (expr) =>
-						Match.value({
-							isNewExpr: true,
-							isIdentifierExpr: true,
-							isPromiseText: expr.text === "Promise",
-						}).pipe(
-							Match.when(Schema.is(IsPromiseExpression), () =>
-								Option.some({
-									isNewExpr: true,
-									isIdentifierExpr: true,
-									isPromiseText: true,
-								}),
-							),
-							Match.orElse(() => Option.none()),
-						),
-					),
+					Match.when(ts.isIdentifier, validatePromiseExpression),
 					Match.orElse(() => Option.none()),
 				);
 
