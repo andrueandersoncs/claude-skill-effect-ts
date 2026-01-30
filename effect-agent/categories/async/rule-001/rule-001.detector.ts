@@ -40,8 +40,8 @@ const FunctionNode = Schema.Union(
 	),
 );
 
-// Schema for violation construction with runtime validation
-const ViolationSchema = Schema.Struct({
+// Base schema for shared violation fields
+const BaseViolationFields = Schema.Struct({
 	ruleId: Schema.String,
 	category: Schema.String,
 	message: Schema.String,
@@ -58,47 +58,22 @@ const ViolationSchema = Schema.Struct({
 		Schema.Literal("definite"),
 		Schema.Literal("potential"),
 	),
+});
+
+// Schema for violation construction with runtime validation
+const ViolationSchema = Schema.Struct({
+	...BaseViolationFields.fields,
 	suggestion: Schema.optional(Schema.String),
 });
 
 // Schema for valid violation objects that matches Violation interface
 const ValidViolationWithSuggestion = Schema.Struct({
-	ruleId: Schema.String,
-	category: Schema.String,
-	message: Schema.String,
-	filePath: Schema.String,
-	line: Schema.Number,
-	column: Schema.Number,
-	snippet: Schema.String,
-	severity: Schema.Union(
-		Schema.Literal("error"),
-		Schema.Literal("warning"),
-		Schema.Literal("info"),
-	),
-	certainty: Schema.Union(
-		Schema.Literal("definite"),
-		Schema.Literal("potential"),
-	),
+	...BaseViolationFields.fields,
 	suggestion: Schema.String,
 });
 
 const ValidViolationWithoutSuggestion = Schema.Struct({
-	ruleId: Schema.String,
-	category: Schema.String,
-	message: Schema.String,
-	filePath: Schema.String,
-	line: Schema.Number,
-	column: Schema.Number,
-	snippet: Schema.String,
-	severity: Schema.Union(
-		Schema.Literal("error"),
-		Schema.Literal("warning"),
-		Schema.Literal("info"),
-	),
-	certainty: Schema.Union(
-		Schema.Literal("definite"),
-		Schema.Literal("potential"),
-	),
+	...BaseViolationFields.fields,
 });
 
 // Helper to create validated violations using Schema
