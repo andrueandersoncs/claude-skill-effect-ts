@@ -22,6 +22,7 @@ const IsPromiseExpression = Schema.Struct({
 });
 
 // Predicate to check if node is a function type
+// @rule-suppress rule-005 - Type predicates cannot be wrapped with Effect.fn() as they must return boolean synchronously
 const isFunctionNode = (node: ts.Node): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction =>
 	ts.isFunctionDeclaration(node) ||
 	ts.isFunctionExpression(node) ||
