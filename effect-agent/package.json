@@ -7,7 +7,11 @@
 		"check": "tsc --noEmit",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
-		"format": "biome format --write ."
+		"format": "biome format --write .",
+		"detect": "bun run detectors/runner.ts",
+		"detect:all": "bun run detectors/runner.ts -s info",
+		"detect:errors": "bun run detectors/runner.ts -s error --no-potential",
+		"detect:json": "bun run detectors/runner.ts --json"
 	},
 	"dependencies": {
 		"@effect/schema": "^0.75.5",
