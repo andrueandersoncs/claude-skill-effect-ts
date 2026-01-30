@@ -31,6 +31,22 @@ Two-phase analysis: fast AST-based detection followed by LLM-powered analysis.
 
 **MANDATORY: Investigate EVERY violation.** Do NOT filter, skip, or prioritize. Spawn an agent for EVERY error, warning, AND info violation found. No exceptions.
 
+## STRICT REQUIREMENTS - DO NOT DEVIATE
+
+**You MUST follow this process exactly. Do NOT "optimize" or skip steps.**
+
+FORBIDDEN actions:
+- ❌ Creating fewer tasks than violations found
+- ❌ Deciding to "apply fixes directly" instead of spawning agents
+- ❌ Reasoning that worktrees will conflict (they are isolated by design)
+- ❌ Batching multiple violations into a single task
+- ❌ Skipping task creation or agent spawning for "efficiency"
+- ❌ Any deviation from: 1 violation = 1 task = 1 agent
+
+The worktree approach EXISTS to handle overlapping violations. Each agent works in complete isolation. Merge conflicts are resolved in Phase 4, not avoided by skipping parallelization.
+
+If you find yourself thinking "it would be more efficient to..." - STOP. Follow the process exactly as written.
+
 ## Implementation
 
 ### Phase 1: Run Detectors
@@ -56,6 +72,8 @@ For EACH violation, create a task:
 - Description: Include violation details (message, snippet, severity)
 ```
 
+**VERIFY: Number of tasks created MUST equal number of violations found.** If detector found 97 violations, you must create exactly 97 tasks. No exceptions.
+
 This provides visibility into progress and enables parallel execution tracking.
 
 ### Phase 3: Spawn Agents
@@ -69,6 +87,8 @@ This provides visibility into progress and enables parallel execution tracking.
 - Investigate ALL violations equally
 
 **CRITICAL**: Spawn ALL agents in a SINGLE message. One agent per violation = maximum parallelism.
+
+**VERIFY: Number of Task tool calls MUST equal number of violations.** If 97 violations, spawn exactly 97 agents in one message. Do NOT reason about efficiency, conflicts, or batching.
 
 #### Analyze Mode (default)
 
