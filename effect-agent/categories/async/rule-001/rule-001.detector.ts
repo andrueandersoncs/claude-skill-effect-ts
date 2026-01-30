@@ -5,7 +5,7 @@
  */
 
 import * as ts from "typescript";
-import { Match, Option, Function as Fn } from "effect";
+import { Array as EffectArray, Match, Option, Function as Fn } from "effect";
 import type { Violation } from "../../../detectors/types";
 
 const meta = {
@@ -65,7 +65,7 @@ export const detect = (
 
 			const violation = Match.value(callbackNames).pipe(
 				Match.when(
-					(names) => names.some((name) => paramName.includes(name)),
+					(names) => names.some((name) => EffectArray.contains(paramName, name)),
 					() => {
 						const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 							node.getStart(),
