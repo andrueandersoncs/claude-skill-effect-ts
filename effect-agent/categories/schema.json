@@ -4,11 +4,19 @@
   "description": "ALL data types MUST be defined as Schema. Use Schema.Class for entities with methods, Schema.TaggedClass for discriminated unions, tagged unions over optional properties. NEVER use Schema.Any/Schema.Unknown except for genuinely unconstrained values.",
   "rules": [
     {
-      "rule": "Never use plain TypeScript interfaces; use Schema",
+      "rule": "Never use TypeScript type or interface for data structures; use Schema.Class or Schema.TaggedClass",
       "example": {
-        "description": "Union type",
-        "bad": "type Status = \"pending\" | \"active\" | \"completed\"\ntype Result = Success | Failure",
-        "good": "const Status = Schema.Literal(\"pending\", \"active\", \"completed\")\ntype Status = Schema.Schema.Type<typeof Status>\n\n// For complex unions, use TaggedClass\nconst Result = Schema.Union(Success, Failure)\ntype Result = Schema.Schema.Type<typeof Result>"
+        "description": "Data structure definition",
+        "bad": "type User = {\n  id: string\n  name: string\n  email: string\n}\n\ninterface Order {\n  orderId: string\n  items: string[]\n  total: number\n}",
+        "good": "class User extends Schema.Class<User>(\"User\")({\n  id: UserId,\n  name: Schema.String,\n  email: Email,\n}) {}\n\nclass Order extends Schema.Class<Order>(\"Order\")({\n  orderId: OrderId,\n  items: Schema.Array(Schema.String),\n  total: Schema.Number,\n}) {}"
+      }
+    },
+    {
+      "rule": "Never use TypeScript union types; use Schema.Union of TaggedClass",
+      "example": {
+        "description": "Union type definition",
+        "bad": "type Status = \"pending\" | \"active\" | \"completed\"\ntype Result = Success | Failure\ntype Event = UserCreated | UserUpdated | UserDeleted",
+        "good": "// For string literals, use Schema.Literal\nconst Status = Schema.Literal(\"pending\", \"active\", \"completed\")\ntype Status = typeof Status.Type\n\n// For complex unions, use TaggedClass\nclass Success extends Schema.TaggedClass<Success>()(\"Success\", {\n  value: Schema.Unknown,\n}) {}\nclass Failure extends Schema.TaggedClass<Failure>()(\"Failure\", {\n  error: Schema.String,\n}) {}\nconst Result = Schema.Union(Success, Failure)\ntype Result = typeof Result.Type"
       }
     },
     {
