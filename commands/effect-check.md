@@ -145,9 +145,28 @@ Collect results from all category-checker agents and present a unified report. M
 
 #### Fix Mode
 
-**MERGE CONFLICTS ARE EXPECTED. FIX THEM. THIS IS THE ENTIRE POINT OF PHASE 4.**
+**DO NOT MERGE IN THE PRIMARY AGENT. SPAWN A SUBAGENT.**
 
-Each task-worker fixed ONE violation in isolation. Multiple workers edited the same file. When you merge, git will report conflicts. **This is normal. This is expected. This is why we have a merge phase.**
+After all task-workers complete, spawn a **single** `general-purpose` subagent to handle merging:
+
+```
+Task tool with:
+- subagent_type: "general-purpose"
+- prompt: Include the list of task IDs/branches and the merge instructions below
+```
+
+**The subagent merges branches SEQUENTIALLY (one at a time) and resolves ALL conflicts.**
+
+---
+
+**MERGE SUBAGENT INSTRUCTIONS (include in prompt):**
+
+Project root: [PROJECT_ROOT]
+Branches to merge: task-1, task-2, task-3, ... (list all task IDs)
+
+**MERGE CONFLICTS ARE EXPECTED. FIX THEM. THIS IS THE ENTIRE POINT OF THIS PHASE.**
+
+Each task-worker fixed ONE violation in isolation. Multiple workers edited the same file. When you merge, git will report conflicts. **This is normal. This is expected.**
 
 **YOU MUST RESOLVE EVERY MERGE CONFLICT. NO EXCEPTIONS.**
 
@@ -178,18 +197,22 @@ For each branch, in order:
    git branch -d task-<task-id>
    ```
 
+5. **Repeat for ALL branches.** Do not stop until every branch is merged.
+
 **FORBIDDEN:**
 - ❌ Aborting merge due to conflicts
 - ❌ Skipping a branch because "there are conflicts"
 - ❌ Using `git merge --abort`
 - ❌ Leaving conflicts unresolved
 - ❌ Choosing only one side of a conflict
+- ❌ Stopping before all branches are merged
 
 **REQUIRED:**
 - ✅ Read the conflicted file
 - ✅ Understand what BOTH sides changed
 - ✅ Keep ALL the fixes from ALL branches
 - ✅ Resolve every conflict by combining changes
+- ✅ Merge ALL branches before returning
 
 **Example conflict resolution:**
 ```
@@ -201,7 +224,9 @@ const result = pipe(data, Array.map(transform), Option.getOrElse(() => []));
 ```
 This means: HEAD has one fix, task-2 has a different fix to a different part. Read the original violations to understand what each fixed. Combine them appropriately.
 
-5. Present summary of all fixes applied
+---
+
+The merge subagent should return a simple "Merge complete. X branches merged." - no detailed summary needed.
 
 ## Output Format
 

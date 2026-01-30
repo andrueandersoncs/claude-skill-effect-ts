@@ -21,6 +21,12 @@ const IsPromiseExpression = Schema.Struct({
 	isPromiseText: Schema.Literal(true),
 });
 
+// Predicate to check if node is a function type
+const isFunctionNode = (node: ts.Node): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction =>
+	ts.isFunctionDeclaration(node) ||
+	ts.isFunctionExpression(node) ||
+	ts.isArrowFunction(node);
+
 export const detect = (
 	filePath: string,
 	sourceFile: ts.SourceFile,
@@ -64,54 +70,55 @@ export const detect = (
 		});
 
 		// Detect callback patterns (functions with callback parameter names)
-		if (
-			(ts.isFunctionDeclaration(node) ||
-				ts.isFunctionExpression(node) ||
-				ts.isArrowFunction(node)) &&
-			node.parameters.length > 0
-		) {
-			const lastParam = node.parameters.at(-1);
-			if (!lastParam) return nodeViolations;
-			const paramName = lastParam.name.getText(sourceFile).toLowerCase();
-			const callbackNames = [
-				"callback",
-				"cb",
-				"done",
-				"next",
-				"resolve",
-				"reject",
-				"handler",
-			];
+		const functionCheckResult = Match.value(node).pipe(
+			Match.when(isFunctionNode, (typedNode) => {
+				if (typedNode.parameters.length === 0) {
+					return Option.none<Violation>();
+				}
+				const lastParam = typedNode.parameters.at(-1);
+				if (!lastParam) return Option.none<Violation>();
+				const paramName = lastParam.name.getText(sourceFile).toLowerCase();
+				const callbackNames = [
+					"callback",
+					"cb",
+					"done",
+					"next",
+					"resolve",
+					"reject",
+					"handler",
+				];
 
-			const violation = Match.value(callbackNames).pipe(
-				Match.when(
-					(names) => names.some((name) => paramName.includes(name)),
-					() => {
-						const { line, character } =
-							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						return Option.some({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"Callback-style APIs should be wrapped with Effect.async()",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, 100),
-							severity: "info" as const,
-							certainty: "potential" as const,
-							suggestion: "Wrap callback-based APIs with Effect.async()",
-						});
-					},
-				),
-				Match.orElse(() => Option.none()),
-			);
+				return Match.value(callbackNames).pipe(
+					Match.when(
+						(names) => names.some((name) => paramName.includes(name)),
+						() => {
+							const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+								node.getStart(),
+							);
+							return Option.some({
+								ruleId: meta.id,
+								category: meta.category,
+								message: "Callback-style APIs should be wrapped with Effect.async()",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, 100),
+								severity: "info" as const,
+								certainty: "potential" as const,
+								suggestion: "Wrap callback-based APIs with Effect.async()",
+							});
+						},
+					),
+					Match.orElse(() => Option.none()),
+				);
+			}),
+			Match.orElse(() => Option.none<Violation>()),
+		);
 
-			nodeViolations = Option.match(violation, {
-				onSome: (v) => EffectArray.append(nodeViolations, v),
-				onNone: () => nodeViolations,
-			});
-		}
+		nodeViolations = Option.match(functionCheckResult, {
+			onSome: (v) => EffectArray.append(nodeViolations, v),
+			onNone: () => nodeViolations,
+		});
 
 		// Recursively collect violations from child nodes
 		let childViolations: Violation[] = [];
