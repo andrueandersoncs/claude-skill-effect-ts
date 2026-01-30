@@ -72,7 +72,7 @@ export const detect = (
 		// Detect callback patterns (functions with callback parameter names)
 		const functionCheckResult = Match.value(node).pipe(
 			Match.when(isFunctionNode, (typedNode) => {
-				if (typedNode.parameters.length === 0) {
+				if (EffectArray.isEmptyArray(typedNode.parameters)) {
 					return Option.none<Violation>();
 				}
 				const lastParam = typedNode.parameters.at(-1);
