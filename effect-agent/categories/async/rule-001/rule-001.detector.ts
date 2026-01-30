@@ -5,8 +5,8 @@
  */
 
 import * as ts from "typescript";
-import { Match, Option, Function as Fn } from "effect";
-import type { Violation } from "../../../detectors/types";
+import { Array as EffectArray, Match, Option, Function as Fn } from "effect";
+import type { Violation } from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-001",
@@ -46,46 +46,51 @@ export const detect = (
 
 		// Detect callback patterns (functions with callback parameter names)
 		if (
-			(ts.isFunctionDeclaration(node) ||
-				ts.isFunctionExpression(node) ||
-				ts.isArrowFunction(node)) &&
-			node.parameters.length > 0
+			ts.isFunctionDeclaration(node) ||
+			ts.isFunctionExpression(node) ||
+			ts.isArrowFunction(node)
 		) {
-			const lastParam = node.parameters.at(-1);
-			const paramName = lastParam.name.getText(sourceFile).toLowerCase();
-			const callbackNames = [
-				"callback",
-				"cb",
-				"done",
-				"next",
-				"resolve",
-				"reject",
-				"handler",
-			];
+			const violation = EffectArray.match(node.parameters, {
+				onEmpty: () => Option.none(),
+				onNonEmpty: (params) => {
+					const lastParam = params.at(-1);
+					if (!lastParam) return Option.none();
+					const paramName = lastParam.name.getText(sourceFile).toLowerCase();
+					const callbackNames = [
+						"callback",
+						"cb",
+						"done",
+						"next",
+						"resolve",
+						"reject",
+						"handler",
+					];
 
-			const violation = Match.value(callbackNames).pipe(
-				Match.when(
-					(names) => names.some((name) => paramName.includes(name)),
-					() => {
-						const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-							node.getStart(),
-						);
-						return Option.some({
-							ruleId: meta.id,
-							category: meta.category,
-							message: "Callback-style APIs should be wrapped with Effect.async()",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, 100),
-							severity: "info" as const,
-							certainty: "potential" as const,
-							suggestion: "Wrap callback-based APIs with Effect.async()",
-						});
-					},
-				),
-				Match.orElse(() => Option.none()),
-			);
+					return Match.value(callbackNames).pipe(
+						Match.when(
+							(names) => names.some((name) => paramName.includes(name)),
+							() => {
+								const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+									node.getStart(),
+								);
+								return Option.some({
+									ruleId: meta.id,
+									category: meta.category,
+									message: "Callback-style APIs should be wrapped with Effect.async()",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node.getText(sourceFile).slice(0, 100),
+									severity: "info" as const,
+									certainty: "potential" as const,
+									suggestion: "Wrap callback-based APIs with Effect.async()",
+								});
+							},
+						),
+						Match.orElse(() => Option.none()),
+					);
+				},
+			});
 
 			Option.match(violation, {
 				onSome: (v) => {
