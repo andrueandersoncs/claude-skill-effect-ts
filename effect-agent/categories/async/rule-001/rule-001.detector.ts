@@ -4,7 +4,7 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Array as EffectArray, Match, Option, Schema, flow, pipe } from "effect";
+import { Array as EffectArray, Function as EffectFunction, Match, Option, Schema, flow, pipe } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.ts";
 
@@ -179,8 +179,8 @@ export const detect = (
 
 				// Use whichever check succeeds
 				return Option.match(directCheck, {
-					onSome: () => directCheck,
-					onNone: () => schemaCheck,
+					onSome: EffectFunction.constant(directCheck),
+					onNone: EffectFunction.constant(schemaCheck),
 				}).pipe(
 					Option.flatMap(() => {
 						const { line, character } =
