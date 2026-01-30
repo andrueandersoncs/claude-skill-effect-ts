@@ -101,24 +101,31 @@ const ValidViolationWithoutSuggestion = Schema.Struct({
 	),
 });
 
-// Helper to create validated violations using Schema
-const createViolation = (data: Omit<Violation, never>): Violation => {
-	const decoded = Schema.decodeSync(ViolationSchema)(data);
-	// Validate and return the violation based on whether suggestion is present
-	return Option.fromNullable(decoded.suggestion).pipe(
-		Option.match({
-			onSome: (suggestion) =>
-				Schema.decodeSync(ValidViolationWithSuggestion)({
-					...decoded,
-					suggestion,
+// Schema transformation for violations based on suggestion presence
+const ViolationTransform = Schema.transform(
+	ViolationSchema,
+	Schema.Union(ValidViolationWithSuggestion, ValidViolationWithoutSuggestion),
+	{
+		decode: (data) =>
+			Option.fromNullable(data.suggestion).pipe(
+				Option.match({
+					onSome: (suggestion) => ({
+						...data,
+						suggestion,
+					}),
+					onNone: () => {
+						const { suggestion, ...rest } = data;
+						return rest;
+					},
 				}),
-			onNone: () => {
-				const { suggestion, ...rest } = decoded;
-				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-			},
-		}),
-	);
-};
+			),
+		encode: (data) => data,
+	},
+);
+
+// Helper to create validated violations using Schema
+const createViolation = (data: Omit<Violation, never>): Violation =>
+	Schema.decodeSync(ViolationTransform)(data);
 
 export const detect = (
 	filePath: string,
