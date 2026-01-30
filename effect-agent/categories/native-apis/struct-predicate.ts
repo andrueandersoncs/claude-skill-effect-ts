@@ -1,12 +1,12 @@
 // Rule: Never use manual &&/|| for predicates; use Predicate.and/or/not
 // Example: Struct predicate
 
-import { Predicate } from "effect"
+import { Predicate } from "effect";
 
 // ✅ Good: Predicate.struct for structural validation
 const isValidInput = Predicate.struct({
-  name: Predicate.isString,
-  age: Predicate.isNumber,
-})
+	name: Predicate.isString,
+	age: Predicate.isNumber,
+});
 
-export { isValidInput }
+export { isValidInput };

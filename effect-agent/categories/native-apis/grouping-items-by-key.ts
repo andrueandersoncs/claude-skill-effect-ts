@@ -1,12 +1,12 @@
 // Rule: Never manually group with loops; use Array.groupBy
 // Example: Grouping items by key
 
-import { Array } from "effect"
-import { User } from "../_fixtures.js"
+import { Array } from "effect";
+import type { User } from "../_fixtures.js";
 
-declare const users: ReadonlyArray<User>
+declare const users: ReadonlyArray<User>;
 
 // ✅ Good: Array.groupBy returns Record<K, NonEmptyArray<A>>
-const usersByRole = Array.groupBy(users, (u) => u.role ?? "user")
+const usersByRole = Array.groupBy(users, (u) => u.role ?? "user");
 
-export { usersByRole }
+export { usersByRole };

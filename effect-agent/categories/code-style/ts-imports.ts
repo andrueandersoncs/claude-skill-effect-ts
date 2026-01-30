@@ -5,15 +5,15 @@
 // import { Item } from "../_fixtures.js"
 
 // ✅ Good: Importing from .ts extension
-import { Item } from "../_fixtures.ts"
+import type { Item } from "../_fixtures.ts";
 
 const example: Item = {
-  id: "1",
-  key: "item-key",
-  value: 42,
-  price: 9.99,
-  quantity: 1,
-  active: true,
-}
+	id: "1",
+	key: "item-key",
+	value: 42,
+	price: 9.99,
+	quantity: 1,
+	active: true,
+};
 
-export { example }
+export { example };

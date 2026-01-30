@@ -1,20 +1,20 @@
 // Rule: Never reassign variables; use functional transformation
 // Example: Building object with mutation
 
-import { Array, pipe, Record } from "effect"
+import { Array, pipe, Record } from "effect";
 
 interface Item {
-  key: string
-  value: number
+	key: string;
+	value: number;
 }
 
-declare const items: ReadonlyArray<Item>
+declare const items: ReadonlyArray<Item>;
 
 // ✅ Good: Functional transformation with Record.fromEntries
 const obj = pipe(
-  items,
-  Array.map((item) => [item.key, item.value] as const),
-  Record.fromEntries
-)
+	items,
+	Array.map((item) => [item.key, item.value] as const),
+	Record.fromEntries,
+);
 
-export { obj }
+export { obj };

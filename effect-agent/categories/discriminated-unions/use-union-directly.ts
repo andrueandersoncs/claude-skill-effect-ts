@@ -1,33 +1,33 @@
 // Rule: Never extract types from ._tag; use the union type directly
 // Example: Extracting _tag as a type
 
-import { Match, Schema } from "effect"
+import { Match, Schema } from "effect";
 import {
-  AppEvent,
-  cleanupData,
-  notifyAdmin,
-  processOrderEvent,
-  UserCreated,
-} from "../_fixtures.js"
+	type AppEvent,
+	cleanupData,
+	notifyAdmin,
+	processOrderEvent,
+	UserCreated,
+} from "../_fixtures.js";
 
 // ✅ Good: Use Schema.is for type narrowing
-const isUserCreated = Schema.is(UserCreated)
+const isUserCreated = Schema.is(UserCreated);
 
 // ✅ Good: Use Match.tag for exhaustive handling
 const handleAll = Match.type<AppEvent>().pipe(
-  Match.tag("UserCreated", (e) => notifyAdmin(e.userId)),
-  Match.tag("UserDeleted", (e) => cleanupData(e.userId)),
-  Match.tag("OrderPlaced", (e) => processOrderEvent(e.orderId)),
-  Match.exhaustive
-)
+	Match.tag("UserCreated", (e) => notifyAdmin(e.userId)),
+	Match.tag("UserDeleted", (e) => cleanupData(e.userId)),
+	Match.tag("OrderPlaced", (e) => processOrderEvent(e.orderId)),
+	Match.exhaustive,
+);
 
 // ✅ Good: Use the union type for function parameters
 const handleEvent = (event: AppEvent) =>
-  Match.value(event).pipe(
-    Match.tag("UserCreated", (e) => notifyAdmin(e.userId)),
-    Match.tag("UserDeleted", (e) => cleanupData(e.userId)),
-    Match.tag("OrderPlaced", (e) => processOrderEvent(e.orderId)),
-    Match.exhaustive
-  )
+	Match.value(event).pipe(
+		Match.tag("UserCreated", (e) => notifyAdmin(e.userId)),
+		Match.tag("UserDeleted", (e) => cleanupData(e.userId)),
+		Match.tag("OrderPlaced", (e) => processOrderEvent(e.orderId)),
+		Match.exhaustive,
+	);
 
-export { isUserCreated, handleAll, handleEvent }
+export { isUserCreated, handleAll, handleEvent };

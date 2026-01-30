@@ -1,18 +1,18 @@
 // Rule: Never use destructuring to omit fields; use Struct.omit
 // Example: Omitting fields
 
-import { Struct } from "effect"
+import { Struct } from "effect";
 
 interface UserWithSecrets {
-  id: string
-  name: string
-  password: string
-  ssn: string
+	id: string;
+	name: string;
+	password: string;
+	ssn: string;
 }
 
-declare const user: UserWithSecrets
+declare const user: UserWithSecrets;
 
 // ✅ Good: Struct.omit for removing fields
-const publicUser = Struct.omit(user, "password", "ssn")
+const publicUser = Struct.omit(user, "password", "ssn");
 
-export { publicUser }
+export { publicUser };

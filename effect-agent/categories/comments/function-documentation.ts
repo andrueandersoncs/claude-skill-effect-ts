@@ -1,8 +1,8 @@
 // Rule: Never add JSDoc @param/@returns that just repeat the type signature
 // Example: Function documentation
 
-import { Effect } from "effect"
-import { DatabaseError, Email, User } from "../_fixtures.js"
+import { Effect } from "effect";
+import type { DatabaseError, Email, User } from "../_fixtures.js";
 
 // ❌ Bad: JSDoc that just restates type signature
 /**
@@ -12,14 +12,14 @@ import { DatabaseError, Email, User } from "../_fixtures.js"
  * @returns The created user
  */
 const createUserBad = (
-  _name: string,
-  _email: Email
-): Effect.Effect<User, DatabaseError> => Effect.die("Not implemented")
+	_name: string,
+	_email: Email,
+): Effect.Effect<User, DatabaseError> => Effect.die("Not implemented");
 
 // ✅ Good: Types speak for themselves
 const createUser = (
-  _name: string,
-  _email: Email
-): Effect.Effect<User, DatabaseError> => Effect.die("Not implemented")
+	_name: string,
+	_email: Email,
+): Effect.Effect<User, DatabaseError> => Effect.die("Not implemented");
 
-export { createUserBad, createUser }
+export { createUserBad, createUser };

@@ -2,19 +2,17 @@
 // Example: Setup for Effect equality assertions
 
 // In vitest.setup.ts or at top of test file
-import { addEqualityTesters, it, expect } from "@effect/vitest"
-import { Effect, Option } from "effect"
+import { addEqualityTesters, expect, it } from "@effect/vitest";
+import { Effect, Option } from "effect";
 
-addEqualityTesters()
+addEqualityTesters();
 
-declare const getOption: () => Effect.Effect<Option.Option<number>>
+declare const getOption: () => Effect.Effect<Option.Option<number>>;
 
 // ✅ Good: Effect types compare correctly with equality testers
 it.effect("should match", () =>
-  Effect.gen(function* () {
-    const result = yield* getOption()
-    expect(result).toEqual(Option.some(42)) // Works correctly
-  })
-)
-
-export {}
+	Effect.gen(function* () {
+		const result = yield* getOption();
+		expect(result).toEqual(Option.some(42)); // Works correctly
+	}),
+);
