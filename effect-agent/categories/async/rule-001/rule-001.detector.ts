@@ -40,8 +40,8 @@ const FunctionNode = Schema.Union(
 	),
 );
 
-// Base schema for violation fields
-const ViolationBaseFields = Schema.Struct({
+// Base schema for shared violation fields
+const BaseViolationFields = Schema.Struct({
 	ruleId: Schema.String,
 	category: Schema.String,
 	message: Schema.String,
@@ -62,18 +62,18 @@ const ViolationBaseFields = Schema.Struct({
 
 // Schema for violation construction with runtime validation
 const ViolationSchema = Schema.Struct({
-	...ViolationBaseFields.fields,
+	...BaseViolationFields.fields,
 	suggestion: Schema.optional(Schema.String),
 });
 
 // Schema for valid violation objects that matches Violation interface
 const ValidViolationWithSuggestion = Schema.Struct({
-	...ViolationBaseFields.fields,
+	...BaseViolationFields.fields,
 	suggestion: Schema.String,
 });
 
 const ValidViolationWithoutSuggestion = Schema.Struct({
-	...ViolationBaseFields.fields,
+	...BaseViolationFields.fields,
 });
 
 // Helper to create validated violations using Schema
