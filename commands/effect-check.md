@@ -1,23 +1,31 @@
 ---
 name: effect-check
-description: Run Effect-TS compliance checks - detectors flag issues, then LLM agents analyze violations in parallel
-argument-hint: "<file-path>"
+description: Run Effect-TS compliance checks - detectors flag issues, then LLM agents analyze/fix violations in parallel
+argument-hint: "<file-path> [--fix]"
 allowed-tools:
   - Bash
   - Read
   - Task
+  - TaskCreate
+  - TaskUpdate
+  - TaskList
 ---
 
 # Effect-TS Compliance Checker
 
 Two-phase analysis: fast AST-based detection followed by LLM-powered analysis.
 
+## Modes
+
+- **Analyze mode** (default): Spawns `category-checker` agents to analyze violations and provide recommendations
+- **Fix mode** (`--fix`): Spawns `task-worker` agents in isolated git worktrees to automatically apply fixes
+
 ## Process Overview
 
 1. **Phase 1: Detection** - Run AST-based detectors to flag violations (fast)
 2. **Phase 2: Task Creation** - Create one task per violation for tracking
-3. **Phase 3: Analysis** - Spawn category-checker agents in parallel (one per EVERY violation)
-4. **Phase 4: Report** - Aggregate and present results
+3. **Phase 3: Analysis/Fix** - Spawn agents in parallel (one per EVERY violation)
+4. **Phase 4: Report/Merge** - Aggregate results; if fix mode, merge branches and cleanup worktrees
 
 **Always use task lists.** Create specific, independent tasks to maximize parallelization.
 
@@ -44,15 +52,13 @@ Create one task per violation for tracking progress:
 
 ```
 For EACH violation, create a task:
-- Subject: "Analyze [category]/[ruleId] at [file]:[line]"
+- Subject: "Fix [category]/[ruleId] at [file]:[line]"
 - Description: Include violation details (message, snippet, severity)
 ```
 
 This provides visibility into progress and enables parallel execution tracking.
 
-### Phase 3: Spawn Violation Analyzers
-
-For EVERY violation - errors, warnings, AND info - spawn a `category-checker` agent.
+### Phase 3: Spawn Agents
 
 **NO FILTERING. NO EXCEPTIONS. NO PRIORITIZATION.**
 
@@ -62,35 +68,72 @@ For EVERY violation - errors, warnings, AND info - spawn a `category-checker` ag
 - Do NOT reduce the number of agents for performance reasons
 - Investigate ALL violations equally
 
+**CRITICAL**: Spawn ALL agents in a SINGLE message. One agent per violation = maximum parallelism.
+
+#### Analyze Mode (default)
+
+Spawn `category-checker` agents for analysis only:
+
 ```
 For EVERY violation, use Task tool with:
 - subagent_type: "effect-ts:category-checker"
-- model: "haiku" (fast, cost-effective)
-- prompt: Include the single violation details
+- model: "haiku"
+- prompt: Include the single violation details and task ID
 ```
 
-**CRITICAL**: Spawn ALL agents in a SINGLE message. One agent per violation = maximum parallelism.
+#### Fix Mode (--fix)
 
-Example prompt for each agent:
+Spawn `task-worker` agents with worktree isolation:
+
 ```
-Analyze this [CATEGORY] violation:
+For EVERY violation, use Task tool with:
+- subagent_type: "effect-ts:task-worker"
+- model: "haiku"
+- prompt: Include task ID, violation details, and rule documentation path
+```
+
+Each task-worker will:
+1. Create its own worktree and branch
+2. Read the source file and rule documentation
+3. Apply the idiomatic fix
+4. Commit the change
+5. Mark the task complete
+
+Example prompt for task-worker:
+```
+Task ID: [TASK_ID]
+Project root: [PROJECT_ROOT]
+
+Fix this [CATEGORY] violation:
 
 File: [FILE_PATH]
 Line: [LINE]:[COLUMN]
 Rule: [ruleId]
 Message: [message]
 Snippet: [snippet]
-Severity: [severity]
-Certainty: [certainty]
 
-Read the source file, understand the context, and provide:
-1. Why this pattern is problematic in Effect-TS
-2. Idiomatic Effect-TS fix (copy-paste ready)
+Rule documentation: ${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/[category]/rule-NNN/rule-NNN.md
+
+Apply the idiomatic Effect-TS fix in your worktree.
 ```
 
-### Phase 4: Aggregate Results
+### Phase 4: Aggregate Results / Merge Branches
 
+#### Analyze Mode
 Collect results from all category-checker agents and present a unified report. Mark tasks as completed as agents finish.
+
+#### Fix Mode
+After all task-workers complete:
+1. Merge each branch into the current branch:
+   ```bash
+   git merge task-<task-id> --no-edit
+   ```
+2. Remove worktrees and branches:
+   ```bash
+   git worktree remove ../worktree-task-<task-id>
+   git branch -d task-<task-id>
+   ```
+3. Present summary of all fixes applied
 
 ## Output Format
 
@@ -99,6 +142,7 @@ Collect results from all category-checker agents and present a unified report. M
 
 **File:** [FILE_PATH]
 **Files Analyzed:** [COUNT]
+**Mode:** [Analyze | Fix]
 
 ---
 
@@ -112,13 +156,13 @@ Collect results from all category-checker agents and present a unified report. M
 
 ---
 
-## Phase 3: Detailed Analysis
+## Phase 3: Detailed Analysis/Fixes
 
-[INCLUDE EACH CATEGORY-CHECKER AGENT'S OUTPUT]
+[INCLUDE EACH AGENT'S OUTPUT]
 
 ---
 
-## Action Items
+## Action Items (Analyze Mode) / Applied Fixes (Fix Mode)
 
 ### Must Fix (Errors)
 1. [file:line] - [brief description]
@@ -156,7 +200,8 @@ cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:errors <file>
 ## Usage
 
 ```
-/effect-check src/services/UserService.ts
-/effect-check src/handlers/api.ts
-/effect-check .  # Check entire directory
+/effect-check src/services/UserService.ts           # Analyze only
+/effect-check src/services/UserService.ts --fix     # Auto-fix with worktrees
+/effect-check .                                      # Check entire directory
+/effect-check . --fix                                # Fix entire directory
 ```

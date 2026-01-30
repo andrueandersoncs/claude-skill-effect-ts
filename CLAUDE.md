@@ -8,6 +8,13 @@
 
 **Maximize subagent parallelism.** Always spawn multiple Task tool subagents in a single message when tasks can run independently. Never work sequentially when parallel execution is possible.
 
+**For tasks requiring file changes:** Spawn `task-worker` agents in parallel, one per task ID. Each worker creates its own worktree/branch. After all workers complete, merge branches and clean up worktrees:
+```bash
+git merge task-<id> --no-edit
+git worktree remove ../worktree-task-<id>
+git branch -d task-<id>
+```
+
 ## Git Commits
 
 When creating a git commit, always bump the version in both:
