@@ -34,31 +34,64 @@ export const detect = (
 ): Violation[] => {
 	const collectViolations = (node: ts.Node): Violation[] => {
 		// Detect new Promise()
-		const promiseCheck = Match.value({
-			isNewExpr: ts.isNewExpression(node),
-			isIdentifierExpr:
-				ts.isNewExpression(node) && ts.isIdentifier(node.expression),
-			isPromiseText:
-				ts.isNewExpression(node) &&
-				ts.isIdentifier(node.expression) &&
-				node.expression.text === "Promise",
-		}).pipe(
-			Match.when(Schema.is(IsPromiseExpression), () => {
-				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-					node.getStart(),
+		// Combined approach: Use the simpler Option-based method from HEAD with Schema validation from task-4
+		const promiseCheck = Match.value(node).pipe(
+			Match.when(ts.isNewExpression, (newExpr) => {
+				// Try the straightforward Option.filter approach first (from HEAD)
+				const directCheck = Option.fromNullable(newExpr.expression).pipe(
+					Option.filter(ts.isIdentifier),
+					Option.filter((expr) => expr.text === "Promise"),
+					Option.map(() => ({
+						isNewExpr: true,
+						isIdentifierExpr: true,
+						isPromiseText: true,
+					})),
 				);
-				return Option.some({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "new Promise() should be replaced with Effect.async()",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, 100),
-					severity: "error" as const,
-					certainty: "definite" as const,
-					suggestion: "Use Effect.async() for callback-based APIs",
-				});
+
+				// Also support the Schema validation approach (from task-4) as a fallback
+				const schemaCheck = Match.value(newExpr.expression).pipe(
+					Match.when(ts.isIdentifier, (expr) =>
+						Match.value({
+							isNewExpr: true,
+							isIdentifierExpr: true,
+							isPromiseText: expr.text === "Promise",
+						}).pipe(
+							Match.when(Schema.is(IsPromiseExpression), () =>
+								Option.some({
+									isNewExpr: true,
+									isIdentifierExpr: true,
+									isPromiseText: true,
+								}),
+							),
+							Match.orElse(() => Option.none()),
+						),
+					),
+					Match.orElse(() => Option.none()),
+				);
+
+				// Use whichever check succeeds
+				return Option.match(directCheck, {
+					onSome: () => directCheck,
+					onNone: () => schemaCheck,
+				}).pipe(
+					Option.flatMap(() => {
+						const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+							node.getStart(),
+						);
+						return Option.some({
+							ruleId: meta.id,
+							category: meta.category,
+							message: "new Promise() should be replaced with Effect.async()",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, 100),
+							severity: "error" as const,
+							certainty: "definite" as const,
+							suggestion: "Use Effect.async() for callback-based APIs",
+						});
+					}),
+				);
 			}),
 			Match.orElse(() => Option.none()),
 		);
