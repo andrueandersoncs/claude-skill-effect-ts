@@ -1,6 +1,5 @@
 ---
 description: Pairwise branch merger for tournament-style parallel merging. Merges branch_b INTO branch_a, resolves ALL conflicts by keeping fixes from BOTH sides, cleans up branch_b.
-model: haiku
 tools:
   - Bash
   - Read

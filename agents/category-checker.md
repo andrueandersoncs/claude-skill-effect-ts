@@ -11,7 +11,6 @@ Agent receives one violation and focuses on providing the best fix recommendatio
 </commentary>
 </example>
 
-model: haiku
 color: yellow
 tools:
   - Read
