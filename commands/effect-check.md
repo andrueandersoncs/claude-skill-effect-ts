@@ -15,7 +15,7 @@ Run all Effect-TS rule categories as checks **in parallel** against a specified 
 ## Instructions
 
 1. **Read the target file** specified in the argument
-2. **Discover all category files** from `${CLAUDE_PLUGIN_ROOT}/effect-agent/categories.builtin/*.json` and `${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/*.json`
+2. **Discover all category files** from `${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/*.json`
 3. **Spawn parallel Task agents** - one per category - to check the file
 4. **Aggregate results** and present a unified report
 
@@ -28,7 +28,6 @@ The user provides a file path like `/effect-check src/UserService.ts`
 ### Step 2: Read all category JSON files
 
 Use Glob to find all category files:
-- `${CLAUDE_PLUGIN_ROOT}/effect-agent/categories.builtin/*.json`
 - `${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/*.json`
 
 ### Step 3: Launch parallel checks

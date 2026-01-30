@@ -1,7 +1,5 @@
 {
-  "$schema": "./config.schema.json",
   "categories": {
-    "useBuiltins": true,
     "include": [],
     "exclude": []
   },

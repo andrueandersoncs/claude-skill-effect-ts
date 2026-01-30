@@ -33,5 +33,4 @@ This skill defines MANDATORY patterns, FORBIDDEN anti-patterns, and idiomatic co
 
 For structured rule checking, use `/effect-check <file>` which runs all bundled rule categories in parallel:
 
-- `effect-agent/categories.builtin/` - Core Effect-TS rules (async, errors, conditionals, services, etc.)
-- `effect-agent/categories/` - Additional style rules (code-style)
+- `effect-agent/categories/` - All Effect-TS rules (async, errors, conditionals, services, comments, etc.)
