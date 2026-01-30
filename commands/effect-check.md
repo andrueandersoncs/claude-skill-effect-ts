@@ -48,8 +48,28 @@ FORBIDDEN:
 - ❌ Asking the user how to proceed when many violations exist
 - ❌ Warning about "merge hell", "merge conflicts", or similar concerns
 - ❌ Expressing concern about multiple violations in the same file
+- ❌ Using `run_in_background: true` for ANY Task tool call
+- ❌ Reading background agent output files
 
 **THE SYSTEM IS DESIGNED FOR THIS.** Each task-worker creates an isolated worktree branch. Phase 4's tournament merge algorithm handles all conflicts by keeping fixes from both sides. Even 100+ violations in one file will be correctly merged. This is not your concern—just spawn the agents.
+
+## ⛔ CRITICAL: SUBAGENTS, NOT BACKGROUND AGENTS
+
+**NEVER use `run_in_background: true` for Task tool calls.**
+
+These are **subagents** that work autonomously and return results. They are NOT background agents whose output you read later. The distinction matters:
+
+| Subagent (CORRECT) | Background Agent (WRONG) |
+|-------------------|-------------------------|
+| Spawned without `run_in_background` | Spawned with `run_in_background: true` |
+| Returns result directly | Requires reading output file |
+| Delegates context to subagent | YOU consume context reading output |
+| Scales to 100+ agents | Context explodes with many agents |
+
+**WHY THIS MATTERS:** If you spawn 97 background agents, you must read 97 output files to see results. That consumes YOUR context—the exact thing we're trying to avoid by delegating to subagents. Subagents handle everything autonomously; you just wait for their completion and get a summary.
+
+**CORRECT:** `Task tool with subagent_type, NO run_in_background parameter`
+**WRONG:** `Task tool with run_in_background: true`
 
 ## Implementation
 
@@ -105,6 +125,7 @@ For EVERY violation, use Task tool with:
 - subagent_type: "effect-ts:category-checker"
 - model: "haiku"
 - prompt: Include the single violation details and task ID
+- ⛔ DO NOT set run_in_background (subagents, not background agents)
 ```
 
 #### Fix Mode (--fix)
@@ -116,6 +137,7 @@ For EVERY violation, use Task tool with:
 - subagent_type: "effect-ts:task-worker"
 - model: "haiku"
 - prompt: Include task ID, violation details, and rule documentation path
+- ⛔ DO NOT set run_in_background (subagents, not background agents)
 ```
 
 Each task-worker will:
@@ -221,6 +243,7 @@ For each pair (branch_a, branch_b), use Task tool with:
 ```
 - subagent_type: "effect-ts:merge-worker"
 - model: "haiku"
+- ⛔ DO NOT set run_in_background (subagents, not background agents)
 - prompt: |
     Project root: [PROJECT_ROOT]
 
@@ -293,6 +316,7 @@ git branch -d <surviving-branch>
 - ❌ Reasoning about "efficiency" to avoid parallel spawning
 - ❌ Saying "I'll merge these directly" instead of spawning agents
 - ❌ Any deviation from the tournament algorithm
+- ❌ Using `run_in_background: true` for merge-worker agents
 
 ## REQUIRED BEHAVIORS IN PHASE 4
 
