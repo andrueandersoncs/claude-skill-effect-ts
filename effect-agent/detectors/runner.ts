@@ -1,142 +1,57 @@
 /**
  * Rule violation detector runner
  *
- * Main entry point for running detection across files using per-rule detectors
+ * Main entry point for running detection across files
  */
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import * as ts from "typescript";
-import type { DetectionContext, RuleDetector } from "./rule-detector.js";
-import { createPositionHelper } from "./rule-detector.js";
+import {
+	allDetectors,
+	getCategoryNames,
+	getDetector,
+} from "./categories/index.js";
 import type {
+	CategoryDetector,
 	DetectorConfig,
 	DetectorResult,
 	Violation,
 	ViolationSeverity,
 } from "./types.js";
 
-// Resolve categories directory relative to this file
-const CATEGORIES_DIR = path.resolve(
-	path.dirname(new URL(import.meta.url).pathname),
-	"../categories",
-);
-
-// Cache for loaded detectors
-let cachedDetectors: Map<string, RuleDetector[]> | null = null;
-
-/**
- * Dynamically load rule detectors from category directories
- */
-const loadCategoryDetectors = async (): Promise<
-	Map<string, RuleDetector[]>
-> => {
-	if (cachedDetectors) {
-		return cachedDetectors;
-	}
-
-	const result = new Map<string, RuleDetector[]>();
-
-	if (!fs.existsSync(CATEGORIES_DIR)) {
-		console.error(`Categories directory not found: ${CATEGORIES_DIR}`);
-		return result;
-	}
-
-	const categories = fs
-		.readdirSync(CATEGORIES_DIR, { withFileTypes: true })
-		.filter((d) => d.isDirectory())
-		.map((d) => d.name);
-
-	for (const category of categories) {
-		const categoryPath = path.join(CATEGORIES_DIR, category);
-		const detectors: RuleDetector[] = [];
-
-		// Find all rule directories
-		const ruleDirs = fs
-			.readdirSync(categoryPath, { withFileTypes: true })
-			.filter((d) => d.isDirectory() && d.name.startsWith("rule-"))
-			.map((d) => d.name)
-			.sort();
-
-		for (const ruleDir of ruleDirs) {
-			const detectorFile = path.join(
-				categoryPath,
-				ruleDir,
-				`${ruleDir}.detector.ts`,
-			);
-
-			if (fs.existsSync(detectorFile)) {
-				try {
-					const module = await import(detectorFile);
-					if (module.detector || module.default) {
-						detectors.push(module.detector || module.default);
-					}
-				} catch (error) {
-					// Silently skip detectors that fail to load
-				}
-			}
-		}
-
-		if (detectors.length > 0) {
-			result.set(category, detectors);
-		}
-	}
-
-	cachedDetectors = result;
-	return result;
-};
-
-/**
- * Get all category names
- */
-export const getCategoryNames = async (): Promise<string[]> => {
-	const detectors = await loadCategoryDetectors();
-	return [...detectors.keys()].sort();
-};
-
-/**
- * Get detectors for a specific category
- */
-export const getCategoryDetectors = async (
-	category: string,
-): Promise<RuleDetector[]> => {
-	const detectors = await loadCategoryDetectors();
-	return detectors.get(category) ?? [];
-};
-
-/**
- * Get all detectors
- */
-export const getAllDetectors = async (): Promise<RuleDetector[]> => {
-	const detectors = await loadCategoryDetectors();
-	const all: RuleDetector[] = [];
-	for (const categoryDetectors of detectors.values()) {
-		all.push(...categoryDetectors);
-	}
-	return all;
-};
-
 /**
  * Glob pattern matching (simple implementation)
  */
 const matchGlob = (pattern: string, filePath: string): boolean => {
+	// Handle common glob patterns
+	// **/*.ts matches any .ts file at any depth
+	// *.ts matches .ts files in current dir only
+	// **/node_modules/** matches node_modules at any depth
+
+	// Simple extension matching for **/*.ext patterns
 	if (pattern.startsWith("**/") && !pattern.slice(3).includes("/")) {
-		const suffix = pattern.slice(3);
+		// Pattern like **/*.ts - match any file ending with the suffix
+		const suffix = pattern.slice(3); // Remove **/
 		if (suffix.startsWith("*")) {
-			const ext = suffix.slice(1);
+			// Pattern like **/*.ts
+			const ext = suffix.slice(1); // Remove *
 			return filePath.endsWith(ext);
 		}
+		// Pattern like **/foo.ts - match exact filename anywhere
 		return filePath.endsWith("/" + suffix) || filePath === suffix;
 	}
 
+	// Pattern like **/*.d.ts - handle multiple extensions
 	if (pattern.startsWith("**/*")) {
-		const ext = pattern.slice(4);
+		const ext = pattern.slice(4); // Get extension part like .d.ts
 		return filePath.endsWith(ext);
 	}
 
+	// For exclude patterns like **/node_modules/**
 	if (pattern.includes("**")) {
 		const parts = pattern.split("**").filter(Boolean);
 		if (parts.length === 1) {
+			// Just check if the path contains the part
 			const part = parts[0].replace(/^\/|\/$/g, "");
 			return (
 				filePath.includes("/" + part + "/") || filePath.startsWith(part + "/")
@@ -144,6 +59,7 @@ const matchGlob = (pattern: string, filePath: string): boolean => {
 		}
 	}
 
+	// Simple wildcard matching
 	const regexPattern = pattern
 		.replace(/[.+^${}()|[\]\\]/g, "\\$&")
 		.replace(/\*\*/g, ".*")
@@ -178,6 +94,7 @@ const findFiles = (
 			const relativePath = path.relative(dir, fullPath);
 
 			if (entry.isDirectory()) {
+				// Skip excluded directories early
 				if (
 					!matchesAny(exclude, relativePath) &&
 					!matchesAny(exclude, `${relativePath}/`)
@@ -209,41 +126,18 @@ const severityLevel: Record<ViolationSeverity, number> = {
 };
 
 /**
- * Create detection context for a file
- */
-const createContext = (
-	filePath: string,
-	sourceCode: string,
-): DetectionContext => {
-	const sourceFile = ts.createSourceFile(
-		filePath,
-		sourceCode,
-		ts.ScriptTarget.Latest,
-		true,
-	);
-
-	return {
-		filePath,
-		sourceCode,
-		sourceFile,
-		getPosition: createPositionHelper(sourceFile),
-	};
-};
-
-/**
  * Run detection on a single file
  */
 export const detectFile = (
 	filePath: string,
-	sourceCode: string,
-	detectors: RuleDetector[],
+	detectors: CategoryDetector[],
 ): { violations: Violation[]; error?: string } => {
 	try {
-		const context = createContext(filePath, sourceCode);
+		const sourceCode = fs.readFileSync(filePath, "utf-8");
 		const violations: Violation[] = [];
 
 		for (const detector of detectors) {
-			const detected = detector.detect(context);
+			const detected = detector.detect(filePath, sourceCode);
 			violations.push(...detected);
 		}
 
@@ -259,10 +153,10 @@ export const detectFile = (
 /**
  * Run detection on a directory or file
  */
-export const detectDirectory = async (
+export const detectDirectory = (
 	target: string,
 	config: Partial<DetectorConfig> = {},
-): Promise<DetectorResult> => {
+): DetectorResult => {
 	const finalConfig: DetectorConfig = {
 		include: config.include ?? ["**/*.ts", "**/*.tsx"],
 		exclude: config.exclude ?? [
@@ -275,23 +169,13 @@ export const detectDirectory = async (
 		includePotential: config.includePotential ?? true,
 	};
 
-	// Load detectors
-	const allCategoryDetectors = await loadCategoryDetectors();
-
 	// Determine which detectors to use
-	const detectors: RuleDetector[] = [];
-	if (finalConfig.categories.length > 0) {
-		for (const cat of finalConfig.categories) {
-			const catDetectors = allCategoryDetectors.get(cat);
-			if (catDetectors) {
-				detectors.push(...catDetectors);
-			}
-		}
-	} else {
-		for (const catDetectors of allCategoryDetectors.values()) {
-			detectors.push(...catDetectors);
-		}
-	}
+	const detectors =
+		finalConfig.categories.length > 0
+			? finalConfig.categories
+					.map(getDetector)
+					.filter((d): d is CategoryDetector => d !== undefined)
+			: allDetectors;
 
 	// Check if target is a file or directory
 	const stat = fs.statSync(target);
@@ -308,8 +192,7 @@ export const detectDirectory = async (
 	// Process each file
 	for (const file of files) {
 		result.filesAnalyzed++;
-		const sourceCode = fs.readFileSync(file, "utf-8");
-		const { violations, error } = detectFile(file, sourceCode, detectors);
+		const { violations, error } = detectFile(file, detectors);
 
 		if (error) {
 			result.errors.push({ filePath: file, error });
@@ -433,7 +316,7 @@ export const formatSummary = (result: DetectorResult): string => {
 /**
  * CLI entry point
  */
-export const main = async () => {
+export const main = () => {
 	const args = process.argv.slice(2);
 
 	// Parse arguments
@@ -442,8 +325,6 @@ export const main = async () => {
 	let minSeverity: ViolationSeverity = "warning";
 	let includePotential = true;
 	let outputFormat: "text" | "json" = "text";
-
-	const categoryNames = await getCategoryNames();
 
 	for (let i = 0; i < args.length; i++) {
 		const arg = args[i];
@@ -462,7 +343,7 @@ Options:
   --help, -h                Show this help
 
 Available categories:
-  ${categoryNames.join(", ")}
+  ${getCategoryNames().join(", ")}
 
 Examples:
   bun run detectors/runner.ts ./src
@@ -486,7 +367,7 @@ Examples:
 	}
 
 	// Run detection
-	const result = await detectDirectory(directory, {
+	const result = detectDirectory(directory, {
 		categories,
 		minSeverity,
 		includePotential,
