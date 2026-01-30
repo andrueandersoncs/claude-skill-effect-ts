@@ -8,7 +8,7 @@
       "example": {
         "description": "Conditional throw based on state",
         "bad": "function processOrder(order: Order) {\n  if (order.status === \"cancelled\") {\n    throw new Error(\"Cannot process cancelled order\")\n  }\n  if (order.total <= 0) {\n    throw new Error(\"Order total must be positive\")\n  }\n  return processValidOrder(order)\n}",
-        "good": "class OrderCancelled extends Schema.TaggedError<OrderCancelled>()(\"OrderCancelled\", {\n  orderId: Schema.String\n}) {}\n\nclass InvalidTotal extends Schema.TaggedError<InvalidTotal>()(\"InvalidTotal\", {\n  total: Schema.Number\n}) {}\n\nconst processOrder = (order: Order) =>\n  Match.value(order).pipe(\n    Match.when({ status: \"cancelled\" }, (o) =>\n      Effect.fail(new OrderCancelled({ orderId: o.id }))\n    ),\n    Match.when({ total: (t) => t <= 0 }, (o) =>\n      Effect.fail(new InvalidTotal({ total: o.total }))\n    ),\n    Match.orElse((o) => processValidOrder(o))\n  )"
+        "good": "const OrderId = Schema.String.pipe(Schema.brand(\"OrderId\"))\n\nclass OrderCancelled extends Schema.TaggedError<OrderCancelled>()(\"OrderCancelled\", {\n  orderId: OrderId,\n}) {}\n\nclass InvalidTotal extends Schema.TaggedError<InvalidTotal>()(\"InvalidTotal\", {\n  total: Schema.Number,\n}) {}\n\nconst processOrder = (order: Order) =>\n  Match.value(order).pipe(\n    Match.when({ status: \"cancelled\" }, (o) =>\n      Effect.fail(new OrderCancelled({ orderId: o.id }))\n    ),\n    Match.when({ total: (t) => t <= 0 }, (o) =>\n      Effect.fail(new InvalidTotal({ total: o.total }))\n    ),\n    Match.orElse((o) => processValidOrder(o))\n  )"
       }
     },
     {
@@ -16,7 +16,7 @@
       "example": {
         "description": "Multiple try/catch blocks",
         "bad": "async function processOrder(data: string) {\n  let order\n  try {\n    order = JSON.parse(data)\n  } catch (e) {\n    throw new Error(\"Invalid order JSON\")\n  }\n\n  try {\n    await saveOrder(order)\n  } catch (e) {\n    throw new Error(\"Failed to save order\")\n  }\n}",
-        "good": "class InvalidOrderJson extends Schema.TaggedError<InvalidOrderJson>()(\"InvalidOrderJson\", {\n  data: Schema.String\n}) {}\n\nclass SaveOrderError extends Schema.TaggedError<SaveOrderError>()(\"SaveOrderError\", {\n  orderId: Schema.String,\n  cause: Schema.Unknown\n}) {}\n\nconst processOrder = (data: string) =>\n  Effect.gen(function* () {\n    const order = yield* Effect.try({\n      try: () => JSON.parse(data) as Order,\n      catch: () => new InvalidOrderJson({ data })\n    })\n\n    yield* Effect.tryPromise({\n      try: () => saveOrder(order),\n      catch: (e) => new SaveOrderError({ orderId: order.id, cause: e })\n    })\n  })"
+        "good": "const OrderId = Schema.String.pipe(Schema.brand(\"OrderId\"))\n\nclass InvalidOrderJson extends Schema.TaggedError<InvalidOrderJson>()(\"InvalidOrderJson\", {\n  data: Schema.String,\n}) {}\n\nclass SaveOrderError extends Schema.TaggedError<SaveOrderError>()(\"SaveOrderError\", {\n  orderId: OrderId,\n  cause: Schema.Unknown,\n}) {}\n\nconst OrderFromJson = Schema.parseJson(Order)\n\nconst processOrder = (data: string) =>\n  Effect.gen(function* () {\n    const order = yield* Schema.decodeUnknown(OrderFromJson)(data).pipe(\n      Effect.mapError(() => new InvalidOrderJson({ data }))\n    )\n\n    yield* Effect.tryPromise({\n      try: () => saveOrder(order),\n      catch: (e) => new SaveOrderError({ orderId: order.id, cause: e })\n    })\n  })"
       }
     },
     {
@@ -24,7 +24,7 @@
       "example": {
         "description": "Wrapping async operation",
         "bad": "async function fetchUser(id: string): Promise<User> {\n  try {\n    const response = await fetch(`/users/${id}`)\n    return await response.json()\n  } catch (e) {\n    throw new Error(\"Failed to fetch user\")\n  }\n}",
-        "good": "class FetchUserError extends Schema.TaggedError<FetchUserError>()(\"FetchUserError\", {\n  userId: Schema.String,\n  cause: Schema.Unknown\n}) {}\n\nconst fetchUser = (id: string) =>\n  Effect.tryPromise({\n    try: async () => {\n      const response = await fetch(`/users/${id}`)\n      return response.json() as Promise<User>\n    },\n    catch: (e) => new FetchUserError({ userId: id, cause: e })\n  })"
+        "good": "const UserId = Schema.String.pipe(Schema.brand(\"UserId\"))\n\nclass FetchUserError extends Schema.TaggedError<FetchUserError>()(\"FetchUserError\", {\n  userId: UserId,\n  cause: Schema.Unknown,\n}) {}\n\nconst fetchUser = (id: typeof UserId.Type) =>\n  Effect.gen(function* () {\n    const response = yield* Effect.tryPromise({\n      try: () => fetch(`/users/${id}`).then((r) => r.json()),\n      catch: (e) => new FetchUserError({ userId: id, cause: e })\n    })\n    return yield* Schema.decodeUnknown(User)(response)\n  })"
       }
     },
     {
@@ -72,7 +72,7 @@
       "example": {
         "description": "Retry only for specific errors",
         "bad": "let attempts = 0\nwhile (attempts < 3) {\n  try {\n    return await fetchData()\n  } catch (e) {\n    if (e.code !== \"NETWORK_ERROR\") throw e\n    attempts++\n  }\n}",
-        "good": "const result = yield* fetchData().pipe(\n  Effect.retry({\n    schedule: Schedule.recurs(3),\n    while: (error) =>\n      Match.value(error).pipe(\n        Match.tag(\"NetworkError\", () => true),\n        Match.orElse(() => false)\n      )\n  })\n)"
+        "good": "import { Function } from \"effect\"\n\nconst result = yield* fetchData().pipe(\n  Effect.retry({\n    schedule: Schedule.recurs(3),\n    while: (error) =>\n      Match.value(error).pipe(\n        Match.tag(\"NetworkError\", Function.constant(true)),\n        Match.orElse(Function.constant(false))\n      )\n  })\n)"
       }
     },
     {

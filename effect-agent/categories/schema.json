@@ -40,7 +40,7 @@
       "example": {
         "description": "Order status with optional fields",
         "bad": "const Order = Schema.Struct({\n  orderId: Schema.String,\n  items: Schema.Array(Schema.String),\n  trackingNumber: Schema.optional(Schema.String),\n  shippedAt: Schema.optional(Schema.Date),\n  deliveredAt: Schema.optional(Schema.Date),\n})",
-        "good": "class Pending extends Schema.TaggedClass<Pending>()(\"Pending\", {\n  orderId: Schema.String,\n  items: Schema.Array(Schema.String),\n}) {}\n\nclass Shipped extends Schema.TaggedClass<Shipped>()(\"Shipped\", {\n  orderId: Schema.String,\n  items: Schema.Array(Schema.String),\n  trackingNumber: Schema.String,\n  shippedAt: Schema.Date,\n}) {}\n\nclass Delivered extends Schema.TaggedClass<Delivered>()(\"Delivered\", {\n  orderId: Schema.String,\n  items: Schema.Array(Schema.String),\n  deliveredAt: Schema.Date,\n}) {}\n\nconst Order = Schema.Union(Pending, Shipped, Delivered)\ntype Order = Schema.Schema.Type<typeof Order>"
+        "good": "const OrderId = Schema.String.pipe(Schema.brand(\"OrderId\"))\nconst TrackingNumber = Schema.String.pipe(Schema.brand(\"TrackingNumber\"))\n\nclass Pending extends Schema.TaggedClass<Pending>()(\"Pending\", {\n  orderId: OrderId,\n  items: Schema.Array(Schema.String),\n}) {}\n\nclass Shipped extends Schema.TaggedClass<Shipped>()(\"Shipped\", {\n  orderId: OrderId,\n  items: Schema.Array(Schema.String),\n  trackingNumber: TrackingNumber,\n  shippedAt: Schema.Date,\n}) {}\n\nclass Delivered extends Schema.TaggedClass<Delivered>()(\"Delivered\", {\n  orderId: OrderId,\n  items: Schema.Array(Schema.String),\n  deliveredAt: Schema.Date,\n}) {}\n\nconst Order = Schema.Union(Pending, Shipped, Delivered)\ntype Order = Schema.Schema.Type<typeof Order>"
       }
     },
     {
@@ -48,7 +48,7 @@
       "example": {
         "description": "Legitimate use of Schema.Unknown (exception cause)",
         "bad": "// Overusing Schema.Unknown\nconst Event = Schema.Struct({\n  type: Schema.String,\n  payload: Schema.Unknown, // Should be typed\n})",
-        "good": "// Schema.Unknown is OK for genuinely unconstrained data\nclass AppError extends Schema.TaggedError<AppError>()(\"AppError\", {\n  message: Schema.String,\n  cause: Schema.Unknown, // Legitimate: captures arbitrary caught exceptions\n}) {}\n\n// But domain data should be typed\nclass UserCreated extends Schema.TaggedClass<UserCreated>()(\"UserCreated\", {\n  userId: Schema.String,\n  email: Schema.String,\n}) {}"
+        "good": "const UserId = Schema.String.pipe(Schema.brand(\"UserId\"))\nconst Email = Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\\.[^@]+$/))\n\nclass AppError extends Schema.TaggedError<AppError>()(\"AppError\", {\n  message: Schema.String,\n  cause: Schema.Unknown,\n}) {}\n\nclass UserCreated extends Schema.TaggedClass<UserCreated>()(\"UserCreated\", {\n  userId: UserId,\n  email: Email,\n}) {}"
       }
     },
     {
@@ -56,7 +56,7 @@
       "example": {
         "description": "Separate JSON.parse then validate (WRONG)",
         "bad": "// Two separate failure points\nconst parsed = JSON.parse(jsonString)  // Can throw!\nconst validated = Schema.decodeUnknownSync(MySchema)(parsed)",
-        "good": "// Schema.parseJson handles both in one type-safe step\nconst MyData = Schema.parseJson(Schema.Struct({\n  name: Schema.String,\n  count: Schema.Number\n}))\n\nconst data = Schema.decodeUnknownSync(MyData)(jsonString)"
+        "good": "class MyData extends Schema.Class<MyData>(\"MyData\")({\n  name: Schema.NonEmptyString,\n  count: Schema.Number,\n}) {}\n\nconst MyDataFromJson = Schema.parseJson(MyData)\n\nconst data = Schema.decodeUnknownSync(MyDataFromJson)(jsonString)"
       }
     },
     {
@@ -64,7 +64,7 @@
       "example": {
         "description": "Unbranded ID types",
         "bad": "const User = Schema.Struct({\n  id: Schema.String,\n  email: Schema.String,\n})\n\n// Nothing prevents mixing up userId and orderId\nconst getOrder = (orderId: string) => ...\ngetOrder(user.id)  // Oops! Used userId as orderId",
-        "good": "const UserId = Schema.String.pipe(Schema.brand(\"UserId\"))\nconst OrderId = Schema.String.pipe(Schema.brand(\"OrderId\"))\n\nclass User extends Schema.Class<User>(\"User\")({\n  id: UserId,\n  email: Schema.String,\n}) {}\n\n// Type error: UserId is not assignable to OrderId\nconst getOrder = (orderId: Schema.Schema.Type<typeof OrderId>) => ...\ngetOrder(user.id)  // Type error!"
+        "good": "const UserId = Schema.String.pipe(Schema.brand(\"UserId\"))\nconst OrderId = Schema.String.pipe(Schema.brand(\"OrderId\"))\nconst Email = Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\\.[^@]+$/))\n\nclass User extends Schema.Class<User>(\"User\")({\n  id: UserId,\n  email: Email,\n}) {}\n\nconst getOrder = (orderId: typeof OrderId.Type) => ...\ngetOrder(user.id)"
       }
     },
     {

@@ -24,7 +24,7 @@
       "example": {
         "description": "Code organization",
         "bad": "// ============ Types ============\nexport type User = { ... };\n\n// ============ Services ============\nexport class UserService extends Context.Tag(\"UserService\")<UserService, { ... }> {}",
-        "good": "export type User = { ... };\n\nexport class UserService extends Context.Tag(\"UserService\")<UserService, { ... }> {}"
+        "good": "export class User extends Schema.Class<User>(\"User\")({\n  id: UserId,\n  name: Schema.NonEmptyString,\n}) {}\n\nexport class UserService extends Context.Tag(\"UserService\")<UserService, {\n  readonly getUser: (id: typeof UserId.Type) => Effect.Effect<User>\n}>() {}"
       }
     },
     {

@@ -8,7 +8,7 @@
       "example": {
         "description": "Finding with default",
         "bad": "const found = items.find((i) => i.id === targetId) ?? defaultItem",
-        "good": "const found = pipe(\n  Array.findFirst(items, (i) => i.id === targetId),\n  Option.getOrElse(() => defaultItem)\n)"
+        "good": "import { Function } from \"effect\"\n\nconst found = pipe(\n  Array.findFirst(items, (i) => i.id === targetId),\n  Option.getOrElse(Function.constant(defaultItem))\n)"
       }
     },
     {
@@ -80,7 +80,7 @@
       "example": {
         "description": "Conditional transformation",
         "bad": "const transform = shouldTransform\n  ? myTransform\n  : (x) => x  // Anonymous identity function",
-        "good": "import { Function } from \"effect\"\n\nconst transform = shouldTransform\n  ? myTransform\n  : Function.identity  // Standard identity function"
+        "good": "import { Function, Match } from \"effect\"\n\nconst transform = Match.value(shouldTransform).pipe(\n  Match.when(true, Function.constant(myTransform)),\n  Match.orElse(Function.constant(Function.identity))\n)"
       }
     },
     {
@@ -88,7 +88,7 @@
       "example": {
         "description": "Function that always returns same value",
         "bad": "const getDefaultUser = () => defaultUser\nconst alwaysZero = () => 0\nconst noop = () => undefined",
-        "good": "import { Function } from \"effect\"\n\nconst getDefaultUser = Function.constant(defaultUser)\nconst alwaysZero = Function.constant(0)\nconst noop = Function.constVoid  // Built-in for () => void"
+        "good": "import { Function } from \"effect\"\n\nconst getDefaultUser = Function.constant(defaultUser)\nconst alwaysZero = Function.constant(0)\nconst noop = Function.constVoid"
       }
     },
     {
@@ -104,7 +104,7 @@
       "example": {
         "description": "Filter and transform in single pass",
         "bad": "const validEmails = users\n  .filter((u) => isValidEmail(u.email))\n  .map((u) => u.email)",
-        "good": "import { Array, Option } from \"effect\"\n\nconst validEmails = Array.filterMap(users, (u) =>\n  isValidEmail(u.email) ? Option.some(u.email) : Option.none()\n)"
+        "good": "import { Array, Match, Option } from \"effect\"\n\nconst validEmails = Array.filterMap(users, (u) =>\n  Match.value(isValidEmail(u.email)).pipe(\n    Match.when(true, () => Option.some(u.email)),\n    Match.orElse(Option.none)\n  )\n)"
       }
     },
     {

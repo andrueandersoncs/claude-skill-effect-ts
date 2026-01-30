@@ -48,7 +48,7 @@
       "example": {
         "description": "Runtime validation of unknown input",
         "bad": "const handleUnknown = (input: unknown) => {\n  if (typeof input === \"object\" && input !== null && (input as any)._tag === \"Circle\") {\n    return `Valid circle`\n  }\n  return \"Invalid shape\"\n}",
-        "good": "const handleUnknown = (input: unknown) =>\n  Match.value(input).pipe(\n    Match.when(Schema.is(Circle), (c) => `Valid circle with radius ${c.radius}`),\n    Match.when(Schema.is(Rectangle), (r) => `Valid rectangle ${r.width}x${r.height}`),\n    Match.orElse(() => \"Invalid shape\")\n  )"
+        "good": "import { Function } from \"effect\"\n\nconst handleUnknown = (input: unknown) =>\n  Match.value(input).pipe(\n    Match.when(Schema.is(Circle), (c) => `Valid circle with radius ${c.radius}`),\n    Match.when(Schema.is(Rectangle), (r) => `Valid rectangle ${r.width}x${r.height}`),\n    Match.orElse(Function.constant(\"Invalid shape\"))\n  )"
       }
     },
     {

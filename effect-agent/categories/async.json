@@ -8,7 +8,7 @@
       "example": {
         "description": "Wrapping external async library",
         "bad": "import { externalLib } from \"some-lib\"\n\nconst useLibrary = Effect.gen(function* () {\n  // Mixing async/await with Effect - BAD\n  const result = await externalLib.doSomething()\n  return result\n})",
-        "good": "import { externalLib } from \"some-lib\"\n\n// Wrap at the boundary\nconst doSomething = Effect.tryPromise({\n  try: () => externalLib.doSomething(),\n  catch: (e) => new LibraryError({ cause: e })\n})\n\n// Use the wrapped Effect\nconst useLibrary = Effect.gen(function* () {\n  const result = yield* doSomething\n  return result\n})"
+        "good": "import { externalLib } from \"some-lib\"\n\nclass LibraryError extends Schema.TaggedError<LibraryError>()(\"LibraryError\", {\n  cause: Schema.Unknown,\n}) {}\n\nconst doSomething = Effect.tryPromise({\n  try: () => externalLib.doSomething(),\n  catch: (e) => new LibraryError({ cause: e })\n})\n\nconst useLibrary = Effect.gen(function* () {\n  const result = yield* doSomething\n  return result\n})"
       }
     },
     {
@@ -48,7 +48,7 @@
       "example": {
         "description": "HTTP handler (boundary OK)",
         "bad": "// Express handler mixing styles\napp.get(\"/users/:id\", async (req, res) => {\n  const user = yield* getUser(req.params.id)  // Won't work\n  res.json(user)\n})",
-        "good": "// Convert Effect to Promise at HTTP boundary\napp.get(\"/users/:id\", async (req, res) => {\n  const result = await Effect.runPromise(\n    getUser(req.params.id).pipe(\n      Effect.provide(AppLive),\n      Effect.either\n    )\n  )\n\n  Either.match(result, {\n    onLeft: (error) => res.status(500).json({ error: error.message }),\n    onRight: (user) => res.json(user)\n  })\n})"
+        "good": "class ErrorResponse extends Schema.Class<ErrorResponse>(\"ErrorResponse\")({\n  error: Schema.String,\n}) {}\n\napp.get(\"/users/:id\", async (req, res) => {\n  const result = await Effect.runPromise(\n    getUser(req.params.id).pipe(\n      Effect.provide(AppLive),\n      Effect.either\n    )\n  )\n\n  Either.match(result, {\n    onLeft: (error) => res.status(500).json(new ErrorResponse({ error: error.message })),\n    onRight: (user) => res.json(user)\n  })\n})"
       }
     },
     {
@@ -56,7 +56,7 @@
       "example": {
         "description": "Converting callback-based API",
         "bad": "const readFileAsync = (path: string) =>\n  new Promise((resolve, reject) => {\n    fs.readFile(path, (err, data) => {\n      if (err) reject(err)\n      else resolve(data)\n    })\n  })",
-        "good": "const readFileAsync = (path: string) =>\n  Effect.async<Buffer, NodeJS.ErrnoException>((resume) => {\n    fs.readFile(path, (err, data) => {\n      if (err) resume(Effect.fail(err))\n      else resume(Effect.succeed(data))\n    })\n  })"
+        "good": "const readFileAsync = (path: string) =>\n  Effect.async<Buffer, NodeJS.ErrnoException>((resume) => {\n    fs.readFile(path, (err, data) =>\n      resume(\n        Match.value({ err, data }).pipe(\n          Match.when({ err: Predicate.isNotNull }, ({ err }) => Effect.fail(err)),\n          Match.orElse(({ data }) => Effect.succeed(data))\n        )\n      )\n    )\n  })"
       }
     },
     {

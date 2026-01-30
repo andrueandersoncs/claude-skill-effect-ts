@@ -24,7 +24,7 @@
       "example": {
         "description": "Array splice/modification",
         "bad": "const arr = [...items]\narr.splice(2, 1)  // Remove at index 2\narr.splice(1, 0, newItem)  // Insert at index 1",
-        "good": "const removed = pipe(\n  items,\n  Array.remove(2)\n)\nconst inserted = pipe(\n  items,\n  Array.insertAt(1, newItem),\n  Option.getOrElse(() => items)\n)"
+        "good": "import { Function } from \"effect\"\n\nconst removed = pipe(\n  items,\n  Array.remove(2)\n)\nconst inserted = pipe(\n  items,\n  Array.insertAt(1, newItem),\n  Option.getOrElse(Function.constant(items))\n)"
       }
     },
     {
@@ -72,7 +72,7 @@
       "example": {
         "description": "Splitting array by condition",
         "bad": "const minors = users.filter((u) => u.age < 18)\nconst adults = users.filter((u) => u.age >= 18)",
-        "good": "import { Array } from \"effect\"\n\n// Single pass, returns [excluded, satisfying]\nconst [minors, adults] = Array.partition(users, (u) => u.age >= 18)"
+        "good": "import { Array } from \"effect\"\n\nconst [minors, adults] = Array.partition(users, (u) => u.age >= 18)"
       }
     }
   ]

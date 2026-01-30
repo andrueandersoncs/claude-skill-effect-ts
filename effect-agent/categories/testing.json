@@ -32,7 +32,7 @@
       "example": {
         "description": "Complex Schema constraints",
         "bad": "const validUser = fc.record({\n  id: fc.string(),\n  name: fc.string(),\n  age: fc.integer(),\n  email: fc.string(),\n}).filter((u) =>\n  u.name.length > 0 &&\n  u.age >= 18 &&\n  u.email.includes(\"@\")\n)",
-        "good": "class User extends Schema.Class<User>(\"User\")({\n  id: Schema.String.pipe(Schema.minLength(1)),\n  name: Schema.String.pipe(Schema.nonEmptyString()),\n  age: Schema.Number.pipe(Schema.int(), Schema.greaterThanOrEqualTo(18)),\n  email: Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\\.[^@]+$/)),\n}) {}\n\n// Arbitrary generates only valid users - no filtering needed\nconst UserArbitrary = Arbitrary.make(User)"
+        "good": "const UserId = Schema.String.pipe(Schema.minLength(1), Schema.brand(\"UserId\"))\nconst Email = Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\\.[^@]+$/))\nconst Age = Schema.Number.pipe(Schema.int(), Schema.greaterThanOrEqualTo(18))\n\nclass User extends Schema.Class<User>(\"User\")({\n  id: UserId,\n  name: Schema.NonEmptyString,\n  age: Age,\n  email: Email,\n}) {}\n\nconst UserArbitrary = Arbitrary.make(User)"
       }
     },
     {
@@ -64,7 +64,7 @@
       "example": {
         "description": "Test layer with hard-coded responses",
         "bad": "const UserApiTest = Layer.succeed(UserApi, {\n  // Hard-coded response - same value every test run\n  getUser: (id) => Effect.succeed({\n    id: \"test-123\",\n    name: \"Test User\",\n    email: \"test@test.com\"\n  }),\n  // Not implemented - this code path won't be tested\n  updateUser: () => Effect.fail(new Error(\"Not implemented\"))\n})",
-        "good": "const UserApiTest = Layer.effect(\n  UserApi,\n  Effect.sync(() => {\n    // Generate different values for each test run\n    const UserArb = Arbitrary.make(User)(fc)\n    return {\n      getUser: (id) => Effect.succeed(\n        fc.sample(UserArb, 1)[0]\n      ),\n      updateUser: (user) => Effect.void\n    }\n  })\n)"
+        "good": "const UserApiTest = Layer.effect(\n  UserApi,\n  Effect.sync(() => {\n    const UserArb = Arbitrary.make(User)(fc)\n    return {\n      getUser: (id) => Effect.succeed(\n        pipe(\n          fc.sample(UserArb, 1),\n          Array.head,\n          Option.getOrThrow\n        )\n      ),\n      updateUser: (user) => Effect.void\n    }\n  })\n)"
       }
     },
     {
@@ -96,7 +96,7 @@
       "example": {
         "description": "Testing with acquireRelease resources",
         "bad": "it(\"should use database connection\", async () => {\n  const conn = await connect()\n  try {\n    const result = await conn.query(\"SELECT 1\")\n    expect(result).toBeDefined()\n  } finally {\n    await conn.close()  // Manual cleanup\n  }\n})",
-        "good": "// it.scoped automatically handles resource cleanup\nit.scoped(\"should use database connection\", () =>\n  Effect.gen(function* () {\n    const conn = yield* acquireDbConnection  // acquireRelease resource\n    const result = yield* conn.query(\"SELECT 1\")\n    expect(result).toBeDefined()\n    // Connection automatically released when test ends\n  })\n)"
+        "good": "it.scoped(\"should use database connection\", () =>\n  Effect.gen(function* () {\n    const conn = yield* acquireDbConnection\n    const result = yield* conn.query(\"SELECT 1\")\n    expect(result).toBeDefined()\n  })\n)"
       }
     },
     {
@@ -112,7 +112,7 @@
       "example": {
         "description": "Asserting on error type and data",
         "bad": "it(\"should fail with UserNotFound\", async () => {\n  try {\n    await Effect.runPromise(getUser(\"nonexistent\"))\n    fail(\"Expected error\")\n  } catch (e) {\n    expect(e._tag).toBe(\"UserNotFound\")\n  }\n})",
-        "good": "it.effect(\"should fail with UserNotFound\", () =>\n  Effect.gen(function* () {\n    const exit = yield* Effect.exit(getUser(\"nonexistent\"))\n\n    expect(Exit.isFailure(exit)).toBe(true)\n\n    Exit.match(exit, {\n      onFailure: (cause) => {\n        const error = Option.getOrThrow(Cause.failureOption(cause))\n        expect(Schema.is(UserNotFound)(error)).toBe(true)\n        expect(error.userId).toBe(\"nonexistent\")\n      },\n      onSuccess: () => { throw new Error(\"Expected failure\") }\n    })\n  })\n)"
+        "good": "it.effect(\"should fail with UserNotFound\", () =>\n  Effect.gen(function* () {\n    const exit = yield* Effect.exit(getUser(\"nonexistent\"))\n\n    expect(Exit.isFailure(exit)).toBe(true)\n\n    Exit.match(exit, {\n      onFailure: (cause) => {\n        const error = Option.getOrThrow(Cause.failureOption(cause))\n        expect(Schema.is(UserNotFound)(error)).toBe(true)\n        expect(error.userId).toBe(\"nonexistent\")\n      },\n      onSuccess: () => expect.fail(\"Expected failure\")\n    })\n  })\n)"
       }
     },
     {
@@ -120,7 +120,7 @@
       "example": {
         "description": "Anti-pattern: stubbing methods as not implemented",
         "bad": "const TestLayer = Layer.succeed(MyService, {\n  getUser: (id) => Effect.succeed({ id, name: \"Hardcoded\" }),\n  updateUser: () => Effect.fail(new Error(\"Not implemented\")),  // Won't test this path!\n  deleteUser: () => Effect.fail(new Error(\"Not implemented\")),\n})",
-        "good": "// Generate valid responses so all code paths can be exercised\nconst TestLayer = Layer.effect(\n  MyService,\n  Effect.sync(() => {\n    const UserArb = Arbitrary.make(User)(fc)\n    return {\n      getUser: (id) => Effect.succeed(\n        fc.sample(UserArb, 1)[0]\n      ),\n      updateUser: (user) => Effect.void,\n      deleteUser: (id) => Effect.void,\n    }\n  })\n)"
+        "good": "// Generate valid responses so all code paths can be exercised\nconst TestLayer = Layer.effect(\n  MyService,\n  Effect.sync(() => {\n    const UserArb = Arbitrary.make(User)(fc)\n    return {\n      getUser: (id) => Effect.succeed(\n        pipe(fc.sample(UserArb, 1), Array.head, Option.getOrThrow)\n      ),\n      updateUser: (user) => Effect.void,\n      deleteUser: (id) => Effect.void,\n    }\n  })\n)"
       }
     }
   ]
