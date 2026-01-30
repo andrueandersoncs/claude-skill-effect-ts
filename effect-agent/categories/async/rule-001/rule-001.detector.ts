@@ -4,15 +4,21 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Match, Option, Schema } from "effect";
+import { Array as EffectArray, Match, Option, Schema } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.ts";
 
-const meta = {
+const MetaSchema = Schema.Struct({
+	id: Schema.Literal("rule-001"),
+	category: Schema.Literal("async"),
+	name: Schema.Literal("callback-api"),
+});
+
+const meta = Schema.decodeUnknownSync(MetaSchema)({
 	id: "rule-001",
 	category: "async",
 	name: "callback-api",
-};
+});
 
 // Schema for valid severity and certainty values
 const SeveritySchema = Schema.Literal("error", "warning", "info");
@@ -32,7 +38,7 @@ const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.ArrowFunction => ts.isArrowFunction(u as ts.Node)),
 );
 
-// Schema for Violation to enforce literal types for severity and certainty
+// Schema for violation construction with runtime validation
 const ViolationSchema = Schema.Struct({
 	ruleId: Schema.String,
 	category: Schema.String,
@@ -212,9 +218,15 @@ export const detect = (
 							"handler",
 						];
 
-						return Match.value(callbackNames).pipe(
+						const hasCallbackName = EffectArray.findFirst(callbackNames, (name) => {
+							// Use regex to check if paramName contains the callback name
+							const regex = new RegExp(name);
+							return regex.test(paramName);
+						});
+
+						return Match.value(hasCallbackName).pipe(
 							Match.when(
-								(names) => names.some((name) => paramName.includes(name)),
+								Option.isSome,
 								() => {
 									const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 										node.getStart(),
