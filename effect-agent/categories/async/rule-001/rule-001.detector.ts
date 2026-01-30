@@ -70,44 +70,43 @@ export const detect = (
 		// Detect callback patterns (functions with callback parameter names)
 		const functionCheckResult = Match.value(node).pipe(
 			Match.when(isFunctionNode, (typedNode) => {
-				if (typedNode.parameters.length === 0) {
-					return Option.none<Violation>();
-				}
-				const lastParam = typedNode.parameters.at(-1);
-				if (!lastParam) return Option.none<Violation>();
-				const paramName = lastParam.name.getText(sourceFile).toLowerCase();
-				const callbackNames = [
-					"callback",
-					"cb",
-					"done",
-					"next",
-					"resolve",
-					"reject",
-					"handler",
-				];
+				return Option.fromNullable(typedNode.parameters.at(-1)).pipe(
+					Option.flatMap((lastParam) => {
+						const paramName = lastParam.name.getText(sourceFile).toLowerCase();
+						const callbackNames = [
+							"callback",
+							"cb",
+							"done",
+							"next",
+							"resolve",
+							"reject",
+							"handler",
+						];
 
-				return Match.value(callbackNames).pipe(
-					Match.when(
-						(names) => names.some((name) => paramName.includes(name)),
-						() => {
-							const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-								node.getStart(),
-							);
-							return Option.some({
-								ruleId: meta.id,
-								category: meta.category,
-								message: "Callback-style APIs should be wrapped with Effect.async()",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, 100),
-								severity: "info" as const,
-								certainty: "potential" as const,
-								suggestion: "Wrap callback-based APIs with Effect.async()",
-							});
-						},
-					),
-					Match.orElse(() => Option.none()),
+						return Match.value(callbackNames).pipe(
+							Match.when(
+								(names) => names.some((name) => paramName.includes(name)),
+								() => {
+									const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+										node.getStart(),
+									);
+									return Option.some({
+										ruleId: meta.id,
+										category: meta.category,
+										message: "Callback-style APIs should be wrapped with Effect.async()",
+										filePath,
+										line: line + 1,
+										column: character + 1,
+										snippet: node.getText(sourceFile).slice(0, 100),
+										severity: "info" as const,
+										certainty: "potential" as const,
+										suggestion: "Wrap callback-based APIs with Effect.async()",
+									});
+								},
+							),
+							Match.orElse(() => Option.none()),
+						);
+					}),
 				);
 			}),
 			Match.orElse(() => Option.none<Violation>()),
