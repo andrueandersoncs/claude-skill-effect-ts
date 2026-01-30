@@ -4,7 +4,7 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Match, Option, Schema } from "effect";
+import { Array as EffectArray, Match, Option, Schema } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.js";
 
@@ -83,9 +83,15 @@ export const detect = (
 							"handler",
 						];
 
-						return Match.value(callbackNames).pipe(
+						const hasCallbackName = EffectArray.findFirst(callbackNames, (name) => {
+							// Use regex to check if paramName contains the callback name
+							const regex = new RegExp(name);
+							return regex.test(paramName);
+						});
+
+						return Match.value(hasCallbackName).pipe(
 							Match.when(
-								(names) => names.some((name) => paramName.includes(name)),
+								Option.isSome,
 								() => {
 									const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 										node.getStart(),
