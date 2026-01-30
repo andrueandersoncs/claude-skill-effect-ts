@@ -3,162 +3,144 @@ name: effect-check
 description: Run Effect-TS compliance checks in parallel across all rule categories
 argument-hint: "<file-path>"
 allowed-tools:
-  - Task
+  - Bash
   - Read
-  - Glob
 ---
 
-# Parallel Effect-TS Compliance Checker
+# Effect-TS Compliance Checker
 
-Run all Effect-TS rule categories as checks **in parallel** against a specified file. Each category spawns as a separate agent, checking rules concurrently for fast feedback.
+Run static analysis to detect Effect-TS anti-patterns using the TypeScript Compiler API.
 
 ## Instructions
 
-1. **Read the target file** specified in the argument
-2. **Discover all category directories** from `${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/*/`
-3. **For each category**, read the README.md and all .ts rule files
-4. **Spawn parallel Task agents** - one per category - to check the file
-5. **Aggregate results** and present a unified report
+1. **Get the target file path** from the command argument
+2. **Run the detector** using Bash with the detection script
+3. **Format and present** the results
 
 ## Implementation
 
-### Step 1: Get the file path from arguments
+### Step 1: Run the Detector
 
-The user provides a file path like `/effect-check src/UserService.ts`
+Execute the detection script on the target file:
 
-### Step 2: Discover categories
-
-Use Glob to find all category directories:
-- `${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/*/README.md`
-
-Each directory name is a category (e.g., `async`, `errors`, `schema`).
-
-### Step 3: For each category, gather rules
-
-For each category directory:
-1. Read `README.md` for category description
-2. Glob for `*.ts` files (excluding `_fixtures.ts`)
-3. Each `.ts` file represents a rule:
-   - First two comment lines contain the rule and example description
-   - Code shows the "good" pattern (lines marked with `// ✅ Good:`)
-   - Some files may also show "bad" patterns (lines marked with `// ❌ Bad:`)
-
-### Step 4: Launch parallel checks
-
-For EACH category, spawn a Task agent **in the same message** (parallel execution):
-
-```
-Task(
-  subagent_type: "general-purpose",
-  model: "haiku",  // Fast model for each check
-  prompt: "Check this code against the '[CATEGORY_NAME]' Effect-TS rules.
-
-## Category: [NAME]
-[README_CONTENT]
-
-## Rules to Check
-[FOR EACH .TS FILE IN CATEGORY]:
-### Rule File: [FILENAME]
-Rule: [FIRST_COMMENT_LINE - the rule]
-Description: [SECOND_COMMENT_LINE - example description]
-
-Good pattern:
-```typescript
-[GOOD_EXAMPLE_CODE from the file]
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:all <file-path> --json 2>/dev/null
 ```
 
-[IF BAD PATTERN EXISTS]:
-Bad pattern (what to look for):
-```typescript
-[BAD_EXAMPLE_CODE from the file]
-```
+The `detect:all` script runs all category detectors and outputs JSON with:
+- `filesAnalyzed`: Number of files checked
+- `violations`: Array of violation objects
+- `errors`: Any analysis errors
 
-## Code to Analyze
-File: [FILE_PATH]
-```typescript
-[FILE_CONTENTS]
-```
+### Step 2: Parse and Format Results
 
-## Task
-1. Check the code against EACH rule in this category
-2. For violations found, report:
-   - Rule violated
-   - Line number(s)
-   - Code snippet showing violation
-   - Suggested fix based on the 'good' pattern
-3. If no violations for a rule, skip it
-4. Return results in this format:
+Each violation in the JSON output contains:
+- `ruleId`: The specific rule violated
+- `category`: Category (async, errors, imperative, etc.)
+- `message`: Description of the violation
+- `filePath`: File where violation was found
+- `line`: Line number
+- `column`: Column number
+- `snippet`: Code snippet showing the violation
+- `severity`: "error" | "warning" | "info"
+- `certainty`: "definite" | "potential"
+- `suggestion`: How to fix it
 
-### [CATEGORY_NAME] Results
-**Violations: [COUNT]**
+### Step 3: Present Report
 
-[FOR EACH VIOLATION]:
-#### Rule: [RULE_TEXT]
-- **Line(s):** [LINE_NUMBERS]
-- **Violation:** [DESCRIPTION]
-- **Code:** `[SNIPPET]`
-- **Fix:** [SUGGESTED_FIX]
-
-If no violations in this category, return:
-### [CATEGORY_NAME] Results
-**Violations: 0** - All checks passed!
-",
-  description: "Check [CATEGORY_NAME] rules"
-)
-```
-
-### Step 5: Aggregate and Report
-
-After all parallel tasks complete, aggregate into a single report:
+Format the output as:
 
 ```
 ## Effect-TS Compliance Report
 
 **File:** [FILE_PATH]
-**Categories Checked:** [COUNT]
-**Total Violations:** [SUM]
+**Violations Found:** [COUNT]
 
 ---
 
-[INCLUDE RESULTS FROM EACH CATEGORY TASK]
+### ❌ Errors ([COUNT])
+
+[FOR EACH ERROR-SEVERITY VIOLATION]:
+**[LINE]:[COLUMN]** `[category/ruleId]` [certainty]
+> [message]
+```
+[snippet]
+```
+💡 [suggestion]
 
 ---
 
-## Summary
-- Categories with violations: [LIST]
-- Categories passed: [LIST]
-- Priority fixes: [TOP 3 MOST CRITICAL VIOLATIONS]
+### ⚠️ Warnings ([COUNT])
+
+[FOR EACH WARNING-SEVERITY VIOLATION]:
+**[LINE]:[COLUMN]** `[category/ruleId]` [certainty]
+> [message]
+```
+[snippet]
+```
+💡 [suggestion]
+
+---
+
+### ℹ️ Info ([COUNT])
+
+[FOR EACH INFO-SEVERITY VIOLATION]:
+**[LINE]:[COLUMN]** `[category/ruleId]` [certainty]
+> [message]
+💡 [suggestion]
+
+---
+
+## Summary by Category
+
+| Category | Errors | Warnings | Info |
+|----------|--------|----------|------|
+| [category] | [count] | [count] | [count] |
+
+## Certainty Breakdown
+- **Definite violations:** [COUNT] (must fix)
+- **Potential violations:** [COUNT] (review recommended)
 ```
 
-## Important Notes
+## Categories Checked
 
-1. **MUST spawn all category checks in a single message** - this enables true parallel execution
-2. **Use haiku model** for individual checks (fast, cheap)
-3. **Read category README.md** for the category philosophy/description
-4. **Parse rule .ts files** to extract:
-   - Rule (first `// Rule:` comment)
-   - Description (second `// Example:` comment)
-   - Good pattern (code after `// ✅ Good:`)
-   - Bad pattern (code after `// ❌ Bad:` if present)
-5. **Not all rules have bad examples** - some only show the correct pattern
+The detector checks 11 categories:
 
-## Example Rule File Format
+| Category | Detects |
+|----------|---------|
+| `async` | async/await, Promises, setTimeout/setInterval |
+| `code-style` | Non-null assertions, type casts, function keyword |
+| `comments` | TODO comments, redundant comments |
+| `conditionals` | if/else, switch/case, ternary operators |
+| `discriminated-unions` | Direct ._tag access |
+| `errors` | try/catch, throw, untyped Error |
+| `imperative` | for/while loops, mutation operators |
+| `native-apis` | Object.keys, JSON.parse, Array methods |
+| `schema` | Interfaces/types without Schema |
+| `services` | Direct fetch/fs calls |
+| `testing` | Effect.runPromise in tests |
 
-```typescript
-// Rule: Never use throw statements; use Effect.fail()
-// Example: Conditional throw based on state
+## Severity Levels
 
-import { Effect, Match } from "effect"
+- **Error**: Must fix - clearly violates Effect-TS patterns
+- **Warning**: Should fix - likely a problem
+- **Info**: Consider fixing - suggestions for improvement
 
-// ❌ Bad: Direct throw (may not be present in all files)
-const badExample = () => {
-  throw new Error("Something went wrong")
-}
+## Certainty Levels
 
-// ✅ Good: Effect.fail with typed error
-const goodExample = Effect.fail(new MyTypedError({ ... }))
+- **Definite**: 100% certain violations (e.g., `for` loops, `try/catch`)
+- **Potential**: Likely violations that may need context (e.g., interfaces)
 
-export { badExample, goodExample }
+## Options
+
+You can filter results by passing additional flags:
+
+```bash
+# Only errors, no potential violations
+bun run detect -s error --no-potential <file>
+
+# Specific categories only
+bun run detect -c imperative,conditionals <file>
 ```
 
 ## Usage
@@ -166,4 +148,5 @@ export { badExample, goodExample }
 ```
 /effect-check src/services/UserService.ts
 /effect-check src/handlers/api.ts
+/effect-check .  # Check entire directory
 ```
