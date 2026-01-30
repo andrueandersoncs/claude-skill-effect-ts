@@ -1,7 +1,7 @@
 {
   "id": "code-style",
   "name": "Code Style & Hygiene",
-  "description": "NEVER use type casting, ESLint disable comments, or plain functions. Use Schema for validation, Effect.fn()/Effect.gen() for functions, and fix lint errors at the source.",
+  "description": "NEVER use type casting, ESLint disable comments, plain functions, or the function keyword. Use Schema for validation, Effect.fn()/Effect.gen() for functions, fat arrow syntax for all function declarations, and fix lint errors at the source.",
   "rules": [
     {
       "rule": "Never use type casting (as); use Schema.decodeUnknown or type guards",
@@ -97,6 +97,14 @@
         "description": "Asserting non-null value",
         "bad": "const user = users.find((u) => u.id === id)!\nconst name = user.name",
         "good": "const user = pipe(\n  Array.findFirst(users, (u) => u.id === id),\n  Option.match({\n    onNone: () => Effect.fail(new UserNotFound({ userId: id })),\n    onSome: Effect.succeed\n  })\n)"
+      }
+    },
+    {
+      "rule": "Never use the function keyword; use fat arrow syntax",
+      "example": {
+        "description": "Function declarations",
+        "bad": "function processItems(items: Array<Item>): number {\n  return items.reduce((sum, item) => sum + item.value, 0)\n}\n\nconst handler = function(event: Event) {\n  return event.data\n}",
+        "good": "const processItems = (items: Array<Item>): number =>\n  items.reduce((sum, item) => sum + item.value, 0)\n\nconst handler = (event: Event) => event.data"
       }
     }
   ]
