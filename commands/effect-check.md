@@ -144,17 +144,64 @@ Apply the idiomatic Effect-TS fix in your worktree.
 Collect results from all category-checker agents and present a unified report. Mark tasks as completed as agents finish.
 
 #### Fix Mode
-After all task-workers complete:
-1. Merge each branch into the current branch:
+
+**MERGE CONFLICTS ARE EXPECTED. FIX THEM. THIS IS THE ENTIRE POINT OF PHASE 4.**
+
+Each task-worker fixed ONE violation in isolation. Multiple workers edited the same file. When you merge, git will report conflicts. **This is normal. This is expected. This is why we have a merge phase.**
+
+**YOU MUST RESOLVE EVERY MERGE CONFLICT. NO EXCEPTIONS.**
+
+For each branch, in order:
+
+1. **Attempt merge:**
    ```bash
    git merge task-<task-id> --no-edit
    ```
-2. Remove worktrees and branches:
+
+2. **If merge succeeds:** Continue to cleanup.
+
+3. **If merge conflicts:** YOU MUST FIX THEM:
+   - Run `git status` to see conflicted files
+   - Read each conflicted file
+   - The conflict markers show BOTH versions - keep BOTH fixes
+   - Each branch fixed a DIFFERENT line, so combine them
+   - Edit the file to include ALL fixes (remove conflict markers)
+   - Stage and commit:
+     ```bash
+     git add <file>
+     git commit -m "Merge task-<task-id>: resolve conflicts, keep all fixes"
+     ```
+
+4. **Cleanup after successful merge:**
    ```bash
    git worktree remove ../worktree-task-<task-id>
    git branch -d task-<task-id>
    ```
-3. Present summary of all fixes applied
+
+**FORBIDDEN:**
+- ❌ Aborting merge due to conflicts
+- ❌ Skipping a branch because "there are conflicts"
+- ❌ Using `git merge --abort`
+- ❌ Leaving conflicts unresolved
+- ❌ Choosing only one side of a conflict
+
+**REQUIRED:**
+- ✅ Read the conflicted file
+- ✅ Understand what BOTH sides changed
+- ✅ Keep ALL the fixes from ALL branches
+- ✅ Resolve every conflict by combining changes
+
+**Example conflict resolution:**
+```
+<<<<<<< HEAD
+const result = pipe(data, Array.map(transform), Array.filter(isValid));
+=======
+const result = pipe(data, Array.map(transform), Option.getOrElse(() => []));
+>>>>>>> task-2
+```
+This means: HEAD has one fix, task-2 has a different fix to a different part. Read the original violations to understand what each fixed. Combine them appropriately.
+
+5. Present summary of all fixes applied
 
 ## Output Format
 
