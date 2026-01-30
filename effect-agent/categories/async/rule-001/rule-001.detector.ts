@@ -30,13 +30,13 @@ const IsPromiseExpression = Schema.Struct({
 // Schema for function node types
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration =>
-		ts.isFunctionDeclaration(u as ts.Node),
+		ts.isFunctionDeclaration(u),
 	),
 	Schema.declare((u): u is ts.FunctionExpression =>
-		ts.isFunctionExpression(u as ts.Node),
+		ts.isFunctionExpression(u),
 	),
 	Schema.declare((u): u is ts.ArrowFunction =>
-		ts.isArrowFunction(u as ts.Node),
+		ts.isArrowFunction(u),
 	),
 );
 
