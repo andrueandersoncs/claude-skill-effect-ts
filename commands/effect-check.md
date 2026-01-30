@@ -33,19 +33,20 @@ Two-phase analysis: fast AST-based detection followed by LLM-powered analysis.
 
 ## STRICT REQUIREMENTS - DO NOT DEVIATE
 
-**You MUST follow this process exactly. Do NOT "optimize" or skip steps.**
+**Every violation gets a task. Every task gets a parallel agent. No exceptions.**
 
-FORBIDDEN actions:
-- ❌ Creating fewer tasks than violations found
-- ❌ Deciding to "apply fixes directly" instead of spawning agents
-- ❌ Reasoning that worktrees will conflict (they are isolated by design)
-- ❌ Batching multiple violations into a single task
-- ❌ Skipping task creation or agent spawning for "efficiency"
-- ❌ Any deviation from: 1 violation = 1 task = 1 agent
+- 100 violations = 100 tasks = 100 parallel agents
+- 500 violations = 500 tasks = 500 parallel agents
+- The numbers MUST match. Period.
 
-The worktree approach EXISTS to handle overlapping violations. Each agent works in complete isolation. Merge conflicts are resolved in Phase 4, not avoided by skipping parallelization.
+FORBIDDEN:
+- ❌ Creating fewer tasks than violations
+- ❌ Spawning fewer agents than tasks
+- ❌ "Applying fixes directly" instead of spawning agents
+- ❌ Batching, grouping, or consolidating violations
+- ❌ Any reasoning about efficiency, conflicts, or optimization
 
-If you find yourself thinking "it would be more efficient to..." - STOP. Follow the process exactly as written.
+Worktrees are isolated by design. Conflicts are resolved in Phase 4. Do NOT skip parallelization.
 
 ## Implementation
 
