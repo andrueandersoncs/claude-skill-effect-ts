@@ -4,7 +4,7 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Array as EffectArray, Match, Option, Schema, Struct } from "effect";
+import { Array as EffectArray, Function, Match, Option, Schema, Struct, flow, pipe } from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.ts";
 
@@ -113,7 +113,29 @@ const RemoveSuggestionSchema = Schema.transform(
 	},
 );
 
+// Helper to validate promise objects using Schema
+const validateIsPromiseExpression = (obj: {
+	isNewExpr: boolean;
+	isIdentifierExpr: boolean;
+	isPromiseText: boolean;
+}): Option.Option<{
+	isNewExpr: boolean;
+	isIdentifierExpr: boolean;
+	isPromiseText: boolean;
+}> =>
+	Match.value(obj).pipe(
+		Match.when(Schema.is(IsPromiseExpression), () =>
+			Option.some({
+				isNewExpr: true,
+				isIdentifierExpr: true,
+				isPromiseText: true,
+			}),
+		),
+		Match.orElse(() => Option.none()),
+	);
+
 // Validate violations using Schema.transform for bidirectional conversion
+
 // Helper to create validated violations using Schema
 const createViolation = (data: Omit<Violation, never>): Violation => {
 	const decoded = Schema.decodeSync(ViolationSchema)(data);
@@ -154,14 +176,24 @@ export const detect = (
 
 				// Also support the Schema validation approach (from task-4) as a fallback
 				const schemaCheck = Match.value(newExpr.expression).pipe(
-					Match.when(ts.isIdentifier, validatePromiseExpression),
+					Match.when(
+						ts.isIdentifier,
+						flow(
+							(expr: ts.Identifier) => ({
+								isNewExpr: true,
+								isIdentifierExpr: true,
+								isPromiseText: expr.text === "Promise",
+							}),
+							validateIsPromiseExpression,
+						),
+					),
 					Match.orElse(() => Option.none()),
 				);
 
 				// Use whichever check succeeds
 				return Option.match(directCheck, {
-					onSome: () => directCheck,
-					onNone: () => schemaCheck,
+					onSome: Function.constant(directCheck),
+					onNone: Function.constant(schemaCheck),
 				}).pipe(
 					Option.flatMap(() => {
 						const { line, character } =
