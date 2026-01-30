@@ -2,7 +2,11 @@
 
 ## Task Management
 
-**Always use tasks.** For every user request, create a task list to track progress.
+**Always use tasks.** For every user request, create a task list with specific tasks that are as independent as possible so they can be parallelized across subagents.
+
+## Parallelization
+
+**Maximize subagent parallelism.** Always spawn multiple Task tool subagents in a single message when tasks can run independently. Never work sequentially when parallel execution is possible.
 
 ## Git Commits
 
@@ -34,6 +38,16 @@ Configuration is in `effect-agent/biome.json`. Key settings:
 - Double quotes
 - Semicolons always
 - `noShadowRestrictedNames` disabled (Effect re-exports `Array`, `Record`, etc.)
+
+## Verification
+
+Before committing, run these checks from `effect-agent/`:
+
+- `bun run check` - TypeScript type checking (tsc --noEmit)
+- `bun run lint` - Biome lint/format check
+- `bun run detect:all <file>` - Run all detectors on a file
+- `bun run detect:errors <file>` - Show only definite errors (no potential issues)
+- `bun run detect:json <file>` - JSON output for programmatic use
 
 ## Refactoring Guidelines
 
