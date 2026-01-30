@@ -16,10 +16,12 @@ Two-phase analysis: fast AST-based detection followed by LLM-powered analysis.
 
 1. **Phase 1: Detection** - Run AST-based detectors to flag violations (fast)
 2. **Phase 2: Task Creation** - Create one task per violation for tracking
-3. **Phase 3: Analysis** - Spawn category-checker agents in parallel (one per violation)
+3. **Phase 3: Analysis** - Spawn category-checker agents in parallel (one per EVERY violation)
 4. **Phase 4: Report** - Aggregate and present results
 
 **Always use task lists.** Create specific, independent tasks to maximize parallelization.
+
+**MANDATORY: Investigate EVERY violation.** Do NOT filter, skip, or prioritize. Spawn an agent for EVERY error, warning, AND info violation found. No exceptions.
 
 ## Implementation
 
@@ -50,10 +52,18 @@ This provides visibility into progress and enables parallel execution tracking.
 
 ### Phase 3: Spawn Violation Analyzers
 
-For EACH violation, spawn a `category-checker` agent. **Maximize parallelism - no grouping.**
+For EVERY violation - errors, warnings, AND info - spawn a `category-checker` agent.
+
+**NO FILTERING. NO EXCEPTIONS. NO PRIORITIZATION.**
+
+- Spawn an agent for EVERY violation found
+- Do NOT skip info-level violations
+- Do NOT skip "less important" violations
+- Do NOT reduce the number of agents for performance reasons
+- Investigate ALL violations equally
 
 ```
-For EACH violation, use Task tool with:
+For EVERY violation, use Task tool with:
 - subagent_type: "effect-ts:category-checker"
 - model: "haiku" (fast, cost-effective)
 - prompt: Include the single violation details
