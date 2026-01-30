@@ -100,6 +100,31 @@ export const detect = (
 					suggestion: "Use immutable operations or Ref.update()",
 				});
 			}
+
+			// Detect indexed/property assignment (obj[key] = value or obj.prop = value)
+			if (operator === ts.SyntaxKind.EqualsToken) {
+				const left = node.left;
+				// Check for indexed assignment: obj[key] = value
+				if (ts.isElementAccessExpression(left)) {
+					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+						node.getStart(),
+					);
+					violations.push({
+						ruleId: meta.id,
+						category: meta.category,
+						message:
+							"Indexed assignment mutates object; use immutable patterns",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, 100),
+						severity: "warning",
+						certainty: "potential",
+						suggestion:
+							"Use Record.set or spread syntax to create new object: { ...obj, [key]: value }",
+					});
+				}
+			}
 		}
 
 		ts.forEachChild(node, visit);

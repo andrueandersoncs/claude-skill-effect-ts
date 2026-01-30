@@ -1,38 +1,37 @@
 // Rule: Never use Effect.runPromise except at application boundaries
-// Example: HTTP handler (boundary OK) (bad example)
+// Example: Using runPromise in a service/utility (NOT at boundary - BAD)
 // @rule-id: rule-003
 // @category: async
 // @original-name: http-handler-boundary
 
-import type { Effect } from "effect";
+import { Effect } from "effect";
 
-// Mock Express types
-interface Request {
-	params: { id: string };
-}
-interface Response {
-	json: (data: unknown) => void;
-}
-interface App {
-	get: (
-		path: string,
-		handler: (req: Request, res: Response) => Promise<void>,
-	) => void;
+// Mock types
+interface User {
+	id: string;
+	name: string;
 }
 
-declare const app: App;
-declare const getUser: (
-	id: string,
-) => Effect.Effect<{ id: string; name: string }>;
+declare const fetchUserFromDb: (id: string) => Effect.Effect<User, Error>;
 
-// ❌ Bad: Trying to use yield* outside of Effect.gen context
-// The bad pattern is: yield* getUser(id) inside an async function
-// This won't compile because yield* requires a generator function
-app.get("/users/:id", async (_req, res) => {
-	// This is wrong - can't use yield* in async function
-	// const user = yield* getUser(req.params.id)
-	void getUser; // Reference to show the pattern
-	res.json({ error: "Cannot use yield* outside Effect.gen" });
-});
+// ❌ Bad: Using Effect.runPromise inside a utility/service function
+// This breaks Effect composition - callers can't compose this with other Effects
+export async function getUserById(id: string): Promise<User> {
+	// BAD: Running Effect in the middle of the application
+	// This should return Effect.Effect<User, Error> instead
+	return Effect.runPromise(fetchUserFromDb(id));
+}
 
-export { app };
+// ❌ Bad: Using Effect.runSync in a helper function
+export function getConfigValue(key: string): string {
+	const config = Effect.succeed({ apiUrl: "https://api.example.com" });
+	// BAD: Running Effect synchronously in utility
+	return Effect.runSync(Effect.map(config, (c) => c.apiUrl));
+}
+
+// ❌ Bad: Breaking Effect composition with runPromise mid-flow
+export const processUser = async (id: string) => {
+	// BAD: This should be Effect.flatMap instead
+	const user = await Effect.runPromise(fetchUserFromDb(id));
+	return { processed: true, user };
+};

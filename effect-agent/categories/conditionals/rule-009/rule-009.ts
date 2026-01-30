@@ -10,14 +10,15 @@ import {
 	cleanupData,
 	notifyAdmin,
 	processOrderEvent,
-} from "../_fixtures.js";
+} from "../../_fixtures.js";
 
 // ✅ Good: Match.tag for exhaustive discriminated union handling
-const handleEvent = Match.type<AppEvent>().pipe(
-	Match.tag("UserCreated", (e) => notifyAdmin(e.userId)),
-	Match.tag("UserDeleted", (e) => cleanupData(e.userId)),
-	Match.tag("OrderPlaced", (e) => processOrderEvent(e.orderId)),
-	Match.exhaustive,
-);
+const handleEvent = (event: AppEvent) =>
+	Match.value(event).pipe(
+		Match.tag("UserCreated", (e) => notifyAdmin(e.userId)),
+		Match.tag("UserDeleted", (e) => cleanupData(e.userId)),
+		Match.tag("OrderPlaced", (e) => processOrderEvent(e.orderId)),
+		Match.exhaustive,
+	);
 
 export { handleEvent };

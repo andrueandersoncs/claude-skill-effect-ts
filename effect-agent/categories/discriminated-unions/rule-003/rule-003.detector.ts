@@ -71,6 +71,38 @@ export const detect = (
 			}
 		}
 
+		// Detect type assertions (as X) followed by ._tag access
+		// Pattern: (something as { _tag?: ... })._tag or (something as SomeType)._tag
+		if (ts.isPropertyAccessExpression(node) && node.name.text === "_tag") {
+			// Check if the expression being accessed is a parenthesized type assertion
+			const expr = node.expression;
+			const innerExpr = ts.isParenthesizedExpression(expr)
+				? expr.expression
+				: expr;
+			if (
+				ts.isAsExpression(innerExpr) ||
+				ts.isTypeAssertionExpression(innerExpr)
+			) {
+				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+					node.getStart(),
+				);
+				violations.push({
+					ruleId: meta.id,
+					category: meta.category,
+					message:
+						"Type assertion to access _tag on unknown; use Schema.is() for validation",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, 80),
+					severity: "warning",
+					certainty: "potential",
+					suggestion:
+						"Use Schema.is(MyTaggedClass)(input) for type-safe validation of unknown data",
+				});
+			}
+		}
+
 		ts.forEachChild(node, visit);
 	};
 

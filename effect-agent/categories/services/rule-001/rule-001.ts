@@ -15,7 +15,7 @@ import {
 	Schema,
 } from "effect";
 import * as fc from "effect/FastCheck";
-import { ApiError, User, type UserId } from "../_fixtures.js";
+import { ApiError, User, type UserId } from "../../_fixtures.js";
 
 // ✅ Good: Context.Tag service for external API
 class UserApi extends Context.Tag("UserApi")<

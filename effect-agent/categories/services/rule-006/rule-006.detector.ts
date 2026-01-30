@@ -25,8 +25,8 @@ export const detect = (
 	const liveLayerFor = new Set<string>();
 	const testLayerFor = new Set<string>();
 
-	// Find Context.Tag definitions to identify services
-	const servicePattern = /(\w+)\s*=\s*Context\.Tag/g;
+	// Find Context.Tag definitions to identify services (including GenericTag)
+	const servicePattern = /(\w+)\s*=\s*Context\.(?:Generic)?Tag/g;
 	for (const match of fullText.matchAll(servicePattern)) {
 		services.add(match[1]);
 	}

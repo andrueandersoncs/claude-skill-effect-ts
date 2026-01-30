@@ -5,7 +5,7 @@
 // @original-name: reusable-pipeline
 
 import { Array, pipe } from "effect";
-import type { Order, User } from "../_fixtures.js";
+import type { Order, User } from "../../_fixtures.js";
 
 declare const users: ReadonlyArray<User>;
 declare const orders: ReadonlyArray<Order>;

@@ -5,14 +5,15 @@
 // @original-name: all-either-mode
 
 import { Array, Effect } from "effect";
-import { processItem } from "../_fixtures.js";
+import { processItem } from "../../_fixtures.js";
 
 declare const items: ReadonlyArray<string>;
 
 // ✅ Good: Effect.all with mode: "either" for non-fail-fast
 const result = Effect.gen(function* () {
 	// Each result is Either<E, A>
-	const results = yield* Effect.all(Array.map(items, processItem), {
+	const effects = Array.map(items, processItem);
+	const results = yield* Effect.all(effects, {
 		mode: "either",
 	});
 	return results;

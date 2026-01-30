@@ -6,7 +6,7 @@
 
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
-import { acquireDbConnection } from "../_fixtures.js";
+import { acquireDbConnection } from "../../_fixtures.js";
 
 // ✅ Good: it.scoped handles resource management
 it.scoped("should use database connection", () =>

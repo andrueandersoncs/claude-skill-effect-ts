@@ -19,51 +19,49 @@ export const detect = (
 ): Violation[] => {
 	const violations: Violation[] = [];
 
+	// Count how many && or || are in a binary expression tree
+	const countLogicalOperators = (node: ts.Node): number => {
+		if (!ts.isBinaryExpression(node)) return 0;
+		const op = node.operatorToken.kind;
+		if (
+			op === ts.SyntaxKind.AmpersandAmpersandToken ||
+			op === ts.SyntaxKind.BarBarToken
+		) {
+			return (
+				1 + countLogicalOperators(node.left) + countLogicalOperators(node.right)
+			);
+		}
+		return 0;
+	};
+
 	const visit = (node: ts.Node) => {
-		// Detect arrow functions that combine predicates with && or ||
+		// Detect arrow functions that return boolean and use multiple && or ||
 		if (ts.isArrowFunction(node)) {
 			const body = node.body;
 
 			if (ts.isBinaryExpression(body)) {
-				const op = body.operatorToken.kind;
+				const logicalOpCount = countLogicalOperators(body);
 
-				// Check for && or || combining predicate calls
-				if (
-					op === ts.SyntaxKind.AmpersandAmpersandToken ||
-					op === ts.SyntaxKind.BarBarToken
-				) {
-					const left = body.left;
-					const right = body.right;
-
-					// Check if both sides look like predicate calls
-					const isPredicateCall = (n: ts.Node): boolean => {
-						if (ts.isCallExpression(n)) return true;
-						if (ts.isPrefixUnaryExpression(n) && ts.isCallExpression(n.operand))
-							return true;
-						return false;
-					};
-
-					if (isPredicateCall(left) && isPredicateCall(right)) {
-						const opName =
-							op === ts.SyntaxKind.AmpersandAmpersandToken ? "&&" : "||";
-						const predicateOp =
-							op === ts.SyntaxKind.AmpersandAmpersandToken ? "and" : "or";
-
-						const { line, character } =
-							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message: `Predicate combination with ${opName}; use Predicate.${predicateOp}`,
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, 80),
-							severity: "info",
-							certainty: "potential",
-							suggestion: `Use Predicate.${predicateOp}(predicate1, predicate2) for composable predicates`,
-						});
-					}
+				// If there are 3+ logical operators, this is a complex predicate
+				// that could benefit from Predicate.and/or composition
+				if (logicalOpCount >= 3) {
+					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+						node.getStart(),
+					);
+					violations.push({
+						ruleId: meta.id,
+						category: meta.category,
+						message:
+							"Complex predicate with multiple &&/||; use Predicate.and/or/not",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, 80),
+						severity: "info",
+						certainty: "potential",
+						suggestion:
+							"Use Predicate.and/or/not for composable, reusable predicates",
+					});
 				}
 			}
 		}

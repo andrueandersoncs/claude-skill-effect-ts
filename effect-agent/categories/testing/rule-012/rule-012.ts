@@ -6,7 +6,7 @@
 
 import { expect, layer } from "@effect/vitest";
 import { Context, Effect, HashMap, Layer, Option, pipe, Ref } from "effect";
-import { User, type UserId, UserNotFound } from "../_fixtures.js";
+import { User, type UserId, UserNotFound } from "../../_fixtures.js";
 
 // Service definition
 class UserRepository extends Context.Tag("UserRepository")<

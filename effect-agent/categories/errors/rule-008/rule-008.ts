@@ -5,7 +5,7 @@
 // @original-name: or-else-fallback
 
 import { Effect } from "effect";
-import { fetchFromBackup, fetchFromPrimary } from "../_fixtures.js";
+import { fetchFromBackup, fetchFromPrimary } from "../../_fixtures.js";
 
 // ✅ Good: Effect.orElse for fallback
 const result = fetchFromPrimary().pipe(Effect.orElse(() => fetchFromBackup()));

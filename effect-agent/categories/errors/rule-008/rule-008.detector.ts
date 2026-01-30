@@ -54,6 +54,42 @@ export const detect = (
 								"Use Effect.orElse(() => fallbackEffect) or Effect.orElseSucceed(() => defaultValue)",
 						});
 					}
+
+					// Check if catchAll ignores the error and just calls another Effect (fallback pattern)
+					// Pattern: () => someEffect() or (_) => someEffect()
+					if (
+						!handlerText.includes("Effect.fail") &&
+						!handlerText.includes("yield*") &&
+						!handlerText.includes("Effect.succeed")
+					) {
+						// Check if handler is an arrow function that ignores error parameter
+						const arg = node.arguments[0];
+						if (
+							ts.isArrowFunction(arg) &&
+							arg.parameters.length <= 1 &&
+							(arg.parameters.length === 0 ||
+								(arg.parameters[0].name &&
+									ts.isIdentifier(arg.parameters[0].name) &&
+									arg.parameters[0].name.text === "_"))
+						) {
+							const { line, character } =
+								sourceFile.getLineAndCharacterOfPosition(node.getStart());
+							violations.push({
+								ruleId: meta.id,
+								category: meta.category,
+								message:
+									"catchAll ignoring error for fallback; use Effect.orElse",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, 80),
+								severity: "info",
+								certainty: "potential",
+								suggestion:
+									"Use Effect.orElse(() => fallbackEffect) when ignoring error for fallback",
+							});
+						}
+					}
 				}
 			}
 		}

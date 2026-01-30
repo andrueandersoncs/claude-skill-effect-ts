@@ -6,7 +6,7 @@
 
 import { expect, it } from "@effect/vitest";
 import { Cause, Effect, Exit, Option, Schema } from "effect";
-import { getUser, type UserId, UserNotFound } from "../_fixtures.js";
+import { getUser, type UserId, UserNotFound } from "../../_fixtures.js";
 
 // ✅ Good: Effect.exit for error assertions
 it.effect("should fail with UserNotFound", () =>

@@ -35,7 +35,7 @@ export const detect = (
 			const condition = node.expression;
 			const orCount = countOrConditions(condition);
 
-			if (orCount >= 2) {
+			if (orCount >= 1) {
 				// Check if it's comparing against literals
 				const conditionText = condition.getText(sourceFile);
 				const isLiteralComparison =

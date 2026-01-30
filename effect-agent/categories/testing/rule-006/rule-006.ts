@@ -6,7 +6,7 @@
 
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
-import { Order, processOrder } from "../_fixtures.js";
+import { Order, processOrder } from "../../_fixtures.js";
 
 // ✅ Good: it.effect.prop generates test data from Schema
 it.effect.prop(

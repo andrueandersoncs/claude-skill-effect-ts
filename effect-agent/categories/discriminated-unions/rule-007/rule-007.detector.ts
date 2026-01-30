@@ -55,6 +55,36 @@ export const detect = (
 			}
 		}
 
+		// Detect indexed access types extracting _tag: SomeType["_tag"]
+		if (
+			ts.isTypeAliasDeclaration(node) &&
+			ts.isIndexedAccessTypeNode(node.type)
+		) {
+			const indexType = node.type.indexType;
+			if (
+				ts.isLiteralTypeNode(indexType) &&
+				ts.isStringLiteral(indexType.literal) &&
+				indexType.literal.text === "_tag"
+			) {
+				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+					node.getStart(),
+				);
+				violations.push({
+					ruleId: meta.id,
+					category: meta.category,
+					message: `Type '${node.name.text}' extracts _tag; use the union type directly instead`,
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, 100),
+					severity: "warning",
+					certainty: "potential",
+					suggestion:
+						"Pass the full union type to functions instead of just the _tag string",
+				});
+			}
+		}
+
 		ts.forEachChild(node, visit);
 	};
 

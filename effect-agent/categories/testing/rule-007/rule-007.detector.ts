@@ -19,11 +19,12 @@ export const detect = (
 ): Violation[] => {
 	const violations: Violation[] = [];
 
-	// Only check test files
+	// Only check test files (and .bad.ts for testing the detector)
 	if (
 		!filePath.includes(".test.") &&
 		!filePath.includes(".spec.") &&
-		!filePath.includes("__tests__")
+		!filePath.includes("__tests__") &&
+		!filePath.includes(".bad.ts")
 	) {
 		return violations;
 	}

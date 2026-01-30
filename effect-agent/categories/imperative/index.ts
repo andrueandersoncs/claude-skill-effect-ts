@@ -4,15 +4,15 @@
  * This file exports all rules in the imperative category.
  */
 
-export * from "./rule-001/rule-001.js";
-export * from "./rule-002/rule-002.js";
-export * from "./rule-003/rule-003.js";
-export * from "./rule-004/rule-004.js";
-export * from "./rule-005/rule-005.js";
-export * from "./rule-006/rule-006.js";
-export * from "./rule-007/rule-007.js";
-export * from "./rule-008/rule-008.js";
-export * from "./rule-009/rule-009.js";
+export { removed, inserted } from "./rule-001/rule-001.js";
+export { obj } from "./rule-002/rule-002.js";
+export { goodExample as rule003Example } from "./rule-003/rule-003.js";
+export { total } from "./rule-004/rule-004.js";
+export { goodExample as rule005Example } from "./rule-005/rule-005.js";
+export { allTags } from "./rule-006/rule-006.js";
+export { goodExample as rule007Example } from "./rule-007/rule-007.js";
+export { processTree } from "./rule-008/rule-008.js";
+export { minors, adults } from "./rule-009/rule-009.js";
 
 /**
  * Rule metadata for this category

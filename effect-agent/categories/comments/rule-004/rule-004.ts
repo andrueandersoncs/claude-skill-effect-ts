@@ -5,7 +5,7 @@
 // @original-name: function-documentation
 
 import { Effect } from "effect";
-import type { DatabaseError, Email, User } from "../_fixtures.js";
+import type { DatabaseError, Email, User } from "../../_fixtures.js";
 
 // ❌ Bad: JSDoc that just restates type signature
 /**

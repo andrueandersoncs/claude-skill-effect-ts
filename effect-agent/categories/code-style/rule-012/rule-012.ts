@@ -5,7 +5,7 @@
 // @original-name: unknown-conversion
 
 import { Schema } from "effect";
-import { RecordId } from "../_fixtures.js";
+import { RecordId } from "../../_fixtures.js";
 
 class NewFormat extends Schema.Class<NewFormat>("NewFormat")({
 	id: RecordId,

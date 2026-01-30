@@ -62,6 +62,79 @@ export const detect = (
 			});
 		}
 
+		// Detect manual validation functions that throw
+		if (
+			(ts.isFunctionDeclaration(node) || ts.isArrowFunction(node)) &&
+			node.body
+		) {
+			const funcName = ts.isFunctionDeclaration(node)
+				? node.name?.text || ""
+				: "";
+			const bodyText = node.body.getText(sourceFile);
+
+			// Check if function name suggests validation and body throws
+			const isValidationFunc =
+				funcName.toLowerCase().includes("validate") ||
+				funcName.toLowerCase().includes("check") ||
+				funcName.toLowerCase().includes("assert");
+
+			if (isValidationFunc && bodyText.includes("throw")) {
+				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+					node.getStart(),
+				);
+				violations.push({
+					ruleId: meta.id,
+					category: meta.category,
+					message:
+						"Manual validation function with throw; use Schema.filter instead",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, 100),
+					severity: "warning",
+					certainty: "potential",
+					suggestion:
+						"Use Schema.String.pipe(Schema.filter((s) => s.includes('@') || 'Invalid email')) for declarative validation",
+				});
+			}
+		}
+
+		// Detect const validation functions (arrow functions assigned to variables)
+		if (ts.isVariableDeclaration(node) && node.initializer) {
+			const varName = node.name.getText(sourceFile);
+			const isValidationName =
+				varName.toLowerCase().includes("validate") ||
+				varName.toLowerCase().includes("check") ||
+				varName.toLowerCase().includes("assert");
+
+			if (
+				isValidationName &&
+				(ts.isArrowFunction(node.initializer) ||
+					ts.isFunctionExpression(node.initializer))
+			) {
+				const bodyText = node.initializer.body?.getText(sourceFile) || "";
+				if (bodyText.includes("throw")) {
+					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+						node.getStart(),
+					);
+					violations.push({
+						ruleId: meta.id,
+						category: meta.category,
+						message:
+							"Manual validation function with throw; use Schema.filter instead",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, 100),
+						severity: "warning",
+						certainty: "potential",
+						suggestion:
+							"Use Schema.String.pipe(Schema.filter(...)) for declarative validation",
+					});
+				}
+			}
+		}
+
 		ts.forEachChild(node, visit);
 	};
 

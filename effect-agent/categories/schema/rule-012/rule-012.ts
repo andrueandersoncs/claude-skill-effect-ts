@@ -5,7 +5,7 @@
 // @original-name: schema-unknown-legitimate
 
 import { Schema } from "effect";
-import { Email, UserId } from "../_fixtures.js";
+import { Email, UserId } from "../../_fixtures.js";
 
 // ✅ Good: Schema.Unknown only for genuinely unconstrained values (like error causes)
 class AppError extends Schema.TaggedError<AppError>()("AppError", {

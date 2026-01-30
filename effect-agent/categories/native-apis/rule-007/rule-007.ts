@@ -5,7 +5,7 @@
 // @original-name: function-constant-value
 
 import { Function } from "effect";
-import { defaultUser } from "../_fixtures.js";
+import { defaultUser } from "../../_fixtures.js";
 
 // ✅ Good: Function.constant and Function.constVoid
 const getDefaultUser = Function.constant(defaultUser);

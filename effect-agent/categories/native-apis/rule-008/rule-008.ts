@@ -5,7 +5,7 @@
 // @original-name: grouping-items-by-key
 
 import { Array } from "effect";
-import type { User } from "../_fixtures.js";
+import type { User } from "../../_fixtures.js";
 
 declare const users: ReadonlyArray<User>;
 

@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from "@effect/vitest";
 import { Effect, type Layer } from "effect";
-import { type Order, processOrder } from "../_fixtures.js";
+import { type Order, processOrder } from "../../_fixtures.js";
 
 declare const TestLayer: Layer.Layer<never>;
 declare const order: Order;

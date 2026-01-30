@@ -5,7 +5,7 @@
 // @original-name: schema-class
 
 import { Schema } from "effect";
-import { Email, OrderId, UserId } from "../_fixtures.js";
+import { Email, OrderId, UserId } from "../../_fixtures.js";
 
 // ✅ Good: Schema.Class for data structures
 class User extends Schema.Class<User>("User")({

@@ -5,7 +5,7 @@
 // @original-name: live-and-test-layers
 
 import { Array, Context, Effect, Layer, Option, pipe, Ref } from "effect";
-import { type Email, sendRealEmail, type User } from "../_fixtures.js";
+import { type Email, sendRealEmail, type User } from "../../_fixtures.js";
 
 interface EmailData {
 	to: Email;

@@ -5,7 +5,7 @@
 // @original-name: catch-tags
 
 import { Effect, Schema } from "effect";
-import { BadRequest, defaultOrder, type Order } from "../_fixtures.js";
+import { BadRequest, defaultOrder, type Order } from "../../_fixtures.js";
 
 class LocalValidationError extends Schema.TaggedError<LocalValidationError>()(
 	"ValidationError",

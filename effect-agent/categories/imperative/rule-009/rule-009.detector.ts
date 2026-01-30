@@ -42,7 +42,7 @@ export const detect = (
 				// Check if we've seen a filter on the same array
 				for (const existing of filterCalls) {
 					if (existing.arrayName === arrayName) {
-						// Check for opposite conditions (negated predicate)
+						// Check for opposite conditions (negated predicate or complementary comparisons)
 						const isOpposite =
 							(predicateText.includes("!") &&
 								!existing.predicateText.includes("!")) ||
@@ -51,7 +51,16 @@ export const detect = (
 							predicateText.includes("!==") !==
 								existing.predicateText.includes("!==") ||
 							predicateText.includes("!=") !==
-								existing.predicateText.includes("!=");
+								existing.predicateText.includes("!=") ||
+							// Check for complementary comparison operators
+							(predicateText.includes("<") &&
+								existing.predicateText.includes(">=")) ||
+							(predicateText.includes(">=") &&
+								existing.predicateText.includes("<")) ||
+							(predicateText.includes(">") &&
+								existing.predicateText.includes("<=")) ||
+							(predicateText.includes("<=") &&
+								existing.predicateText.includes(">"));
 
 						if (isOpposite) {
 							const { line, character } =

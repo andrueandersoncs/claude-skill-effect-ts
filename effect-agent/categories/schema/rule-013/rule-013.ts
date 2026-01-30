@@ -5,7 +5,7 @@
 // @original-name: tagged-union-state
 
 import { Schema } from "effect";
-import { OrderId, TrackingNumber } from "../_fixtures.js";
+import { OrderId, TrackingNumber } from "../../_fixtures.js";
 
 // ✅ Good: Tagged unions for state variants
 class Pending extends Schema.TaggedClass<Pending>()("Pending", {

@@ -6,7 +6,7 @@
 
 import { Arbitrary, Array, Context, Effect, Layer, Option, pipe } from "effect";
 import * as fc from "effect/FastCheck";
-import { User, type UserId } from "../_fixtures.js";
+import { User, type UserId } from "../../_fixtures.js";
 
 class MyService extends Context.Tag("MyService")<
 	MyService,

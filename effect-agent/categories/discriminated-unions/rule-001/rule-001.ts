@@ -10,7 +10,7 @@ import {
 	cleanupData,
 	notifyAdmin,
 	processOrderEvent,
-} from "../_fixtures.js";
+} from "../../_fixtures.js";
 
 // ✅ Good: Match.tag for discriminated union dispatch
 const handleEvent = Match.type<AppEvent>().pipe(

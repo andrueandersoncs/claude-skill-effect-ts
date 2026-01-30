@@ -14,7 +14,7 @@ import {
 	OrderServiceLive,
 	UserRepositoryLive,
 	UserServiceLive,
-} from "../_fixtures.js";
+} from "../../_fixtures.js";
 
 // ✅ Good: Compose layers bottom-up in a dedicated module
 

@@ -4,7 +4,7 @@
 // @category: code-style
 // @original-name: unused-variable
 
-import { processResult, someFunction } from "../_fixtures.js";
+import { processResult, someFunction } from "../../_fixtures.js";
 
 // ✅ Good: Use the result instead of ignoring lint error
 const result = someFunction();

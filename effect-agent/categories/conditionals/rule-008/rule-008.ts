@@ -5,7 +5,7 @@
 // @original-name: result-effect-match
 
 import { Effect, Schema } from "effect";
-import { getUser, User, type UserId } from "../_fixtures.js";
+import { getUser, User, UserNotFound, type UserId } from "../../_fixtures.js";
 
 class ErrorResult extends Schema.TaggedClass<ErrorResult>()("ErrorResult", {
 	status: Schema.Literal("error"),
@@ -23,10 +23,10 @@ class SuccessResultType extends Schema.TaggedClass<SuccessResultType>()(
 declare const id: UserId;
 
 // ✅ Good: Effect.match with Schema-defined result types
-const result = Effect.match(getUser(id), {
-	onFailure: (error) =>
+const fetchResult = Effect.match(getUser(id), {
+	onFailure: (error: UserNotFound) =>
 		new ErrorResult({ status: "error", message: error.userId }),
 	onSuccess: (user) => new SuccessResultType({ status: "success", user }),
 });
 
-export { result };
+export { fetchResult };

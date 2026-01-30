@@ -5,7 +5,7 @@
 // @original-name: finding-with-default
 
 import { Array, Function, Option, pipe } from "effect";
-import { defaultItem, type Item } from "../_fixtures.js";
+import { defaultItem, type Item } from "../../_fixtures.js";
 
 declare const items: ReadonlyArray<Item>;
 declare const targetId: string;

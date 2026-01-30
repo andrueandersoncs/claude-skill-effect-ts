@@ -5,7 +5,7 @@
 // @original-name: timeout-fail
 
 import { Effect } from "effect";
-import { fetchData, TimeoutError } from "../_fixtures.js";
+import { fetchData, TimeoutError } from "../../_fixtures.js";
 
 // ✅ Good: Effect.timeoutFail with typed error
 const result = Effect.gen(function* () {

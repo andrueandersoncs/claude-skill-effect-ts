@@ -83,6 +83,38 @@ export const detect = (
 			}
 		}
 
+		// Detect for-of loops that iterate over children in async/recursive context
+		if (ts.isForOfStatement(node)) {
+			const iterableText = node.expression.getText(sourceFile).toLowerCase();
+			const bodyText = node.statement.getText(sourceFile).toLowerCase();
+
+			// Check if iterating over children with recursive calls or async operations
+			if (
+				(iterableText.includes("children") || iterableText.includes("child")) &&
+				(bodyText.includes("await") ||
+					bodyText.includes("push") ||
+					bodyText.includes("results"))
+			) {
+				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+					node.getStart(),
+				);
+				violations.push({
+					ruleId: meta.id,
+					category: meta.category,
+					message:
+						"Imperative for-of loop for tree traversal; use recursive Effect",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, 100),
+					severity: "warning",
+					certainty: "potential",
+					suggestion:
+						"Use Effect.forEach(node.children, traverse) with a recursive Effect.gen function",
+				});
+			}
+		}
+
 		ts.forEachChild(node, visit);
 	};
 

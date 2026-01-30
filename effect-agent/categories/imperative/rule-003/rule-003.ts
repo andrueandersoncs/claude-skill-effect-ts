@@ -5,7 +5,7 @@
 // @original-name: chunked-processing
 
 import { Array, Chunk, Effect, Stream } from "effect";
-import { processItem } from "../_fixtures.js";
+import { processItem } from "../../_fixtures.js";
 
 declare const items: ReadonlyArray<string>;
 

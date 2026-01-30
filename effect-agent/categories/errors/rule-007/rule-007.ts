@@ -5,7 +5,7 @@
 // @original-name: map-error
 
 import { Effect } from "effect";
-import { ApiError, RawNetworkError } from "../_fixtures.js";
+import { ApiError, RawNetworkError } from "../../_fixtures.js";
 
 declare const url: string;
 

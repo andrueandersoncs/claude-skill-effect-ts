@@ -21,7 +21,8 @@ export const detect = (
 
 	const visit = (node: ts.Node) => {
 		// Detect angle bracket type assertions (<Type>value)
-		if (ts.isTypeAssertion(node)) {
+		// Note: ts.isTypeAssertionExpression is the correct API for angle bracket assertions
+		if (ts.isTypeAssertionExpression(node)) {
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);

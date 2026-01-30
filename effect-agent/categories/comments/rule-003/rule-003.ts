@@ -10,7 +10,7 @@ import type {
 	UserId,
 	UserNotFound,
 	ValidationError,
-} from "../_fixtures.js";
+} from "../../_fixtures.js";
 
 declare const fetchUser: (id: UserId) => Effect.Effect<User, UserNotFound>;
 declare const validateUser: (

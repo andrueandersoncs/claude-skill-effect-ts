@@ -5,7 +5,7 @@
 // @original-name: non-null-assertion
 
 import { Array, Effect, Option, pipe } from "effect";
-import { type User, type UserId, UserNotFound } from "../_fixtures.js";
+import { type User, type UserId, UserNotFound } from "../../_fixtures.js";
 
 declare const users: ReadonlyArray<User>;
 declare const id: UserId;

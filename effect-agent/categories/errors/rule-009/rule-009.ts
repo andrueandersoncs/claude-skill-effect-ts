@@ -5,7 +5,7 @@
 // @original-name: retry-schedule
 
 import { Effect, Function, Match, Schedule, Schema } from "effect";
-import { type Item, NetworkError } from "../_fixtures.js";
+import { type Item, NetworkError } from "../../_fixtures.js";
 
 // Declare a function that can fail with NetworkError
 declare const fetchDataWithError: () => Effect.Effect<

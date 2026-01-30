@@ -25,7 +25,10 @@ export const detect = (
 			for (const clause of node.heritageClauses) {
 				if (clause.token === ts.SyntaxKind.ExtendsKeyword) {
 					for (const type of clause.types) {
+						const typeText = type.getText(sourceFile);
 						const typeName = type.expression.getText(sourceFile);
+
+						// Check for plain Error
 						if (typeName === "Error") {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
@@ -41,6 +44,26 @@ export const detect = (
 								certainty: "definite",
 								suggestion:
 									"Use Schema.TaggedError('ErrorName')({ fields }) pattern",
+							});
+						}
+
+						// Check for Data.TaggedError (should use Schema.TaggedError)
+						if (typeText.includes("Data.TaggedError")) {
+							const { line, character } =
+								sourceFile.getLineAndCharacterOfPosition(node.getStart());
+							violations.push({
+								ruleId: meta.id,
+								category: meta.category,
+								message:
+									"Data.TaggedError should be replaced with Schema.TaggedError for serialization support",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, 100),
+								severity: "warning",
+								certainty: "potential",
+								suggestion:
+									"Use class MyError extends Schema.TaggedError<MyError>()('MyError', { fields }) {} for serializable errors",
 							});
 						}
 					}

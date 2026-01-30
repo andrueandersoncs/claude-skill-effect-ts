@@ -10,7 +10,7 @@ import {
 	getUser,
 	type UserId,
 	UserNotFound,
-} from "../_fixtures.js";
+} from "../../_fixtures.js";
 
 declare const id: UserId;
 declare const error: unknown;

@@ -10,8 +10,8 @@ import type { Shape } from "../../_fixtures.js";
 // ❌ Bad: Using Match.tag when you need class methods
 // Match.tag doesn't preserve the class instance, so methods won't work
 const processBad = Match.type<Shape>().pipe(
-	Match.tag("Circle", (c) => c.radius * Math.PI * 2), // Can't use c.area() here!
-	Match.tag("Rectangle", (r) => r.width * r.height), // Can't use r.area() here!
+	Match.tag("Circle", (c) => c.area), // This will fail at runtime - Match.tag doesn't preserve class instances
+	Match.tag("Rectangle", (r) => r.area), // Same issue - method calls won't work
 	Match.exhaustive,
 );
 

@@ -4,7 +4,7 @@
  * Rule: Never suppress type errors with comments; fix the types
  */
 
-import * as ts from "typescript";
+import type * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.js";
 
 const meta = {
@@ -18,102 +18,61 @@ export const detect = (
 	sourceFile: ts.SourceFile,
 ): Violation[] => {
 	const violations: Violation[] = [];
+	const fullText = sourceFile.getFullText();
 
-	const visit = (node: ts.Node) => {
-		// Detect type assertions (as) that aren't 'as any' or 'as unknown' (those are rule-012)
-		if (ts.isAsExpression(node)) {
-			const typeText = node.type.getText(sourceFile);
+	// Detect @ts-expect-error and @ts-ignore comments
+	const tsIgnoreRegex = /@ts-ignore|@ts-expect-error/g;
+	let ignoreMatch = tsIgnoreRegex.exec(fullText);
 
-			// Skip 'as any' and 'as unknown' - those are handled by rule-012
-			if (typeText !== "any" && typeText !== "unknown") {
-				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-					node.getStart(),
-				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Type assertions may hide type errors; consider Schema validation",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, 100),
-					severity: "warning",
-					certainty: "potential",
-					suggestion:
-						"Consider using Schema validation or fixing the types at source",
-				});
-			}
-		}
+	while (ignoreMatch !== null) {
+		const pos = ignoreMatch.index;
+		const { line, character } = sourceFile.getLineAndCharacterOfPosition(pos);
 
-		// Detect angle-bracket type assertions (<Type>expr)
-		if (ts.isTypeAssertionExpression(node)) {
-			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-				node.getStart(),
-			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message:
-					"Type assertions may hide type errors; consider Schema validation",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, 100),
-				severity: "warning",
-				certainty: "potential",
-				suggestion:
-					"Consider using Schema validation or fixing the types at source",
-			});
-		}
+		// Get the line text for context
+		const lineStart = fullText.lastIndexOf("\n", pos) + 1;
+		const lineEnd = fullText.indexOf("\n", pos);
+		const lineText = fullText
+			.slice(lineStart, lineEnd === -1 ? undefined : lineEnd)
+			.trim();
 
-		// Detect 'any' type annotations
-		if (ts.isTypeReferenceNode(node)) {
-			const typeName = node.typeName.getText(sourceFile);
-			if (typeName === "any") {
-				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-					node.getStart(),
-				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "'any' type should be replaced with proper typing or Schema",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.parent.getText(sourceFile).slice(0, 80),
-					severity: "error",
-					certainty: "definite",
-					suggestion: "Use Schema validation or explicit types",
-				});
-			}
-		}
+		violations.push({
+			ruleId: meta.id,
+			category: meta.category,
+			message: `Type error suppression comment '${ignoreMatch[0]}'; fix the types instead`,
+			filePath,
+			line: line + 1,
+			column: character + 1,
+			snippet: lineText.slice(0, 80),
+			severity: "error",
+			certainty: "definite",
+			suggestion:
+				"Fix the underlying type error instead of suppressing it with comments",
+		});
+		ignoreMatch = tsIgnoreRegex.exec(fullText);
+	}
 
-		// Detect ': any' in parameter/variable declarations
-		if ((ts.isParameter(node) || ts.isVariableDeclaration(node)) && node.type) {
-			if (node.type.kind === ts.SyntaxKind.AnyKeyword) {
-				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-					node.getStart(),
-				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"'any' type annotation should be replaced with proper typing",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, 80),
-					severity: "error",
-					certainty: "definite",
-					suggestion: "Use Schema validation or explicit types",
-				});
-			}
-		}
+	// Also detect @ts-nocheck at file level
+	const tsNocheckRegex = /@ts-nocheck/g;
+	let nocheckMatch = tsNocheckRegex.exec(fullText);
 
-		ts.forEachChild(node, visit);
-	};
+	while (nocheckMatch !== null) {
+		const pos = nocheckMatch.index;
+		const { line, character } = sourceFile.getLineAndCharacterOfPosition(pos);
 
-	visit(sourceFile);
+		violations.push({
+			ruleId: meta.id,
+			category: meta.category,
+			message: "@ts-nocheck disables all type checking; fix the types instead",
+			filePath,
+			line: line + 1,
+			column: character + 1,
+			snippet: "@ts-nocheck",
+			severity: "error",
+			certainty: "definite",
+			suggestion: "Remove @ts-nocheck and fix all type errors in this file",
+		});
+		nocheckMatch = tsNocheckRegex.exec(fullText);
+	}
+
 	return violations;
 };

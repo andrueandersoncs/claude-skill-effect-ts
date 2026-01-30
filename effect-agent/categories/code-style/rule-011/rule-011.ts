@@ -8,7 +8,7 @@
 // import { Item } from "../_fixtures.js"
 
 // ✅ Good: Importing from .ts extension
-import type { Item } from "../_fixtures.ts";
+import type { Item } from "../../_fixtures.js";
 
 const example: Item = {
 	id: "1",

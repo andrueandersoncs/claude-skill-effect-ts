@@ -15,7 +15,7 @@ import {
 	pipe,
 	Ref,
 } from "effect";
-import { FileError } from "../_fixtures.js";
+import { FileError } from "../../_fixtures.js";
 
 // ✅ Good: Context.Tag service for file system
 class FileSystem extends Context.Tag("FileSystem")<

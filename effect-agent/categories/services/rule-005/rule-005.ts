@@ -11,7 +11,7 @@ import {
 	type User,
 	type UserId,
 	type UserNotFound,
-} from "../_fixtures.js";
+} from "../../_fixtures.js";
 
 // ✅ Good: Layer.effect for service with dependencies
 class UserService extends Context.Tag("UserService")<

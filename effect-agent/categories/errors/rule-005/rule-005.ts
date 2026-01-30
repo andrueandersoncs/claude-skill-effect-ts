@@ -5,7 +5,7 @@
 // @original-name: effect-try-promise
 
 import { Effect, Schema } from "effect";
-import { FetchUserError, User, type UserId } from "../_fixtures.js";
+import { FetchUserError, User, type UserId } from "../../_fixtures.js";
 
 // ✅ Good: Effect.tryPromise with typed error
 const fetchUser = (id: UserId) =>

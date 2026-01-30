@@ -5,7 +5,7 @@
 // @original-name: flattening-nested-arrays
 
 import { Array } from "effect";
-import type { Post } from "../_fixtures.js";
+import type { Post } from "../../_fixtures.js";
 
 declare const posts: ReadonlyArray<Post>;
 

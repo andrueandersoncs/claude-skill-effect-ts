@@ -23,10 +23,10 @@ declare const value2: string;
 declare const defaultValue: string;
 
 // ✅ Good: Match.when with Schema.is for conditional assignment
-const result = Match.value({ condition1, condition2 }).pipe(
+const assignmentResult = Match.value({ condition1, condition2 }).pipe(
 	Match.when(Schema.is(Condition1Active), Function.constant(value1)),
 	Match.when(Schema.is(Condition2Active), Function.constant(value2)),
 	Match.orElse(Function.constant(defaultValue)),
 );
 
-export { result };
+export { assignmentResult };

@@ -35,7 +35,7 @@ export const detect = (
 			const condition = node.expression;
 			const andCount = countAndConditions(condition);
 
-			if (andCount >= 2) {
+			if (andCount >= 1) {
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);

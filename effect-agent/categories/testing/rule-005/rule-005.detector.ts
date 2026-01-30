@@ -4,7 +4,7 @@
  * Rule: Never skip addEqualityTesters(); call it for Effect type equality
  */
 
-import type * as ts from "typescript";
+import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.js";
 
 const meta = {
@@ -19,35 +19,56 @@ export const detect = (
 ): Violation[] => {
 	const violations: Violation[] = [];
 
-	// Only check test setup files
+	// Only check test setup files (and .bad.ts for testing the detector)
 	if (
 		!filePath.includes("setup") &&
 		!filePath.includes("vitest.config") &&
-		!filePath.includes("test-utils")
+		!filePath.includes("test-utils") &&
+		!filePath.includes(".bad.ts")
 	) {
 		return violations;
 	}
 
 	const fullText = sourceFile.getFullText();
 
-	// Check if file imports from @effect/vitest but doesn't call addEqualityTesters
-	const hasEffectVitestImport =
-		fullText.includes("@effect/vitest") ||
-		fullText.includes("from 'effect'") ||
-		fullText.includes('from "effect"');
+	// Check if file uses Effect types that need equality testers (Option, Either, etc.)
+	const hasEffectTypes =
+		fullText.includes("Option.") ||
+		fullText.includes("Either.") ||
+		fullText.includes("Exit.") ||
+		fullText.includes("Cause.") ||
+		fullText.includes("Chunk.");
 
-	if (hasEffectVitestImport) {
-		const hasAddEqualityTesters = fullText.includes("addEqualityTesters");
+	// Check if file uses expect().toEqual on Effect types
+	const hasToEqualWithEffectTypes =
+		fullText.includes("toEqual") && hasEffectTypes;
 
-		if (!hasAddEqualityTesters) {
+	if (hasToEqualWithEffectTypes) {
+		// Look for an actual addEqualityTesters() call (not just in comments)
+		let hasAddEqualityTestersCall = false;
+
+		const visit = (node: ts.Node) => {
+			if (ts.isCallExpression(node)) {
+				const callText = node.expression.getText(sourceFile);
+				if (callText === "addEqualityTesters") {
+					hasAddEqualityTestersCall = true;
+				}
+			}
+			ts.forEachChild(node, visit);
+		};
+
+		visit(sourceFile);
+
+		if (!hasAddEqualityTestersCall) {
 			violations.push({
 				ruleId: meta.id,
 				category: meta.category,
-				message: "Test setup uses Effect but missing addEqualityTesters() call",
+				message:
+					"Test uses Effect types with toEqual() but missing addEqualityTesters() call",
 				filePath,
 				line: 1,
 				column: 1,
-				snippet: "Missing addEqualityTesters() in test setup",
+				snippet: "Missing addEqualityTesters() for Effect type equality",
 				severity: "warning",
 				certainty: "potential",
 				suggestion:

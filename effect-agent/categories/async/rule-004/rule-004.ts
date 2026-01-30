@@ -5,7 +5,7 @@
 // @original-name: parallel-results
 
 import { Effect } from "effect";
-import { getOrders, getUser, type UserId } from "../_fixtures.js";
+import { getOrders, getUser, type UserId } from "../../_fixtures.js";
 
 declare const id: UserId;
 

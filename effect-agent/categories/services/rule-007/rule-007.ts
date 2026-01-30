@@ -10,10 +10,10 @@ import {
 	type User,
 	type UserId,
 	UserNotFound,
-} from "../_fixtures.js";
+} from "../../_fixtures.js";
 
-class UserRepository extends Context.Tag("UserRepository")<
-	UserRepository,
+class StatefulUserRepository extends Context.Tag("StatefulUserRepository")<
+	StatefulUserRepository,
 	{
 		readonly findById: (id: UserId) => Effect.Effect<User, UserNotFound>;
 		readonly save: (user: User) => Effect.Effect<void, DatabaseError>;
@@ -22,8 +22,8 @@ class UserRepository extends Context.Tag("UserRepository")<
 >() {}
 
 // ✅ Good: Stateful test layer with Ref
-const UserRepositoryTest = Layer.effect(
-	UserRepository,
+const StatefulUserRepositoryTest = Layer.effect(
+	StatefulUserRepository,
 	Effect.gen(function* () {
 		const store = yield* Ref.make(HashMap.empty<UserId, User>());
 
@@ -48,4 +48,4 @@ const UserRepositoryTest = Layer.effect(
 	}),
 );
 
-export { UserRepository, UserRepositoryTest };
+export { StatefulUserRepository, StatefulUserRepositoryTest };

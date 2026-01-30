@@ -47,6 +47,40 @@ export const detect = (
 			}
 		}
 
+		// Detect Promise .catch() that throws a new error (transformation)
+		if (
+			ts.isCallExpression(node) &&
+			ts.isPropertyAccessExpression(node.expression) &&
+			node.expression.name.text === "catch"
+		) {
+			if (node.arguments.length > 0) {
+				const handlerText = node.arguments[0].getText(sourceFile);
+
+				if (
+					handlerText.includes("throw new") ||
+					handlerText.includes("throw Error")
+				) {
+					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+						node.getStart(),
+					);
+					violations.push({
+						ruleId: meta.id,
+						category: meta.category,
+						message:
+							"Promise .catch() rethrows transformed error; use Effect.mapError",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, 80),
+						severity: "warning",
+						certainty: "potential",
+						suggestion:
+							"Use Effect.tryPromise with Effect.mapError instead of .catch() that rethrows",
+					});
+				}
+			}
+		}
+
 		// Detect Effect.catchAll that just wraps and fails
 		if (
 			ts.isCallExpression(node) &&

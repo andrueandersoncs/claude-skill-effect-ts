@@ -5,7 +5,7 @@
 // @original-name: fat-arrow-syntax
 
 import { Array } from "effect";
-import type { Item } from "../_fixtures.js";
+import type { Item } from "../../_fixtures.js";
 
 interface Event {
 	data: unknown;

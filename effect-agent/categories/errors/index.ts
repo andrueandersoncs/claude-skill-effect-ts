@@ -4,18 +4,18 @@
  * This file exports all rules in the errors category.
  */
 
-export * from "./rule-001/rule-001.js";
-export * from "./rule-002/rule-002.js";
-export * from "./rule-003/rule-003.js";
-export * from "./rule-004/rule-004.js";
-export * from "./rule-005/rule-005.js";
-export * from "./rule-006/rule-006.js";
-export * from "./rule-007/rule-007.js";
-export * from "./rule-008/rule-008.js";
-export * from "./rule-009/rule-009.js";
-export * from "./rule-010/rule-010.js";
-export * from "./rule-011/rule-011.js";
-export * from "./rule-012/rule-012.js";
+export { result as allEitherModeResult } from "./rule-001/rule-001.js";
+export { result as catchTagResult } from "./rule-002/rule-002.js";
+export { result as catchTagsResult } from "./rule-003/rule-003.js";
+export { processOrder as conditionalFailProcessOrder } from "./rule-004/rule-004.js";
+export { fetchUser } from "./rule-005/rule-005.js";
+export { processOrder as effectTryProcessOrder } from "./rule-006/rule-006.js";
+export { result as mapErrorResult } from "./rule-007/rule-007.js";
+export { result as orElseFallbackResult } from "./rule-008/rule-008.js";
+export { result as retryScheduleResult } from "./rule-009/rule-009.js";
+export { result as sandboxCatchTagsResult } from "./rule-010/rule-010.js";
+export { result as timeoutFailResult } from "./rule-011/rule-011.js";
+export { program as typedErrorsProgram } from "./rule-012/rule-012.js";
 
 /**
  * Rule metadata for this category

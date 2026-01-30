@@ -5,7 +5,7 @@
 // @original-name: wrap-external-async
 
 import { Effect } from "effect";
-import { LibraryError } from "../_fixtures.js";
+import { LibraryError } from "../../_fixtures.js";
 
 // External library stub
 declare const externalLib: { doSomething: () => Promise<unknown> };

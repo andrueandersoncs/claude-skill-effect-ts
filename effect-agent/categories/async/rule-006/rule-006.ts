@@ -5,11 +5,11 @@
 // @original-name: race-operations
 
 import { Effect } from "effect";
-import { fetchFromBackup, fetchFromPrimary } from "../_fixtures.js";
+import { fetchFromBackup, fetchFromPrimary } from "../../_fixtures.js";
 
 // ✅ Good: Effect.race for racing two operations
-const result = Effect.gen(function* () {
+const raceResult = Effect.gen(function* () {
 	return yield* Effect.race(fetchFromPrimary(), fetchFromBackup());
 });
 
-export { result };
+export { raceResult };

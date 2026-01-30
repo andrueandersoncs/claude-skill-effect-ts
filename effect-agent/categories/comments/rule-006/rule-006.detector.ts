@@ -23,10 +23,18 @@ export const detect = (
 	const violations: Violation[] = [];
 	const fullText = sourceFile.getFullText();
 
-	// Patterns that might indicate redundant "why" comments
-	const redundantWhyPatterns = [
-		/\/\/\s*(this is )?(because|since|as)\s+(we need|it's required|it is required)/i,
-		/\/\/\s*(we|i)\s+(need|have)\s+to\s+do\s+this\s+(because|to)/i,
+	// Patterns that indicate "what" comments (describing what code does, not why)
+	const whatNotWhyPatterns = [
+		/\/\/\s*set\s+\w+\s+to\s+/i, // "Set timeout to 30 seconds"
+		/\/\/\s*assign\s+/i, // "Assign value to..."
+		/\/\/\s*store\s+/i, // "Store the value"
+		/\/\/\s*define\s+/i, // "Define the constant"
+		/\/\/\s*declare\s+/i, // "Declare a variable"
+		/\/\/\s*initialize\s+/i, // "Initialize the array"
+		/\/\/\s*create\s+(a\s+|the\s+)?(new\s+)?(variable|constant|array|object|map|set)/i,
+		/\/\/\s*add\s+\d+/i, // "Add 1 to..."
+		/\/\/\s*increment\s+/i, // "Increment counter"
+		/\/\/\s*decrement\s+/i, // "Decrement counter"
 		/\/\/\s*workaround\s*$/i, // Just "workaround" without explanation
 		/\/\/\s*hack\s*$/i, // Just "hack" without explanation
 		/\/\/\s*fix(ed)?\s*$/i, // Just "fix" without explanation
@@ -41,7 +49,7 @@ export const detect = (
 			if (comment.kind === ts.SyntaxKind.SingleLineCommentTrivia) {
 				const commentText = fullText.slice(comment.pos, comment.end);
 
-				for (const pattern of redundantWhyPatterns) {
+				for (const pattern of whatNotWhyPatterns) {
 					if (pattern.test(commentText)) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(comment.pos);
@@ -49,7 +57,7 @@ export const detect = (
 							ruleId: meta.id,
 							category: meta.category,
 							message:
-								"Comment lacks specific context; WHY comments should explain non-obvious reasons",
+								"Comment describes 'what' not 'why'; comments should explain non-obvious reasons",
 							filePath,
 							line: line + 1,
 							column: character + 1,

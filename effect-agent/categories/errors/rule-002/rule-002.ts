@@ -5,7 +5,7 @@
 // @original-name: catch-tag
 
 import { Effect } from "effect";
-import { defaultUser, getUser, type UserId } from "../_fixtures.js";
+import { defaultUser, getUser, type UserId } from "../../_fixtures.js";
 
 declare const id: UserId;
 

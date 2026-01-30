@@ -5,7 +5,7 @@
 // @original-name: schema-constructor
 
 import { Schema } from "effect";
-import { Email, OrderId, UserId } from "../_fixtures.js";
+import { Email, OrderId, UserId } from "../../_fixtures.js";
 
 class User extends Schema.Class<User>("User")({
 	id: UserId,

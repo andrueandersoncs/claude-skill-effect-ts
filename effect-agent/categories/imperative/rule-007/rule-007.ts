@@ -5,7 +5,7 @@
 // @original-name: limited-concurrency
 
 import { Array, Effect } from "effect";
-import { processItem } from "../_fixtures.js";
+import { processItem } from "../../_fixtures.js";
 
 declare const items: ReadonlyArray<string>;
 

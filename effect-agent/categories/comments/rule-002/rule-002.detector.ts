@@ -20,12 +20,11 @@ export const detect = (
 	const violations: Violation[] = [];
 	const fullText = sourceFile.getFullText();
 
-	// Check for commented-out code
-	const codePatterns = [
-		/\/\/\s*(const|let|var|function|class|interface|type|import|export)\s+/,
-		/\/\/\s*return\s+[^;]+;/,
-		/\/\/\s*\w+\s*=\s*[^;]+;/,
-		/\/\/\s*\w+\([^)]*\);/,
+	// Check for section marker comments (like "// ============ Types ============")
+	const sectionMarkerPatterns = [
+		/\/\/\s*[=\-#*]{3,}.*[=\-#*]{3,}\s*$/, // // ==== Types ==== or // ---- Types ----
+		/\/\/\s*[=\-#*]{5,}\s*$/, // Just divider lines like // ============
+		/\/\*\s*[=\-#*]{3,}.*[=\-#*]{3,}\s*\*\//, // /* ==== Types ==== */
 	];
 
 	const scanComments = (pos: number) => {
@@ -40,21 +39,21 @@ export const detect = (
 				comment.pos,
 			);
 
-			for (const pattern of codePatterns) {
+			for (const pattern of sectionMarkerPatterns) {
 				if (pattern.test(commentText)) {
 					violations.push({
 						ruleId: meta.id,
 						category: meta.category,
 						message:
-							"Commented-out code should be removed; use version control instead",
+							"Section marker comments should be avoided; use file organization and clear naming instead",
 						filePath,
 						line: line + 1,
 						column: character + 1,
 						snippet: commentText.slice(0, 80),
-						severity: "warning",
+						severity: "info",
 						certainty: "potential",
 						suggestion:
-							"Delete commented code; git history preserves old code if needed",
+							"Remove section markers; organize code into separate files or use clear naming conventions",
 					});
 					break;
 				}

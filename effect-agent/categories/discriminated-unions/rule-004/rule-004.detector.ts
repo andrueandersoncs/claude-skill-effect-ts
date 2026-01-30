@@ -35,12 +35,15 @@ export const detect = (
 					if (ts.isArrowFunction(handler) || ts.isFunctionExpression(handler)) {
 						const bodyText = handler.getText(sourceFile);
 
-						// Check for method calls on the matched value
-						// This is a heuristic - if the handler calls methods, Schema.is might be better
+						// Check for method/property access on the matched value
+						// This is a heuristic - if the handler accesses class members, Schema.is might be better
+						// Match pattern like .methodName() or .propertyName (not console.log() or Effect.)
+						const memberAccessPattern = /\.\s*[a-z][a-zA-Z0-9]*/;
 						if (
-							bodyText.includes(".(") &&
+							memberAccessPattern.test(bodyText) &&
 							!bodyText.includes("console.") &&
-							!bodyText.includes("Effect.")
+							!bodyText.includes("Effect.") &&
+							!bodyText.includes("_tag")
 						) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());

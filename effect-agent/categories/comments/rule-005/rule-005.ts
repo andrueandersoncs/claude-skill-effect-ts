@@ -5,7 +5,7 @@
 // @original-name: function-implementation
 
 import { Effect } from "effect";
-import { Database, type UserId } from "../_fixtures.js";
+import { Database, type UserId } from "../../_fixtures.js";
 
 // ❌ Bad: Comment describes what the code does
 // Get the user from the database

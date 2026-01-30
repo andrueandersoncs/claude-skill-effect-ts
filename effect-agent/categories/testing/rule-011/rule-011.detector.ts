@@ -19,20 +19,23 @@ export const detect = (
 ): Violation[] => {
 	const violations: Violation[] = [];
 
-	// Only check test files
+	// Only check test files (and .bad.ts for testing the detector)
 	if (
 		!filePath.includes(".test.") &&
 		!filePath.includes(".spec.") &&
-		!filePath.includes("__tests__")
+		!filePath.includes("__tests__") &&
+		!filePath.includes(".bad.ts")
 	) {
 		return violations;
 	}
 
 	const fullText = sourceFile.getFullText();
 
-	// Check if file has describe.layer but no property-based tests
+	// Check if file has describe.layer or layer() but no property-based tests
 	const hasDescribeLayer =
-		fullText.includes("describe.layer") || fullText.includes("it.layer");
+		fullText.includes("describe.layer") ||
+		fullText.includes("it.layer") ||
+		/\blayer\s*\(/.test(fullText);
 	const hasPropertyTests =
 		fullText.includes("it.prop") ||
 		fullText.includes("it.effect.prop") ||

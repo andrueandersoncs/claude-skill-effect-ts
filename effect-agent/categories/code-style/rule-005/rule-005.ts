@@ -5,7 +5,7 @@
 // @original-name: effect-fn-transformation
 
 import { Array, Effect } from "effect";
-import type { Item } from "../_fixtures.js";
+import type { Item } from "../../_fixtures.js";
 
 // ✅ Good: Effect.fn for simple effectful functions
 const calculateTotal = Effect.fn("calculateTotal")(

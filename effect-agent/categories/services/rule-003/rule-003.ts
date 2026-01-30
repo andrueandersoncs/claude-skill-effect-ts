@@ -22,7 +22,7 @@ import {
 	type User,
 	type UserId,
 	UserNotFound,
-} from "../_fixtures.js";
+} from "../../_fixtures.js";
 
 class UserNotFoundByEmail extends Schema.TaggedError<UserNotFoundByEmail>()(
 	"UserNotFoundByEmail",

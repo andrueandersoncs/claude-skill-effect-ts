@@ -19,6 +19,22 @@ export const detect = (
 ): Violation[] => {
 	const violations: Violation[] = [];
 
+	// Track Schema.Struct declarations and their derived types
+	const schemaStructs = new Map<string, ts.Node>();
+
+	// First pass: collect Schema.Struct declarations
+	const collectStructs = (node: ts.Node) => {
+		if (ts.isVariableDeclaration(node) && node.initializer) {
+			const initText = node.initializer.getText(sourceFile);
+			if (initText.includes("Schema.Struct")) {
+				const varName = node.name.getText(sourceFile);
+				schemaStructs.set(varName, node);
+			}
+		}
+		ts.forEachChild(node, collectStructs);
+	};
+	collectStructs(sourceFile);
+
 	const visit = (node: ts.Node) => {
 		// Detect Schema.Struct followed by manually adding methods
 		if (ts.isVariableDeclaration(node) && node.initializer) {
@@ -54,6 +70,66 @@ export const detect = (
 								"Use class Entity extends Schema.Class<Entity>('Entity')({ ... }) { methods() { ... } }",
 						});
 						break;
+					}
+				}
+			}
+		}
+
+		// Detect functions that operate on Schema.Struct types (should be methods)
+		if (ts.isFunctionDeclaration(node) && node.parameters.length > 0) {
+			const firstParam = node.parameters[0];
+			if (firstParam.type) {
+				const typeText = firstParam.type.getText(sourceFile);
+				// Check if the parameter type matches a Schema.Struct
+				if (schemaStructs.has(typeText)) {
+					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+						node.getStart(),
+					);
+					violations.push({
+						ruleId: meta.id,
+						category: meta.category,
+						message: `Function operates on Schema.Struct type '${typeText}'; consider using Schema.Class with methods`,
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, 100),
+						severity: "warning",
+						certainty: "potential",
+						suggestion:
+							"Use class Entity extends Schema.Class<Entity>('Entity')({ ... }) { method() { ... } }",
+					});
+				}
+			}
+		}
+
+		// Detect arrow functions/const functions that operate on Schema.Struct types
+		if (ts.isVariableDeclaration(node) && node.initializer) {
+			if (
+				ts.isArrowFunction(node.initializer) ||
+				ts.isFunctionExpression(node.initializer)
+			) {
+				const fn = node.initializer;
+				if (fn.parameters.length > 0) {
+					const firstParam = fn.parameters[0];
+					if (firstParam.type) {
+						const typeText = firstParam.type.getText(sourceFile);
+						if (schemaStructs.has(typeText)) {
+							const { line, character } =
+								sourceFile.getLineAndCharacterOfPosition(node.getStart());
+							violations.push({
+								ruleId: meta.id,
+								category: meta.category,
+								message: `Function operates on Schema.Struct type '${typeText}'; consider using Schema.Class with methods`,
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, 100),
+								severity: "warning",
+								certainty: "potential",
+								suggestion:
+									"Use class Entity extends Schema.Class<Entity>('Entity')({ ... }) { method() { ... } }",
+							});
+						}
 					}
 				}
 			}

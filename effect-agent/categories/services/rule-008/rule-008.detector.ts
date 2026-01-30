@@ -44,7 +44,7 @@ export const detect = (
 			}
 		}
 
-		// Detect process.env access
+		// Detect process.env access with dot notation: process.env.X
 		if (
 			ts.isPropertyAccessExpression(node) &&
 			ts.isPropertyAccessExpression(node.expression)
@@ -69,6 +69,36 @@ export const detect = (
 					severity: "warning",
 					certainty: "potential",
 					suggestion: `Use Config.string('${node.name.text}') with ConfigProvider`,
+				});
+			}
+		}
+
+		// Detect process.env access with bracket notation: process.env["X"]
+		if (
+			ts.isElementAccessExpression(node) &&
+			ts.isPropertyAccessExpression(node.expression)
+		) {
+			const objExpr = node.expression;
+			if (
+				ts.isIdentifier(objExpr.expression) &&
+				objExpr.expression.text === "process" &&
+				objExpr.name.text === "env"
+			) {
+				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+					node.getStart(),
+				);
+				const keyText = node.argumentExpression.getText(sourceFile);
+				violations.push({
+					ruleId: meta.id,
+					category: meta.category,
+					message: `process.env[${keyText}] should use Effect Config`,
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile),
+					severity: "warning",
+					certainty: "potential",
+					suggestion: `Use Config.string(${keyText}) with ConfigProvider`,
 				});
 			}
 		}

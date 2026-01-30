@@ -11,7 +11,7 @@ import {
 	notifyAdmin,
 	processOrderEvent,
 	UserCreated,
-} from "../_fixtures.js";
+} from "../../_fixtures.js";
 
 // ✅ Good: Use Schema.is for type narrowing
 const isUserCreated = Schema.is(UserCreated);
@@ -25,7 +25,7 @@ const handleAll = Match.type<AppEvent>().pipe(
 );
 
 // ✅ Good: Use the union type for function parameters
-const handleEvent = (event: AppEvent) =>
+const handleEventUnion = (event: AppEvent) =>
 	Match.value(event).pipe(
 		Match.tag("UserCreated", (e) => notifyAdmin(e.userId)),
 		Match.tag("UserDeleted", (e) => cleanupData(e.userId)),
@@ -33,4 +33,4 @@ const handleEvent = (event: AppEvent) =>
 		Match.exhaustive,
 	);
 
-export { isUserCreated, handleAll, handleEvent };
+export { isUserCreated, handleAll, handleEventUnion };

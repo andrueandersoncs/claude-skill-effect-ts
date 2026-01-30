@@ -5,7 +5,7 @@
 // @original-name: http-handler-boundary
 
 import { Effect, Either } from "effect";
-import { AppLive, ErrorResponse, getUser, type UserId } from "../_fixtures.js";
+import { ErrorResponse, getUser, type UserId } from "../../_fixtures.js";
 
 // Type for Express-like request/response
 interface Request {
@@ -24,10 +24,7 @@ declare const app: App;
 // ✅ Good: Effect.runPromise at HTTP handler boundary with Either
 app.get("/users/:id", async (req, res) => {
 	const result = await Effect.runPromise(
-		getUser(req.params.id as UserId).pipe(
-			Effect.provide(AppLive),
-			Effect.either,
-		),
+		getUser(req.params.id as UserId).pipe(Effect.either),
 	);
 
 	Either.match(result, {

@@ -5,7 +5,7 @@
 // @original-name: dom-element
 
 import { Effect, Option, pipe } from "effect";
-import { ElementNotFound } from "../_fixtures.js";
+import { ElementNotFound } from "../../_fixtures.js";
 
 // ✅ Good: Option and type guard for DOM elements
 const getInput = (id: string) =>

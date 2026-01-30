@@ -5,7 +5,7 @@
 // @original-name: fix-types
 
 import { Effect, Schema } from "effect";
-import { compatibleFunction } from "../_fixtures.js";
+import { compatibleFunction } from "../../_fixtures.js";
 
 class Input extends Schema.Class<Input>("Input")({
 	data: Schema.String,

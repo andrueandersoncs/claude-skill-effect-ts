@@ -21,7 +21,7 @@ import {
 	ChargeResult,
 	PaymentError,
 	RefundError,
-} from "../_fixtures.js";
+} from "../../_fixtures.js";
 
 // Stripe SDK stub
 interface Stripe {

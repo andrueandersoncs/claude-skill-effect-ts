@@ -5,7 +5,7 @@
 // @original-name: validate-api-response
 
 import { Effect, Schema } from "effect";
-import { FetchError, User, type UserId } from "../_fixtures.js";
+import { FetchError, User, type UserId } from "../../_fixtures.js";
 
 // ✅ Good: Schema.decodeUnknown for runtime validation
 const fetchUser = (id: UserId) =>

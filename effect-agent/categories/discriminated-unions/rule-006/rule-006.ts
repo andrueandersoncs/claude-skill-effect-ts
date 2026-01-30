@@ -5,7 +5,7 @@
 // @original-name: switch-on-tag
 
 import { Match, Schema } from "effect";
-import { Delivered, type OrderStatus, Pending, Shipped } from "../_fixtures.js";
+import { Delivered, type OrderStatus, Pending, Shipped } from "../../_fixtures.js";
 
 // ✅ Good: Match.when with Schema.is for type narrowing
 const getOrderStatus = (order: OrderStatus) =>

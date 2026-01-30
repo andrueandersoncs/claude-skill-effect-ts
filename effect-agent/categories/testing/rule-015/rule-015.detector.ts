@@ -19,18 +19,25 @@ export const detect = (
 ): Violation[] => {
 	const violations: Violation[] = [];
 
-	// Only check test files
+	// Only check test files (and .bad.ts for testing the detector)
 	if (
 		!filePath.includes(".test.") &&
 		!filePath.includes(".spec.") &&
-		!filePath.includes("__tests__")
+		!filePath.includes("__tests__") &&
+		!filePath.includes(".bad.ts")
 	) {
 		return violations;
 	}
 
 	const visit = (node: ts.Node) => {
-		// Detect TestClock usage
-		if (ts.isPropertyAccessExpression(node) && node.name.text === "TestClock") {
+		// Detect TestClock usage - either as Effect.TestClock or TestClock.method()
+		if (
+			(ts.isPropertyAccessExpression(node) &&
+				node.name.text === "TestClock") ||
+			(ts.isPropertyAccessExpression(node) &&
+				ts.isIdentifier(node.expression) &&
+				node.expression.text === "TestClock")
+		) {
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);

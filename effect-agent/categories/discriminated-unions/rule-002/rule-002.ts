@@ -5,7 +5,7 @@
 // @original-name: partitioning-by-tag
 
 import { Array, Schema } from "effect";
-import { type OrderStatus, Pending } from "../_fixtures.js";
+import { type OrderStatus, Pending } from "../../_fixtures.js";
 
 declare const orders: ReadonlyArray<OrderStatus>;
 

@@ -44,6 +44,30 @@ export const detect = (
 			}
 		}
 
+		// Detect ternary expressions with .length checks
+		if (ts.isConditionalExpression(node)) {
+			const conditionText = node.condition.getText(sourceFile);
+
+			if (conditionText.includes(".length")) {
+				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+					node.getStart(),
+				);
+				violations.push({
+					ruleId: meta.id,
+					category: meta.category,
+					message:
+						"Array length check in ternary should use Array.match or Array.isEmptyArray",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, 150),
+					severity: "error",
+					certainty: "definite",
+					suggestion: "Use Array.match() or Array.isEmptyArray()",
+				});
+			}
+		}
+
 		ts.forEachChild(node, visit);
 	};
 

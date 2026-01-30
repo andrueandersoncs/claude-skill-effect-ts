@@ -5,7 +5,7 @@
 // @original-name: runtime-validation
 
 import { Function, Match, Schema } from "effect";
-import { Circle, Rectangle } from "../_fixtures.js";
+import { Circle, Rectangle } from "../../_fixtures.js";
 
 // ✅ Good: Schema.is for runtime validation of unknown input
 const handleUnknown = (input: unknown) =>

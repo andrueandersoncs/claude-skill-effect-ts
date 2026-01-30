@@ -5,7 +5,7 @@
 // @original-name: filter-and-transform-single-pass
 
 import { Array, Match, Option } from "effect";
-import { isValidEmail, type User } from "../_fixtures.js";
+import { isValidEmail, type User } from "../../_fixtures.js";
 
 declare const users: ReadonlyArray<User>;
 

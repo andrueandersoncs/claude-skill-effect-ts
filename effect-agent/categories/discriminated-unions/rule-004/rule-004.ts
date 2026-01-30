@@ -5,7 +5,7 @@
 // @original-name: schema-is-vs-match-tag
 
 import { Match, Schema } from "effect";
-import { Circle, Rectangle, type Shape } from "../_fixtures.js";
+import { Circle, Rectangle, type Shape } from "../../_fixtures.js";
 
 // ✅ Good: Match.tag - when you just need the data
 const getShapeName = (shape: Shape) =>

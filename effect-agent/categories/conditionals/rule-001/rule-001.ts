@@ -5,7 +5,7 @@
 // @original-name: array-empty-check
 
 import { Array, Function } from "effect";
-import { defaultItem, type Item } from "../_fixtures.js";
+import { defaultItem, type Item } from "../../_fixtures.js";
 
 declare const items: ReadonlyArray<Item>;
 

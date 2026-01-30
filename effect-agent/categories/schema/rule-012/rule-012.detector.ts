@@ -19,6 +19,17 @@ export const detect = (
 ): Violation[] => {
 	const violations: Violation[] = [];
 
+	// Legitimate context keywords for Schema.Unknown/Any
+	const legitimateKeywords = [
+		"cause",
+		"error",
+		"external",
+		"generic",
+		"json",
+		"rawdata",
+		"unknowncause",
+	];
+
 	const visit = (node: ts.Node) => {
 		// Detect Schema.Any or Schema.Unknown usage
 		if (
@@ -30,23 +41,37 @@ export const detect = (
 
 			if (propName === "Any" || propName === "Unknown") {
 				// Check context - some uses are legitimate
-				let parent = node.parent;
 				let isLegitimate = false;
 
-				// Check if it's used for error cause, external data, etc.
+				// Check if it's in a property assignment and the property name suggests legitimate use
+				let parent = node.parent;
 				while (parent && !isLegitimate) {
-					const parentText = parent.getText(sourceFile).toLowerCase();
-					if (
-						parentText.includes("cause") ||
-						parentText.includes("error") ||
-						parentText.includes("external") ||
-						parentText.includes("any") ||
-						parentText.includes("unknown") ||
-						parentText.includes("generic") ||
-						parentText.includes("json")
-					) {
-						isLegitimate = true;
+					// Check property assignment names
+					if (ts.isPropertyAssignment(parent) && ts.isIdentifier(parent.name)) {
+						const propAssignName = parent.name.text.toLowerCase();
+						if (
+							legitimateKeywords.some(
+								(kw) =>
+									propAssignName.includes(kw) ||
+									propAssignName === "cause" ||
+									propAssignName === "error",
+							)
+						) {
+							isLegitimate = true;
+						}
 					}
+
+					// Check variable declaration names
+					if (
+						ts.isVariableDeclaration(parent) &&
+						ts.isIdentifier(parent.name)
+					) {
+						const varName = parent.name.text.toLowerCase();
+						if (legitimateKeywords.some((kw) => varName.includes(kw))) {
+							isLegitimate = true;
+						}
+					}
+
 					parent = parent.parent;
 				}
 

@@ -5,7 +5,7 @@
 // @original-name: match-struct-conditions
 
 import { Function, Match, Schema } from "effect";
-import type { User } from "../_fixtures.js";
+import type { User } from "../../_fixtures.js";
 
 const VerifiedAdmin = Schema.Struct({
 	role: Schema.Literal("admin"),

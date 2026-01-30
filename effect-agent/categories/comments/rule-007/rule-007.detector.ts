@@ -20,8 +20,9 @@ export const detect = (
 	const violations: Violation[] = [];
 	const fullText = sourceFile.getFullText();
 
-	// Patterns that indicate obvious/redundant comments
-	const obviousCommentPatterns = [
+	// Patterns that indicate comments compensating for poor naming
+	// These comments describe WHAT a variable/function is, which should be in the name
+	const namingCommentPatterns = [
 		/\/\/\s*increment\s+/i,
 		/\/\/\s*decrement\s+/i,
 		/\/\/\s*add\s+\d+\s+to/i,
@@ -36,6 +37,13 @@ export const detect = (
 		/\/\/\s*declare\s+/i,
 		/\/\/\s*create\s+(a\s+)?(new\s+)?variable/i,
 		/\/\/\s*initialize\s+/i,
+		// Comments that describe what a variable contains (should be in the name)
+		/\/\/\s*\w+\s+who\s+(have|has|are|is)\s+/i, // "Users who have admin privileges"
+		/\/\/\s*\w+\s+that\s+(have|has|are|is|contain)/i, // "Items that are active"
+		/\/\/\s*\w+\s+with\s+/i, // "Users with permissions"
+		/\/\/\s*(all|the|list of)\s+\w+\s+(who|that|with|from)/i, // "All users who..."
+		/\/\/\s*filtered\s+\w+/i, // "Filtered users"
+		/\/\/\s*sorted\s+\w+/i, // "Sorted items"
 	];
 
 	const scanComments = (pos: number) => {
@@ -50,7 +58,7 @@ export const detect = (
 				comment.pos,
 			);
 
-			for (const pattern of obviousCommentPatterns) {
+			for (const pattern of namingCommentPatterns) {
 				if (pattern.test(commentText)) {
 					violations.push({
 						ruleId: meta.id,

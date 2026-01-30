@@ -11,7 +11,7 @@ import {
 	ProcessedOrder,
 	saveOrder,
 	validateOrder,
-} from "../_fixtures.js";
+} from "../../_fixtures.js";
 
 // ✅ Good: Effect.gen for multi-step operations
 const processOrder = (orderId: OrderId) =>

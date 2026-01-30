@@ -5,7 +5,7 @@
 // @original-name: code-organization
 
 import { Context, type Effect, Schema } from "effect";
-import { UserId } from "../_fixtures.js";
+import { UserId } from "../../_fixtures.js";
 
 // ❌ Bad: Section marker comments
 // ============ Types ============

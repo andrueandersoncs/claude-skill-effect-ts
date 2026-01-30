@@ -5,14 +5,14 @@
 // @original-name: promise-chain
 
 import { Array, Effect, pipe } from "effect";
-import { fetchData, type Item } from "../_fixtures.js";
+import { fetchData, type Item } from "../../_fixtures.js";
 
 // ✅ Good: pipe with Effect.map for transformations
-const result = pipe(
+const promiseChainResult = pipe(
 	fetchData(),
 	Effect.map((data) => data.items),
 	Effect.map(Array.filter((i: Item) => i.active)),
 	Effect.map(Array.map((i: Item) => i.id)),
 );
 
-export { result };
+export { promiseChainResult };

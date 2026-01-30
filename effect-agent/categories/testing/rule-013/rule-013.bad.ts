@@ -5,9 +5,10 @@
 // @original-name: property-based
 
 import { Effect } from "effect";
+import * as fc from "fast-check";
 
 // Declare external test functions
-declare function it(name: string, fn: () => Promise<void>): void;
+declare function it(name: string, fn: () => void): void;
 declare function expect<T>(value: T): { toBe(expected: unknown): void };
 
 // Declare order type and processor
@@ -21,17 +22,23 @@ interface OrderResult {
 	status: string;
 }
 
-declare function generateTestOrders(count: number): Order[];
 declare function processOrder(order: Order): Effect.Effect<OrderResult>;
 
-// BAD: Manual property test loop instead of it.effect.prop
-it("should process orders correctly", async () => {
-	const orders = generateTestOrders(100);
-
-	for (const order of orders) {
-		const result = await Effect.runPromise(processOrder(order));
-		expect(result.status).toBe("completed");
-	}
+// BAD: Using raw fc.assert/fc.property instead of it.effect.prop
+it("should process orders correctly", () => {
+	fc.assert(
+		fc.asyncProperty(
+			fc.record({
+				id: fc.string(),
+				total: fc.integer({ min: 0 }),
+				items: fc.array(fc.string()),
+			}),
+			async (order) => {
+				const result = await Effect.runPromise(processOrder(order));
+				expect(result.status).toBe("completed");
+			},
+		),
+	);
 });
 
-export { generateTestOrders };
+export { fc };

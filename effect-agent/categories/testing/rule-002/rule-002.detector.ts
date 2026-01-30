@@ -19,11 +19,12 @@ export const detect = (
 ): Violation[] => {
 	const violations: Violation[] = [];
 
-	// Only check test files
+	// Only check test files (and .bad.ts for testing the detector)
 	if (
 		!filePath.includes(".test.") &&
 		!filePath.includes(".spec.") &&
-		!filePath.includes("__tests__")
+		!filePath.includes("__tests__") &&
+		!filePath.includes(".bad.ts")
 	) {
 		return violations;
 	}
@@ -63,6 +64,54 @@ export const detect = (
 							suggestion:
 								"Use Arbitrary.make(YourSchema) to generate test data from schemas",
 						});
+					}
+				}
+			}
+		}
+
+		// Detect Layer.succeed with hardcoded object literals containing string values
+		if (
+			ts.isCallExpression(node) &&
+			ts.isPropertyAccessExpression(node.expression)
+		) {
+			const obj = node.expression.expression;
+			const method = node.expression.name.text;
+
+			if (
+				ts.isIdentifier(obj) &&
+				obj.text === "Layer" &&
+				method === "succeed"
+			) {
+				// Check if the second argument (service implementation) contains hardcoded values
+				if (node.arguments.length >= 2) {
+					const serviceImpl = node.arguments[1];
+					if (ts.isObjectLiteralExpression(serviceImpl)) {
+						// Look for Effect.succeed with hardcoded object literals
+						const implText = serviceImpl.getText(sourceFile);
+						// Check for patterns like Effect.succeed({ ... "string" ... })
+						if (
+							implText.includes("Effect.succeed") &&
+							/Effect\.succeed\s*\(\s*\{[^}]*["'][^"']+["'][^}]*\}/.test(
+								implText,
+							)
+						) {
+							const { line, character } =
+								sourceFile.getLineAndCharacterOfPosition(node.getStart());
+							violations.push({
+								ruleId: meta.id,
+								category: meta.category,
+								message:
+									"Test Layer uses hardcoded values; use Arbitrary-generated values",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, 100),
+								severity: "warning",
+								certainty: "potential",
+								suggestion:
+									"Use Schema.Arbitrary to generate test data: Effect.succeed(Arbitrary.make(Schema))",
+							});
+						}
 					}
 				}
 			}

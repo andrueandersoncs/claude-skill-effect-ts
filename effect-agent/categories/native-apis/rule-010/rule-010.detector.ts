@@ -29,31 +29,29 @@ export const detect = (
 				const hasRest = name.elements.some((e) => e.dotDotDotToken);
 				const nonRestElements = name.elements.filter((e) => !e.dotDotDotToken);
 
-				// If we have both rest and non-rest elements, it might be omitting
+				// If we have both rest and non-rest elements, it's the omitting pattern
+				// This pattern: const { field1, field2, ...rest } = obj
+				// is used to omit field1 and field2 from the result (rest)
 				if (hasRest && nonRestElements.length > 0) {
-					// Check if non-rest elements are unused (prefixed with _)
-					const possiblyOmitting = nonRestElements.some((e) => {
-						const elementName = e.name.getText(sourceFile);
-						return elementName.startsWith("_");
+					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+						node.getStart(),
+					);
+					const omittedFields = nonRestElements
+						.map((e) => e.name.getText(sourceFile))
+						.join(", ");
+					violations.push({
+						ruleId: meta.id,
+						category: meta.category,
+						message: `Destructuring to omit fields (${omittedFields}); use Struct.omit`,
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, 80),
+						severity: "info",
+						certainty: "potential",
+						suggestion:
+							"Use Struct.omit(obj, 'field1', 'field2') for clearer intent",
 					});
-
-					if (possiblyOmitting) {
-						const { line, character } =
-							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message: "Destructuring to omit fields; use Struct.omit",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, 80),
-							severity: "info",
-							certainty: "potential",
-							suggestion:
-								"Use Struct.omit(obj, 'field1', 'field2') for clearer intent",
-						});
-					}
 				}
 			}
 		}

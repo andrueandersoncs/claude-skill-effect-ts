@@ -10,7 +10,7 @@ import {
 	processLeaf,
 	type Result,
 	type TreeNode,
-} from "../_fixtures.js";
+} from "../../_fixtures.js";
 
 // ✅ Good: Recursive Effect processing with Array.match
 const processTree = (node: TreeNode): Effect.Effect<Result> =>

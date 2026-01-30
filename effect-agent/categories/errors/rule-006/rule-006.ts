@@ -10,7 +10,7 @@ import {
 	Order,
 	SaveOrderError,
 	saveOrder,
-} from "../_fixtures.js";
+} from "../../_fixtures.js";
 
 const OrderFromJson = Schema.parseJson(Order);
 

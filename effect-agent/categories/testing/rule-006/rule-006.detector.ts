@@ -19,11 +19,12 @@ export const detect = (
 ): Violation[] => {
 	const violations: Violation[] = [];
 
-	// Only check test files
+	// Only check test files (and .bad.ts for testing the detector)
 	if (
 		!filePath.includes(".test.") &&
 		!filePath.includes(".spec.") &&
-		!filePath.includes("__tests__")
+		!filePath.includes("__tests__") &&
+		!filePath.includes(".bad.ts")
 	) {
 		return violations;
 	}
@@ -70,6 +71,49 @@ export const detect = (
 								suggestion:
 									"Use it.effect.prop({ data: Schema }, ({ data }) => Effect.gen(...)) for generated test data",
 							});
+						}
+					}
+				}
+			}
+
+			// Detect forEach with hardcoded test data arrays
+			if (ts.isIdentifier(obj) && method === "forEach") {
+				// Check if the array being iterated has "test", "order", "mock", etc. in name
+				const objName = obj.text.toLowerCase();
+				if (
+					objName.includes("test") ||
+					objName.includes("order") ||
+					objName.includes("mock") ||
+					objName.includes("fixture") ||
+					objName.includes("sample") ||
+					objName.includes("data")
+				) {
+					// Check if forEach callback contains an it() call
+					if (node.arguments.length >= 1) {
+						const callback = node.arguments[0];
+						if (
+							ts.isArrowFunction(callback) ||
+							ts.isFunctionExpression(callback)
+						) {
+							const bodyText = callback.getText(sourceFile);
+							if (bodyText.includes("it(") || bodyText.includes("it(`")) {
+								const { line, character } =
+									sourceFile.getLineAndCharacterOfPosition(node.getStart());
+								violations.push({
+									ruleId: meta.id,
+									category: meta.category,
+									message:
+										"forEach with hardcoded test data; use it.effect.prop for property-based testing",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node.getText(sourceFile).slice(0, 80),
+									severity: "info",
+									certainty: "potential",
+									suggestion:
+										"Use it.effect.prop({ data: Schema }, ({ data }) => Effect.gen(...)) for generated test data",
+								});
+							}
 						}
 					}
 				}

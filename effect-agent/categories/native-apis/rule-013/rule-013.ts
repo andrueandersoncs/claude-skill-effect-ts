@@ -16,7 +16,7 @@ declare const itemId: string;
 declare const calculateTotal: (price: number) => Effect.Effect<number>;
 
 // ✅ Good: Record.get with Option.match
-const result = pipe(
+const priceEffect = pipe(
 	Record.get(prices, itemId),
 	Option.match({
 		onNone: () => Effect.fail(new ItemNotFound(itemId)),
@@ -24,4 +24,4 @@ const result = pipe(
 	}),
 );
 
-export { result };
+export { priceEffect };

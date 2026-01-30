@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from "@effect/vitest";
 import { Effect } from "effect";
-import { createUser } from "../_fixtures.js";
+import { createUser } from "../../_fixtures.js";
 
 // ✅ Good: Use @effect/vitest for all test utilities
 describe("UserService", () => {

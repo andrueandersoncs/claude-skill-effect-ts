@@ -54,8 +54,7 @@ export const detect = (
 					condText.includes(">") ||
 					condText.includes("<=") ||
 					condText.includes(">=")) &&
-				node.elseStatement &&
-				ts.isIfStatement(node.elseStatement)
+				node.elseStatement
 			) {
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
