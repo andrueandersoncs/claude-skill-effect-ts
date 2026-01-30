@@ -20,6 +20,14 @@
       }
     },
     {
+      "rule": "Never construct object literals; use Schema class constructors",
+      "example": {
+        "description": "Creating data instances",
+        "bad": "const user: User = {\n  id: \"user-123\",\n  name: \"Alice\",\n  email: \"alice@example.com\",\n}\n\nconst order = {\n  orderId: \"order-456\",\n  items: [\"item1\", \"item2\"],\n  total: 99.99,\n} satisfies Order",
+        "good": "const user = new User({\n  id: UserId.make(\"user-123\"),\n  name: \"Alice\",\n  email: Email.make(\"alice@example.com\"),\n})\n\nconst order = new Order({\n  orderId: OrderId.make(\"order-456\"),\n  items: [\"item1\", \"item2\"],\n  total: 99.99,\n})"
+      }
+    },
+    {
       "rule": "Never use Schema.Struct for entities with methods; use Schema.Class",
       "example": {
         "description": "Entity with computed properties",
