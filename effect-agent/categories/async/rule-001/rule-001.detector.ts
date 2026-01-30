@@ -98,8 +98,8 @@ export const detect = (
 										line: line + 1,
 										column: character + 1,
 										snippet: node.getText(sourceFile).slice(0, 100),
-										severity: "info" as const,
-										certainty: "potential" as const,
+										severity: "info",
+										certainty: "potential",
 										suggestion: "Wrap callback-based APIs with Effect.async()",
 									});
 								},
