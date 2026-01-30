@@ -14,6 +14,10 @@ const meta = {
 	name: "callback-api",
 };
 
+// Schema for valid severity and certainty values
+const SeveritySchema = Schema.Literal("error", "warning", "info");
+const CertaintySchema = Schema.Literal("definite", "potential");
+
 // Schema for detecting new Promise() patterns
 const IsPromiseExpression = Schema.Struct({
 	isNewExpr: Schema.Literal(true),
