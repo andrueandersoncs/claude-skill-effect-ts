@@ -138,95 +138,157 @@ Rule documentation: ${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/[category]/rul
 Apply the idiomatic Effect-TS fix in your worktree.
 ```
 
-### Phase 4: Aggregate Results / Merge Branches
+### Phase 4: Parallel Tournament Merge
 
 #### Analyze Mode
+
 Collect results from all category-checker agents and present a unified report. Mark tasks as completed as agents finish.
 
-#### Fix Mode
+#### Fix Mode: Tournament Merge
 
-**DO NOT MERGE IN THE PRIMARY AGENT. SPAWN A SUBAGENT.**
+## ⚠️ CRITICAL: MANDATORY PARALLEL TOURNAMENT MERGE ⚠️
 
-After all task-workers complete, spawn a **single** `general-purpose` subagent to handle merging:
+**YOU MUST USE TOURNAMENT-STYLE PARALLEL MERGING. SEQUENTIAL MERGING IS FORBIDDEN.**
 
-```
-Task tool with:
-- subagent_type: "general-purpose"
-- prompt: Include the list of task IDs/branches and the merge instructions below
-```
+**DO NOT:**
+- ❌ Merge branches one at a time
+- ❌ Use a single general-purpose agent to merge sequentially
+- ❌ Skip the tournament algorithm
+- ❌ "Simplify" by merging directly
+- ❌ Reason about "it's easier to just merge sequentially"
 
-**The subagent merges branches SEQUENTIALLY (one at a time) and resolves ALL conflicts.**
-
----
-
-**MERGE SUBAGENT INSTRUCTIONS (include in prompt):**
-
-Project root: [PROJECT_ROOT]
-Branches to merge: task-1, task-2, task-3, ... (list all task IDs)
-
-**MERGE CONFLICTS ARE EXPECTED. FIX THEM. THIS IS THE ENTIRE POINT OF THIS PHASE.**
-
-Each task-worker fixed ONE violation in isolation. Multiple workers edited the same file. When you merge, git will report conflicts. **This is normal. This is expected.**
-
-**YOU MUST RESOLVE EVERY MERGE CONFLICT. NO EXCEPTIONS.**
-
-For each branch, in order:
-
-1. **Attempt merge:**
-   ```bash
-   git merge task-<task-id> --no-edit
-   ```
-
-2. **If merge succeeds:** Continue to cleanup.
-
-3. **If merge conflicts:** YOU MUST FIX THEM:
-   - Run `git status` to see conflicted files
-   - Read each conflicted file
-   - The conflict markers show BOTH versions - keep BOTH fixes
-   - Each branch fixed a DIFFERENT line, so combine them
-   - Edit the file to include ALL fixes (remove conflict markers)
-   - Stage and commit:
-     ```bash
-     git add <file>
-     git commit -m "Merge task-<task-id>: resolve conflicts, keep all fixes"
-     ```
-
-4. **Cleanup after successful merge:**
-   ```bash
-   git worktree remove ../worktree-task-<task-id>
-   git branch -d task-<task-id>
-   ```
-
-5. **Repeat for ALL branches.** Do not stop until every branch is merged.
-
-**FORBIDDEN:**
-- ❌ Aborting merge due to conflicts
-- ❌ Skipping a branch because "there are conflicts"
-- ❌ Using `git merge --abort`
-- ❌ Leaving conflicts unresolved
-- ❌ Choosing only one side of a conflict
-- ❌ Stopping before all branches are merged
-
-**REQUIRED:**
-- ✅ Read the conflicted file
-- ✅ Understand what BOTH sides changed
-- ✅ Keep ALL the fixes from ALL branches
-- ✅ Resolve every conflict by combining changes
-- ✅ Merge ALL branches before returning
-
-**Example conflict resolution:**
-```
-<<<<<<< HEAD
-const result = pipe(data, Array.map(transform), Array.filter(isValid));
-=======
-const result = pipe(data, Array.map(transform), Option.getOrElse(() => []));
->>>>>>> task-2
-```
-This means: HEAD has one fix, task-2 has a different fix to a different part. Read the original violations to understand what each fixed. Combine them appropriately.
+**YOU MUST:**
+- ✅ Spawn `merge-worker` agents IN PARALLEL for EVERY pair
+- ✅ Execute MULTIPLE ROUNDS until one branch remains
+- ✅ Spawn ALL merge-workers for a round in a SINGLE message
+- ✅ Wait for round to complete before starting next round
 
 ---
 
-The merge subagent should return a simple "Merge complete. X branches merged." - no detailed summary needed.
+### Tournament Algorithm
+
+```
+Given branches: [task-1, task-2, task-3, ..., task-n]
+
+REPEAT until only 1 branch remains:
+  1. Pair branches: (task-1, task-2), (task-3, task-4), ...
+  2. If odd count, last branch gets "bye" to next round
+  3. Spawn merge-worker agents IN PARALLEL (one per pair)
+  4. WAIT for ALL merges in this round to complete
+  5. Surviving branches continue to next round
+
+FINAL: Merge the single surviving branch into main
+```
+
+**Time complexity**: O(log n) rounds instead of O(n) sequential merges.
+
+| Branches | Sequential | Tournament Rounds |
+|----------|------------|-------------------|
+| 8        | 8 merges   | 3 rounds          |
+| 50       | 50 merges  | 6 rounds          |
+| 97       | 97 merges  | 7 rounds          |
+| 100      | 100 merges | 7 rounds          |
+
+---
+
+### MANDATORY: Spawning Merge Workers
+
+**FOR EACH ROUND, YOU MUST SPAWN ALL MERGE-WORKERS IN A SINGLE MESSAGE.**
+
+**VERIFY BEFORE EACH ROUND:**
+- Count the pairs: floor(branches / 2)
+- You MUST spawn EXACTLY that many merge-worker agents
+- 8 branches = 4 merge-workers in round 1
+- 4 branches = 2 merge-workers in round 2
+- 2 branches = 1 merge-worker in round 3
+
+**THE NUMBER OF Task TOOL CALLS MUST EQUAL THE NUMBER OF PAIRS. NO EXCEPTIONS.**
+
+For each pair (branch_a, branch_b), use Task tool with:
+```
+- subagent_type: "effect-ts:merge-worker"
+- model: "haiku"
+- prompt: |
+    Project root: [PROJECT_ROOT]
+
+    Merge these branches:
+    - branch_a (survives): [BRANCH_A]
+    - branch_b (consumed): [BRANCH_B]
+
+    Merge branch_b INTO branch_a. Keep ALL fixes from BOTH.
+    Clean up branch_b's worktree and delete branch_b after success.
+```
+
+---
+
+### Example: 8 branches (3 rounds)
+
+**Round 1: Spawn 4 merge-workers IN PARALLEL (single message with 4 Task calls)**
+```
+Pair 1: task-1 + task-2 → task-1 survives
+Pair 2: task-3 + task-4 → task-3 survives
+Pair 3: task-5 + task-6 → task-5 survives
+Pair 4: task-7 + task-8 → task-7 survives
+```
+WAIT for all 4 to complete. Surviving: [task-1, task-3, task-5, task-7]
+
+**Round 2: Spawn 2 merge-workers IN PARALLEL (single message with 2 Task calls)**
+```
+Pair 1: task-1 + task-3 → task-1 survives
+Pair 2: task-5 + task-7 → task-5 survives
+```
+WAIT for both to complete. Surviving: [task-1, task-5]
+
+**Round 3: Spawn 1 merge-worker (single message with 1 Task call)**
+```
+Pair 1: task-1 + task-5 → task-1 survives
+```
+WAIT for it to complete. Surviving: [task-1]
+
+**Final: Merge task-1 into main**
+
+---
+
+### Handling Odd Counts
+
+If odd number of branches, the LAST branch passes to next round unchanged (gets a "bye"):
+- `[task-1, task-2, task-3]` → merge (task-1, task-2), task-3 passes through
+- Result after round: `[task-1, task-3]`
+
+---
+
+### Final Merge to Main
+
+After tournament completes (exactly ONE branch remains):
+
+```bash
+cd <project_root>
+git checkout main
+git merge <surviving-branch> --no-edit
+git worktree remove ../worktree-<surviving-branch> --force
+git branch -d <surviving-branch>
+```
+
+---
+
+## FORBIDDEN BEHAVIORS IN PHASE 4
+
+- ❌ Merging branches sequentially one at a time
+- ❌ Using a general-purpose agent to do sequential merges
+- ❌ Skipping rounds or "optimizing" the tournament
+- ❌ Spawning fewer merge-workers than pairs in a round
+- ❌ Reasoning about "efficiency" to avoid parallel spawning
+- ❌ Saying "I'll merge these directly" instead of spawning agents
+- ❌ Any deviation from the tournament algorithm
+
+## REQUIRED BEHAVIORS IN PHASE 4
+
+- ✅ Calculate pairs for each round: floor(branches / 2)
+- ✅ Spawn EXACTLY that many merge-worker agents per round
+- ✅ Use a SINGLE message with MULTIPLE Task tool calls per round
+- ✅ WAIT for all agents in a round to complete before next round
+- ✅ Continue rounds until exactly 1 branch remains
+- ✅ Only then merge the final branch into main
 
 ## Output Format
 
