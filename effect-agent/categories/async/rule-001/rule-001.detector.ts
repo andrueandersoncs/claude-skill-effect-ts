@@ -5,14 +5,28 @@
  */
 
 import * as ts from "typescript";
-import { Match, Option, Function as Fn } from "effect";
-import type { Violation } from "../../../detectors/types";
+import { Match, Option, Function as Fn, Schema } from "effect";
+import type { Violation } from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-001",
 	category: "async",
 	name: "callback-api",
 };
+
+// Schema for runtime validation of Violation objects
+const ViolationSchema = Schema.Struct({
+	ruleId: Schema.String,
+	category: Schema.String,
+	message: Schema.String,
+	filePath: Schema.String,
+	line: Schema.Number,
+	column: Schema.Number,
+	snippet: Schema.String,
+	severity: Schema.Literal("error", "warning", "info"),
+	certainty: Schema.Literal("definite", "potential"),
+	suggestion: Schema.optional(Schema.String),
+});
 
 export const detect = (
 	filePath: string,
@@ -52,6 +66,7 @@ export const detect = (
 			node.parameters.length > 0
 		) {
 			const lastParam = node.parameters.at(-1);
+			if (!lastParam) return [];
 			const paramName = lastParam.name.getText(sourceFile).toLowerCase();
 			const callbackNames = [
 				"callback",
@@ -70,7 +85,7 @@ export const detect = (
 						const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 							node.getStart(),
 						);
-						return Option.some({
+						const violationData = {
 							ruleId: meta.id,
 							category: meta.category,
 							message: "Callback-style APIs should be wrapped with Effect.async()",
@@ -78,10 +93,20 @@ export const detect = (
 							line: line + 1,
 							column: character + 1,
 							snippet: node.getText(sourceFile).slice(0, 100),
-							severity: "info" as const,
-							certainty: "potential" as const,
+							severity: "info",
+							certainty: "potential",
 							suggestion: "Wrap callback-based APIs with Effect.async()",
-						});
+						};
+
+						// Validate using Schema.decodeUnknown for runtime type validation
+						try {
+							const validated = Schema.decodeUnknownSync(ViolationSchema)(
+								violationData,
+							);
+							return Option.some(validated as Violation);
+						} catch {
+							return Option.none();
+						}
 					},
 				),
 				Match.orElse(() => Option.none()),
