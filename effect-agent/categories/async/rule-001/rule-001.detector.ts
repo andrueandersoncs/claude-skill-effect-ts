@@ -4,9 +4,9 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
+import { Array as EffectArray, Function as Fn, Match, Option } from "effect";
 import * as ts from "typescript";
-import { Match, Option, Function as Fn } from "effect";
-import type { Violation } from "../../../detectors/types";
+import type { Violation } from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-001",
@@ -19,7 +19,7 @@ export const detect = (
 	sourceFile: ts.SourceFile,
 ): Violation[] => {
 	const collectViolations = (node: ts.Node): Violation[] => {
-		const nodeViolations: Violation[] = [];
+		let nodeViolations: Violation[] = [];
 
 		// Detect new Promise()
 		if (
@@ -30,7 +30,7 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			nodeViolations.push({
+			nodeViolations = EffectArray.append(nodeViolations, {
 				ruleId: meta.id,
 				category: meta.category,
 				message: "new Promise() should be replaced with Effect.async()",
@@ -52,6 +52,7 @@ export const detect = (
 			node.parameters.length > 0
 		) {
 			const lastParam = node.parameters.at(-1);
+			if (!lastParam) return [];
 			const paramName = lastParam.name.getText(sourceFile).toLowerCase();
 			const callbackNames = [
 				"callback",
@@ -87,11 +88,9 @@ export const detect = (
 				Match.orElse(() => Option.none()),
 			);
 
-			Option.match(violation, {
-				onSome: (v) => {
-					nodeViolations.push(v);
-				},
-				onNone: Fn.constVoid,
+			nodeViolations = Option.match(violation, {
+				onSome: (v) => EffectArray.append(nodeViolations, v),
+				onNone: () => nodeViolations,
 			});
 		}
 
