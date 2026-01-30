@@ -104,10 +104,10 @@ const RemoveSuggestionSchema = Schema.transform(
 	{
 		decode(input) {
 			const { suggestion: _unused, ...rest } = input as Record<string, unknown>;
-			return rest as Schema.To<typeof ValidViolationWithoutSuggestion>;
+			return rest as Schema.Schema.Type<typeof ValidViolationWithoutSuggestion>;
 		},
 		encode(output) {
-			return output as Schema.To<typeof ViolationSchema>;
+			return output as Schema.Schema.Type<typeof ViolationSchema>;
 		},
 		strict: true,
 	},
@@ -153,6 +153,7 @@ const createViolation = (data: Omit<Violation, never>): Violation => {
 			},
 		}),
 	);
+};
 
 export const detect = (
 	filePath: string,
