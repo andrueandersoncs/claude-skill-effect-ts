@@ -95,12 +95,13 @@ export const detect = (
 		}
 
 		// Recursively collect violations from child nodes
-		const childViolations: Violation[] = [];
+		let childViolations: Violation[] = [];
 		ts.forEachChild(node, (child) => {
-			childViolations.push(...collectViolations(child));
+			const violations = collectViolations(child);
+			childViolations = EffectArray.concat(childViolations, violations);
 		});
 
-		return [...nodeViolations, ...childViolations];
+		return EffectArray.concat(nodeViolations, childViolations);
 	};
 
 	return collectViolations(sourceFile);
