@@ -15,9 +15,10 @@ Run all Effect-TS rule categories as checks **in parallel** against a specified 
 ## Instructions
 
 1. **Read the target file** specified in the argument
-2. **Discover all category files** from `${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/*.json`
-3. **Spawn parallel Task agents** - one per category - to check the file
-4. **Aggregate results** and present a unified report
+2. **Discover all category directories** from `${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/*/`
+3. **For each category**, read the README.md and all .ts rule files
+4. **Spawn parallel Task agents** - one per category - to check the file
+5. **Aggregate results** and present a unified report
 
 ## Implementation
 
@@ -25,14 +26,26 @@ Run all Effect-TS rule categories as checks **in parallel** against a specified 
 
 The user provides a file path like `/effect-check src/UserService.ts`
 
-### Step 2: Read all category JSON files
+### Step 2: Discover categories
 
-Use Glob to find all category files:
-- `${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/*.json`
+Use Glob to find all category directories:
+- `${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/*/README.md`
 
-### Step 3: Launch parallel checks
+Each directory name is a category (e.g., `async`, `errors`, `schema`).
 
-For EACH category file, spawn a Task agent **in the same message** (parallel execution):
+### Step 3: For each category, gather rules
+
+For each category directory:
+1. Read `README.md` for category description
+2. Glob for `*.ts` files (excluding `_fixtures.ts`)
+3. Each `.ts` file represents a rule:
+   - First two comment lines contain the rule and example description
+   - Code shows the "good" pattern (lines marked with `// ✅ Good:`)
+   - Some files may also show "bad" patterns (lines marked with `// ❌ Bad:`)
+
+### Step 4: Launch parallel checks
+
+For EACH category, spawn a Task agent **in the same message** (parallel execution):
 
 ```
 Task(
@@ -41,18 +54,23 @@ Task(
   prompt: "Check this code against the '[CATEGORY_NAME]' Effect-TS rules.
 
 ## Category: [NAME]
-[CATEGORY_DESCRIPTION]
+[README_CONTENT]
 
 ## Rules to Check
-[FOR EACH RULE IN CATEGORY]:
-### Rule: [RULE_TEXT]
-Bad pattern:
-```typescript
-[BAD_EXAMPLE]
-```
+[FOR EACH .TS FILE IN CATEGORY]:
+### Rule File: [FILENAME]
+Rule: [FIRST_COMMENT_LINE - the rule]
+Description: [SECOND_COMMENT_LINE - example description]
+
 Good pattern:
 ```typescript
-[GOOD_EXAMPLE]
+[GOOD_EXAMPLE_CODE from the file]
+```
+
+[IF BAD PATTERN EXISTS]:
+Bad pattern (what to look for):
+```typescript
+[BAD_EXAMPLE_CODE from the file]
 ```
 
 ## Code to Analyze
@@ -89,7 +107,7 @@ If no violations in this category, return:
 )
 ```
 
-### Step 4: Aggregate and Report
+### Step 5: Aggregate and Report
 
 After all parallel tasks complete, aggregate into a single report:
 
@@ -116,8 +134,32 @@ After all parallel tasks complete, aggregate into a single report:
 
 1. **MUST spawn all category checks in a single message** - this enables true parallel execution
 2. **Use haiku model** for individual checks (fast, cheap)
-3. **Read category JSON** and extract: `id`, `name`, `description`, `rules[]` (each with `rule`, `example.bad`, `example.good`)
-4. **Include both bad AND good examples** in each prompt so the agent understands the pattern
+3. **Read category README.md** for the category philosophy/description
+4. **Parse rule .ts files** to extract:
+   - Rule (first `// Rule:` comment)
+   - Description (second `// Example:` comment)
+   - Good pattern (code after `// ✅ Good:`)
+   - Bad pattern (code after `// ❌ Bad:` if present)
+5. **Not all rules have bad examples** - some only show the correct pattern
+
+## Example Rule File Format
+
+```typescript
+// Rule: Never use throw statements; use Effect.fail()
+// Example: Conditional throw based on state
+
+import { Effect, Match } from "effect"
+
+// ❌ Bad: Direct throw (may not be present in all files)
+const badExample = () => {
+  throw new Error("Something went wrong")
+}
+
+// ✅ Good: Effect.fail with typed error
+const goodExample = Effect.fail(new MyTypedError({ ... }))
+
+export { badExample, goodExample }
+```
 
 ## Usage
 
