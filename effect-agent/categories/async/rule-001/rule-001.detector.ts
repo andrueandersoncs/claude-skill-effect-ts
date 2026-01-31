@@ -44,6 +44,8 @@ class IsPromiseExpression extends Schema.Class<IsPromiseExpression>("IsPromiseEx
 // NOTE: Type assertions to ts.Node are justified here as we implement type guards
 // for the TypeScript compiler API which requires this narrowing. After validating
 // the basic object structure, we delegate to TypeScript's built-in type predicates.
+// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
+// This is a special case where pure type guards are necessary for TypeScript AST filtering.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const assertAsNode = (u: any): ts.Node => u;
 
@@ -144,8 +146,8 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithoutSuggestion,
 );
 
-// Helper to validate and decode violation data with comprehensive Option-based validation
-const decodeViolationData = (data: {
+// Type definition for violation data
+type ViolationData = {
 	ruleId: string & { readonly RuleId: symbol };
 	category: string;
 	message: string;
@@ -155,27 +157,69 @@ const decodeViolationData = (data: {
 	snippet: string;
 	certainty: "definite" | "potential";
 	suggestion?: string | undefined;
-}): Violation =>
-	Option.fromNullable(data.suggestion).pipe(
-		Option.match({
-			onSome: (suggestion) =>
-				Schema.decodeSync(ValidViolationWithSuggestion)({
-					...data,
-					suggestion,
-				}),
-			onNone: () => {
-				const rest = Struct.omit(data, "suggestion");
-				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-			},
-		}),
-	);
+};
 
+// Pipeline: Extract suggestion from data
+const extractSuggestion = (data: ViolationData): Option.Option<string> =>
+	Option.fromNullable(data.suggestion);
+
+// Pipeline: Decode with suggestion
+const decodeWithSuggestion = (suggestion: string) =>
+	(data: ViolationData): Violation =>
+		Schema.decodeSync(ValidViolationWithSuggestion)({
+			...data,
+			suggestion,
+		});
+
+// Pipeline: Decode without suggestion
+const decodeWithoutSuggestion = (data: ViolationData): Violation => {
+	const rest = Struct.omit(data, "suggestion");
+	return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+};
+
+// Pipeline: Match and decode based on suggestion presence
+const matchAndDecode = (data: ViolationData) =>
+	(suggestion: Option.Option<string>): Violation =>
+		Option.match(suggestion, {
+			onSome: (sug) => decodeWithSuggestion(sug)(data),
+			onNone: () => decodeWithoutSuggestion(data),
+		});
+
+// Helper to validate and decode violation data with reusable pipeline
+const decodeViolationData = (data: ViolationData): Violation =>
+	flow(
+		extractSuggestion(data),
+		matchAndDecode(data),
+	);
 // Schema transform for conditional validation based on suggestion presence
 const ViolationTransform = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
 	{
-		decode: decodeViolationData,
+		decode: (data: {
+			ruleId: string & { readonly RuleId: symbol };
+			category: string;
+			message: string;
+			filePath: string;
+			line: number;
+			column: number;
+			snippet: string;
+			certainty: "definite" | "potential";
+			suggestion?: string | undefined;
+		}): Violation =>
+			Option.fromNullable(data.suggestion).pipe(
+				Option.match({
+					onSome: (suggestion) =>
+						Schema.decodeSync(ValidViolationWithSuggestion)({
+							...data,
+							suggestion,
+						}),
+					onNone: () => {
+						const rest = Struct.omit(data, "suggestion");
+						return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+					},
+				}),
+			),
 		encode: Function.identity,
 		strict: true,
 	},
