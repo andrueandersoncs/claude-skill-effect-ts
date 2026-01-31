@@ -36,55 +36,41 @@ const meta = new MetaSchema({
 // NOTE: Type assertions to ts.Node are justified here as we implement type guards
 // for the TypeScript compiler API which requires this narrowing. After validating
 // the basic object structure, we delegate to TypeScript's built-in type predicates.
-// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
-// This is a special case where pure type guards are necessary for TypeScript AST filtering.
+// Using Schema.declare() is the idiomatic Effect-TS pattern for type guards that must
+// return boolean rather than Effect.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const assertAsNode = (u: any): ts.Node => u;
 
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isFunctionDeclaration(assertAsNode(u));
-};
-
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isFunctionExpression(assertAsNode(u));
-};
-
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isArrowFunction(assertAsNode(u));
-};
-
-const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
-	return (
-		isFunctionDeclaration(node) ||
-		isFunctionExpression(node) ||
-		isArrowFunction(node)
-	);
-};
-
-// Schema for function node types using discriminated union of type guards
+// Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
 const FunctionNode = Schema.Union(
-	Schema.declare(isFunctionDeclaration),
-	Schema.declare(isFunctionExpression),
-	Schema.declare(isArrowFunction),
+	Schema.declare((u): u is ts.FunctionDeclaration => {
+		// Structural validation: ensure we have a Node-like object
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Use TypeScript's built-in type predicate after structural validation
+		// eslint-disable-next-line @effect-ts/rule-002
+		return ts.isFunctionDeclaration(assertAsNode(u));
+	}),
+	Schema.declare((u): u is ts.FunctionExpression => {
+		// Structural validation: ensure we have a Node-like object
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Use TypeScript's built-in type predicate after structural validation
+		// eslint-disable-next-line @effect-ts/rule-002
+		return ts.isFunctionExpression(assertAsNode(u));
+	}),
+	Schema.declare((u): u is ts.ArrowFunction => {
+		// Structural validation: ensure we have a Node-like object
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Use TypeScript's built-in type predicate after structural validation
+		// eslint-disable-next-line @effect-ts/rule-002
+		return ts.isArrowFunction(assertAsNode(u));
+	}),
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
@@ -222,7 +208,7 @@ export const detect = (
 
 		// Detect callback patterns (functions with callback parameter names)
 		const functionCheckResult = Match.value(node).pipe(
-			Match.when((n): n is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => isFunctionNode(n), (typedNode) => {
+			Match.when(Schema.is(FunctionNode), (typedNode) => {
 				return Option.fromNullable(typedNode.parameters.at(-1)).pipe(
 					Option.flatMap((lastParam) => {
 						const paramName = lastParam.name.getText(sourceFile).toLowerCase();
