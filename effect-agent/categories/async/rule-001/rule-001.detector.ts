@@ -7,7 +7,6 @@
 import {
 	Effect,
 	Array as EffectArray,
-	Function,
 	Match,
 	Option,
 	pipe,
