@@ -56,7 +56,7 @@ const FunctionNode = Schema.Union(
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
-const BaseViolationFields = Schema.Struct({
+class BaseViolationFields extends Schema.Class<BaseViolationFields>("BaseViolationFields")({
 	ruleId: Schema.String.pipe(Schema.brand("RuleId")),
 	category: Schema.String,
 	message: Schema.String,
@@ -68,7 +68,7 @@ const BaseViolationFields = Schema.Struct({
 		Schema.Literal("definite"),
 		Schema.Literal("potential"),
 	),
-});
+}) {}
 
 // Schema for violation construction with runtime validation
 const ViolationSchema = Schema.Struct({
