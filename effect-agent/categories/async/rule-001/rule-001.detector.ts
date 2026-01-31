@@ -130,38 +130,32 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithoutSuggestion,
 );
 
-// Helper to validate and decode violation data with comprehensive Option-based validation
-const decodeViolationData = (data: {
-	ruleId: string & { readonly RuleId: symbol };
-	category: string;
-	message: string;
-	filePath: string;
-	line: number;
-	column: number;
-	snippet: string;
-	certainty: "definite" | "potential";
-	suggestion?: string | undefined;
-}): Violation =>
-	Option.fromNullable(data.suggestion).pipe(
-		Option.match({
-			onSome: (suggestion) =>
-				Schema.decodeSync(ValidViolationWithSuggestion)({
-					...data,
-					suggestion,
-				}),
-			onNone: () => {
-				const rest = Struct.omit(data, "suggestion");
-				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-			},
-		}),
-	);
-
-// Schema transform for conditional validation based on suggestion presence
+// Conditional validator using Schema.transform bidirectional conversion
+// Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
+// using Schema.transform pattern for type-safe transformation
 const ViolationTransform = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
 	{
-		decode: decodeViolationData,
+		decode: (input) => {
+			const suggestion = Option.fromNullable(input.suggestion);
+			if (Option.isSome(suggestion)) {
+				return Schema.decodeSync(ValidViolationWithSuggestion)({
+					...input,
+					suggestion: suggestion.value,
+				});
+			}
+			return Schema.decodeSync(ValidViolationWithoutSuggestion)({
+				ruleId: input.ruleId,
+				category: input.category,
+				message: input.message,
+				filePath: input.filePath,
+				line: input.line,
+				column: input.column,
+				snippet: input.snippet,
+				certainty: input.certainty,
+			});
+		},
 		encode: Function.identity,
 		strict: true,
 	},
