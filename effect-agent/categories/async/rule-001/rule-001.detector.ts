@@ -19,11 +19,11 @@ import {
 	type Violation,
 } from "../../../detectors/types.ts";
 
-const MetaSchema = Schema.Struct({
+class MetaSchema extends Schema.Class<MetaSchema>("MetaSchema")({
 	id: Schema.Literal("rule-001"),
 	category: Schema.Literal("async"),
 	name: Schema.Literal("callback-api"),
-});
+}) {}
 
 const meta = Schema.decodeUnknownSync(MetaSchema)({
 	id: "rule-001",
