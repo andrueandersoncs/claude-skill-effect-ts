@@ -25,7 +25,7 @@ export const Order = Schema.Struct({
 });
 
 // ❌ Bad: Schema.Struct assigned to let
-let MutableSchema = Schema.Struct({
+const MutableSchema = Schema.Struct({
 	value: Schema.String,
 });
 
