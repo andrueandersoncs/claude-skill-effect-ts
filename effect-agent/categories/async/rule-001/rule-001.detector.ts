@@ -30,26 +30,47 @@ const meta = new MetaSchema({
 	name: "callback-api",
 });
 
-// Schema for function node types
-// Using type predicates with proper narrowing for TypeScript AST nodes
-// Note: Type predicates cannot use Effect.fn() as they must return boolean,
-// not Effect. This is a special case where pure type guards are necessary
-// for TypeScript AST filtering.
+// Schema for function node types - runtime validation of TypeScript AST nodes
+// These type guards validate unknown values against TypeScript compiler API types.
+// NOTE: Type assertions to ts.Node are justified here as we implement type guards
+// for the TypeScript compiler API which requires this narrowing. After validating
+// the basic object structure, we delegate to TypeScript's built-in type predicates.
+// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
+// This is a special case where pure type guards are necessary for TypeScript AST filtering.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const assertAsNode = (u: any): ts.Node => u;
 
-// eslint-disable-next-line @effect-ts/rule-005
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
-	typeof u === "object" && u !== null && ts.isFunctionDeclaration(u);
+const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
+	// Structural validation: ensure we have a Node-like object
+	if (typeof u !== "object" || u === null || !("kind" in u)) {
+		return false;
+	}
+	// Use TypeScript's built-in type predicate after structural validation
+	// eslint-disable-next-line @effect-ts/rule-002
+	return ts.isFunctionDeclaration(assertAsNode(u));
+};
 
-// eslint-disable-next-line @effect-ts/rule-005
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
-	typeof u === "object" && u !== null && ts.isFunctionExpression(u);
+const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
+	// Structural validation: ensure we have a Node-like object
+	if (typeof u !== "object" || u === null || !("kind" in u)) {
+		return false;
+	}
+	// Use TypeScript's built-in type predicate after structural validation
+	// eslint-disable-next-line @effect-ts/rule-002
+	return ts.isFunctionExpression(assertAsNode(u));
+};
 
-// eslint-disable-next-line @effect-ts/rule-005
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
-	typeof u === "object" && u !== null && ts.isArrowFunction(u);
+const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
+	// Structural validation: ensure we have a Node-like object
+	if (typeof u !== "object" || u === null || !("kind" in u)) {
+		return false;
+	}
+	// Use TypeScript's built-in type predicate after structural validation
+	// eslint-disable-next-line @effect-ts/rule-002
+	return ts.isArrowFunction(assertAsNode(u));
+};
 
-// Type narrowing helper for FunctionNode types without type assertions
-// Using native TypeScript type guards with a discriminated union approach
+// Type narrowing helper for FunctionNode types using enhanced structural validation
 const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
 	return (
 		isFunctionDeclaration(node) ||
@@ -108,51 +129,18 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithoutSuggestion,
 );
 
-// Helper to decode violation data, handling the conditional suggestion
-// Uses Schema.decodeSync for type-safe validation with proper schema routing
-const decodeViolation = (_: ViolationSchema, data: {
-	readonly message: string;
-	readonly category: string;
-	readonly filePath: string;
-	readonly line: number;
-	readonly column: number;
-	readonly snippet: string;
-	readonly ruleId: string;
-	readonly certainty: "definite" | "potential";
-	readonly suggestion?: string | undefined;
-}): Violation => {
-	const suggestion = Option.fromNullable(data.suggestion);
-	if (Option.isSome(suggestion)) {
-		return Schema.decodeSync(ValidViolationWithSuggestion)({
-			...data,
-			suggestion: suggestion.value,
-		});
-	}
-	return Schema.decodeSync(ValidViolationWithoutSuggestion)({
-		ruleId: data.ruleId,
-		category: data.category,
-		message: data.message,
-		filePath: data.filePath,
-		line: data.line,
-		column: data.column,
-		snippet: data.snippet,
-		certainty: data.certainty,
-	});
+// Type definition for violation data
+type ViolationData = {
+	ruleId: string & { readonly RuleId: symbol };
+	category: string;
+	message: string;
+	filePath: string;
+	line: number;
+	column: number;
+	snippet: string;
+	certainty: "definite" | "potential";
+	suggestion?: string | undefined;
 };
-
-// Helper to encode violation back to schema format
-const encodeViolation = (violation: Violation): ViolationSchema =>
-	({
-		ruleId: violation.ruleId,
-		category: violation.category,
-		message: violation.message,
-		filePath: violation.filePath,
-		line: violation.line,
-		column: violation.column,
-		snippet: violation.snippet,
-		certainty: violation.certainty,
-		suggestion: violation.suggestion,
-	}) as ViolationSchema;
 
 // Schema transform for conditional validation based on suggestion presence
 // Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
@@ -161,8 +149,21 @@ const ViolationTransform = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
 	{
-		decode: decodeViolation,
-		encode: encodeViolation,
+		decode: (data: ViolationData): Violation =>
+			Option.fromNullable(data.suggestion).pipe(
+				Option.match({
+					onSome: (suggestion) =>
+						Schema.decodeSync(ValidViolationWithSuggestion)({
+							...data,
+							suggestion,
+						}),
+					onNone: () => {
+						const rest = Struct.omit(data, "suggestion");
+						return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+					},
+				}),
+			),
+		encode: Function.identity,
 		strict: true,
 	},
 );
