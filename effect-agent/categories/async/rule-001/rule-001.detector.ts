@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Effect,
 	Function,
 	Match,
 	Option,
@@ -40,6 +41,7 @@ const meta = new MetaSchema({
 // Using Schema.Unknown to safely handle unknown values without type assertions
 const assertAsNode = (u: Schema.Unknown): ts.Node => u as ts.Node;
 
+// eslint-disable-next-line @effect-ts/rule-005
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	// Structural validation: ensure we have a Node-like object
 	if (typeof u !== "object" || u === null || !("kind" in u)) {
