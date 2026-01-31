@@ -40,9 +40,21 @@ const meta = new MetaSchema({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const assertAsNode = (u: any): ts.Node => u;
 
+// Helper to validate structural requirements using Option for null/undefined checks
+const validateNodeStructure = (u: unknown): boolean => {
+	return Option.fromNullable(u).pipe(
+		Option.filter((val) => typeof val === "object"),
+		Option.filter((val) => "kind" in val),
+		Option.match({
+			onSome: () => true,
+			onNone: () => false,
+		}),
+	);
+};
+
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
+	// Structural validation: ensure we have a Node-like object using Option.match
+	if (!validateNodeStructure(u)) {
 		return false;
 	}
 	// Use TypeScript's built-in type predicate after structural validation
@@ -51,8 +63,8 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 };
 
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
+	// Structural validation: ensure we have a Node-like object using Option.match
+	if (!validateNodeStructure(u)) {
 		return false;
 	}
 	// Use TypeScript's built-in type predicate after structural validation
@@ -61,8 +73,8 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 };
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
+	// Structural validation: ensure we have a Node-like object using Option.match
+	if (!validateNodeStructure(u)) {
 		return false;
 	}
 	// Use TypeScript's built-in type predicate after structural validation
