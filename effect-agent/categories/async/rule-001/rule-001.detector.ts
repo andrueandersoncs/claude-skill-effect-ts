@@ -119,6 +119,51 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithoutSuggestion,
 );
 
+// Type definition for violation data
+type ViolationData = {
+	ruleId: string & { readonly RuleId: symbol };
+	category: string;
+	message: string;
+	filePath: string;
+	line: number;
+	column: number;
+	snippet: string;
+	certainty: "definite" | "potential";
+	suggestion?: string | undefined;
+};
+
+// Pipeline: Extract suggestion from data
+const extractSuggestion = (data: ViolationData): Option.Option<string> =>
+	Option.fromNullable(data.suggestion);
+
+// Pipeline: Decode with suggestion
+const decodeWithSuggestion = (suggestion: string) =>
+	(data: ViolationData): Violation =>
+		Schema.decodeSync(ValidViolationWithSuggestion)({
+			...data,
+			suggestion,
+		});
+
+// Pipeline: Decode without suggestion
+const decodeWithoutSuggestion = (data: ViolationData): Violation => {
+	const rest = Struct.omit(data, "suggestion");
+	return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+};
+
+// Pipeline: Match and decode based on suggestion presence
+const matchAndDecode = (data: ViolationData) =>
+	(suggestion: Option.Option<string>): Violation =>
+		Option.match(suggestion, {
+			onSome: (sug) => decodeWithSuggestion(sug)(data),
+			onNone: () => decodeWithoutSuggestion(data),
+		});
+
+// Helper to validate and decode violation data with reusable pipeline
+const decodeViolationData = (data: ViolationData): Violation =>
+	flow(
+		extractSuggestion(data),
+		matchAndDecode(data),
+	);
 // Schema transform for conditional validation based on suggestion presence
 const ViolationTransform = Schema.transform(
 	ViolationSchema,
