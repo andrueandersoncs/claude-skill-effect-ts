@@ -59,7 +59,7 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 		Match.when(isNodeLike, (validNode) => {
 			// Check kind property directly without type assertion
 			// ts.SyntaxKind.FunctionDeclaration === 263
-			const kind = validNode["kind"];
+			const kind = validNode.kind;
 			if (typeof kind === "number" && kind === 263) {
 				return true;
 			}
@@ -79,7 +79,7 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 		Match.when(isNodeLike, (validNode) => {
 			// Check kind property directly without type assertion
 			// ts.SyntaxKind.FunctionExpression === 219
-			const kind = validNode["kind"];
+			const kind = validNode.kind;
 			if (typeof kind === "number" && kind === 219) {
 				return true;
 			}
@@ -99,7 +99,7 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 		Match.when(isNodeLike, (validNode) => {
 			// Check kind property directly without type assertion
 			// ts.SyntaxKind.ArrowFunction === 220
-			const kind = validNode["kind"];
+			const kind = validNode.kind;
 			if (typeof kind === "number" && kind === 220) {
 				return true;
 			}
@@ -133,7 +133,7 @@ const FunctionNode = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.FunctionDeclaration === 263
-		const kind = u["kind"];
+		const kind = u.kind;
 		if (typeof kind === "number" && kind === 263) {
 			return true;
 		}
@@ -147,7 +147,7 @@ const FunctionNode = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.FunctionExpression === 219
-		const kind = u["kind"];
+		const kind = u.kind;
 		if (typeof kind === "number" && kind === 219) {
 			return true;
 		}
@@ -161,7 +161,7 @@ const FunctionNode = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.ArrowFunction === 220
-		const kind = u["kind"];
+		const kind = u.kind;
 		if (typeof kind === "number" && kind === 220) {
 			return true;
 		}
