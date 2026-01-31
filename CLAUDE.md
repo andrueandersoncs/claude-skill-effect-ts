@@ -71,6 +71,26 @@ When reorganizing or refactoring code:
 - **Recover deleted code** - Use `git show HEAD~N:<path>` to recover accidentally deleted files
 - **Simple over complex** - Prefer direct copy/extraction over elaborate migration scripts
 
+## Complex Code Guidelines
+
+When writing complex logic (multi-step pipelines, nested transformations, intricate conditionals):
+
+**Decompose and verify:**
+- Break into small, independently testable functions
+- Test each function in isolation before composing them
+- Name intermediate steps - extract and name transformations for clarity and testability
+
+**State assumptions and failure modes explicitly:**
+- Document what inputs are expected and what guarantees the code provides
+- Identify edge cases (empty arrays, null values, concurrent access, etc.)
+- Handle each failure mode intentionally - don't let errors fall through silently
+
+**Mental simulation before coding:**
+- Walk through the logic step-by-step with concrete example inputs
+- Trace edge cases mentally: What happens with empty input? Malformed data? Partial failures?
+- Predict intermediate values at each step - if you can't, the logic is too complex
+- Ask: "What assumptions am I making? What if they're wrong?"
+
 ## Communication
 
 - When asked a question, answer it before taking action
