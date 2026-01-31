@@ -30,29 +30,42 @@ export const detect = (
 	}
 
 	const visit = (node: ts.Node) => {
-		// Detect TestClock usage - either as Effect.TestClock or TestClock.method()
-		if (
-			(ts.isPropertyAccessExpression(node) && node.name.text === "TestClock") ||
-			(ts.isPropertyAccessExpression(node) &&
-				ts.isIdentifier(node.expression) &&
-				node.expression.text === "TestClock")
-		) {
-			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-				node.getStart(),
-			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "TestClock detected; ensure test uses it.effect (not it.live)",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile),
-				severity: "info",
-				certainty: "potential",
-				suggestion:
-					"it.effect provides TestClock automatically; use it.live for real time",
-			});
+		// Detect manual TestClock.layer provision patterns:
+		// - .provide(TestClock.layer)
+		// - Effect.provide(TestClock.layer)
+		// - Layer.provide(TestClock.layer)
+		// - Layer.merge(TestClock.layer)
+		if (ts.isCallExpression(node)) {
+			const expr = node.expression;
+
+			// Check for .provide() or .merge() calls
+			if (ts.isPropertyAccessExpression(expr)) {
+				const methodName = expr.name.text;
+
+				if (methodName === "provide" || methodName === "merge") {
+					// Check if any argument is TestClock.layer
+					for (const arg of node.arguments) {
+						if (isTestClockLayer(arg)) {
+							const { line, character } =
+								sourceFile.getLineAndCharacterOfPosition(node.getStart());
+							violations.push({
+								ruleId: meta.id,
+								category: meta.category,
+								message:
+									"Manual TestClock.layer provision detected; it.effect includes it automatically",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile),
+								severity: "warning",
+								certainty: "definite",
+								suggestion:
+									"Remove TestClock.layer provision; use it.effect which provides TestClock automatically",
+							});
+						}
+					}
+				}
+			}
 		}
 
 		ts.forEachChild(node, visit);
@@ -61,3 +74,31 @@ export const detect = (
 	visit(sourceFile);
 	return violations;
 };
+
+/**
+ * Check if a node represents TestClock.layer
+ * Handles: TestClock.layer, Effect.TestClock.layer
+ */
+function isTestClockLayer(node: ts.Node): boolean {
+	// TestClock.layer
+	if (
+		ts.isPropertyAccessExpression(node) &&
+		node.name.text === "layer" &&
+		ts.isIdentifier(node.expression) &&
+		node.expression.text === "TestClock"
+	) {
+		return true;
+	}
+
+	// Effect.TestClock.layer
+	if (
+		ts.isPropertyAccessExpression(node) &&
+		node.name.text === "layer" &&
+		ts.isPropertyAccessExpression(node.expression) &&
+		node.expression.name.text === "TestClock"
+	) {
+		return true;
+	}
+
+	return false;
+}
