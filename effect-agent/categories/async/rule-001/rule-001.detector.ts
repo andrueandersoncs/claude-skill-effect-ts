@@ -6,7 +6,6 @@
 
 import {
 	Array as EffectArray,
-	Effect,
 	Function,
 	Match,
 	Option,
@@ -179,25 +178,18 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Composable helper functions for violation validation using Effect.fn for traceability
-const decodeWithSuggestion = Effect.fn("decodeWithSuggestion")(
-	(data: ViolationData, suggestion: string) =>
-		Effect.succeed(
-			Schema.decodeSync(ValidViolationWithSuggestion)({
-				...data,
-				suggestion,
-			}),
-		),
-);
+// Pure synchronous decoders without Effect - suitable for Schema.transform
+const decodeWithSuggestion = (data: ViolationData, suggestion: string) =>
+	Schema.decodeSync(ValidViolationWithSuggestion)({
+		...data,
+		suggestion,
+	});
 
-const decodeWithoutSuggestion = Effect.fn("decodeWithoutSuggestion")(
-	(data: ViolationData) => {
-		const rest = Struct.omit(data, "suggestion");
-		return Effect.succeed(
-			Schema.decodeSync(ValidViolationWithoutSuggestion)(rest),
-		);
-	},
-);
+const decodeWithoutSuggestion = (data: ViolationData) => {
+	const rest = Struct.omit(data, "suggestion");
+	return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+};
+
 // Schema transform for conditional validation based on suggestion presence
 // Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
 // This uses Schema.transform to ensure bidirectional type-safe conversion
@@ -210,9 +202,9 @@ const ViolationTransform = Schema.transform(
 				Option.fromNullable(data.suggestion),
 				Option.match({
 					onSome: (suggestion) =>
-						Effect.runSync(decodeWithSuggestion(data as unknown as ViolationData, suggestion)),
+						decodeWithSuggestion(data as unknown as ViolationData, suggestion),
 					onNone: () =>
-						Effect.runSync(decodeWithoutSuggestion(data as unknown as ViolationData)),
+						decodeWithoutSuggestion(data as unknown as ViolationData),
 				}),
 			),
 		encode: (v) => v as unknown as ViolationSchema,
