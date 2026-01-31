@@ -82,9 +82,9 @@ const ValidViolationWithSuggestion = Schema.Struct({
 	suggestion: Schema.String,
 });
 
-const ValidViolationWithoutSuggestion = Schema.Struct({
+class ValidViolationWithoutSuggestion extends Schema.Class<ValidViolationWithoutSuggestion>("ValidViolationWithoutSuggestion")({
 	...BaseViolationFields.fields,
-});
+}) {}
 
 // Helper to validate promise objects using Schema
 const validateIsPromiseExpression = (obj: {
