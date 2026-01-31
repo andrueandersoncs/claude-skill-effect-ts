@@ -178,11 +178,21 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
+// Pure synchronous decoders without Effect - suitable for Schema.transform
+const decodeWithSuggestion = (data: ViolationData, suggestion: string) =>
+	Schema.decodeSync(ValidViolationWithSuggestion)({
+		...data,
+		suggestion,
+	});
+
+const decodeWithoutSuggestion = (data: ViolationData) => {
+	const rest = Struct.omit(data, "suggestion");
+	return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+};
+
 // Schema transform for conditional validation based on suggestion presence
 // Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
 // This uses Schema.transform to ensure bidirectional type-safe conversion
-// Note: decode function is synchronous (required by Schema.transform), so we inline
-// Schema.decodeSync calls directly without Effect.fn wrapping
 const ViolationTransform = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
@@ -192,14 +202,9 @@ const ViolationTransform = Schema.transform(
 				Option.fromNullable(data.suggestion),
 				Option.match({
 					onSome: (suggestion) =>
-						Schema.decodeSync(ValidViolationWithSuggestion)({
-							...data,
-							suggestion,
-						}),
-					onNone: () => {
-						const rest = Struct.omit(data, "suggestion");
-						return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-					},
+						decodeWithSuggestion(data as unknown as ViolationData, suggestion),
+					onNone: () =>
+						decodeWithoutSuggestion(data as unknown as ViolationData),
 				}),
 			),
 		encode: (v) => v as unknown as ViolationSchema,
