@@ -55,7 +55,7 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 			// eslint-disable-next-line @effect-ts/rule-002
 			return ts.isFunctionDeclaration(assertAsNode(validNode));
 		}),
-		Match.orElse(() => false),
+		Match.orElse(Function.constant(false)),
 	);
 };
 
@@ -70,7 +70,7 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 			// eslint-disable-next-line @effect-ts/rule-002
 			return ts.isFunctionExpression(assertAsNode(validNode));
 		}),
-		Match.orElse(() => false),
+		Match.orElse(Function.constant(false)),
 	);
 };
 
@@ -85,7 +85,7 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 			// eslint-disable-next-line @effect-ts/rule-002
 			return ts.isArrowFunction(assertAsNode(validNode));
 		}),
-		Match.orElse(() => false),
+		Match.orElse(Function.constant(false)),
 	);
 };
 
