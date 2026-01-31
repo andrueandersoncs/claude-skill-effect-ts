@@ -94,33 +94,9 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 
 // Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
 const FunctionNode = Schema.Union(
-	Schema.declare((u): u is ts.FunctionDeclaration => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isFunctionDeclaration(assertAsNode(u));
-	}),
-	Schema.declare((u): u is ts.FunctionExpression => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isFunctionExpression(assertAsNode(u));
-	}),
-	Schema.declare((u): u is ts.ArrowFunction => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isArrowFunction(assertAsNode(u));
-	}),
+	Schema.declare((u): u is ts.FunctionDeclaration => isFunctionDeclaration(u)),
+	Schema.declare((u): u is ts.FunctionExpression => isFunctionExpression(u)),
+	Schema.declare((u): u is ts.ArrowFunction => isArrowFunction(u)),
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
