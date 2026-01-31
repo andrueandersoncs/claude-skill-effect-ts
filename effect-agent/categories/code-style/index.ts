@@ -4,7 +4,6 @@
  * This file exports all rules in the code-style category.
  */
 
-export * from "./rule-001/rule-001.js";
 export * from "./rule-002/rule-002.js";
 export * from "./rule-003/rule-003.js";
 export * from "./rule-004/rule-004.js";
@@ -15,25 +14,17 @@ export * from "./rule-008/rule-008.js";
 export * from "./rule-009/rule-009.js";
 export * from "./rule-010/rule-010.js";
 export * from "./rule-011/rule-011.js";
-export * from "./rule-012/rule-012.js";
 export * from "./rule-013/rule-013.js";
-export * from "./rule-014/rule-014.js";
 
 /**
  * Rule metadata for this category
  */
 export const rules = [
 	{
-		id: "rule-001",
-		category: "code-style",
-		name: "dom-element",
-		rule: "Never use angle bracket casting (<Type>value); use Schema",
-	},
-	{
 		id: "rule-002",
 		category: "code-style",
-		name: "dynamic-data",
-		rule: "Never use 'as any'; fix the type or create a Schema",
+		name: "no-type-assertions",
+		rule: "Never use type assertions (as, angle brackets, double assertions); use Schema.decodeUnknown or type guards",
 	},
 	{
 		id: "rule-003",
@@ -90,22 +81,10 @@ export const rules = [
 		rule: 'Never import from ".js" files; always import from ".ts" files directly',
 	},
 	{
-		id: "rule-012",
-		category: "code-style",
-		name: "unknown-conversion",
-		rule: "Never use 'as unknown as T'; define a Schema instead",
-	},
-	{
 		id: "rule-013",
 		category: "code-style",
 		name: "unused-variable",
 		rule: "Never use eslint-disable comments; fix the underlying issue",
-	},
-	{
-		id: "rule-014",
-		category: "code-style",
-		name: "validate-api-response",
-		rule: "Never use type casting (as); use Schema.decodeUnknown or type guards",
 	},
 ] as const;
 
