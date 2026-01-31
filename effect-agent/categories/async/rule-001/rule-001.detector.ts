@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Effect,
 	Function,
 	flow,
 	Match,
@@ -46,8 +47,10 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
 	ts.isFunctionExpression(u as ts.Node);
 
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
-	ts.isArrowFunction(u as ts.Node);
+const isArrowFunction = Effect.fn("isArrowFunction")(
+	(u: unknown): u is ts.ArrowFunction =>
+		ts.isArrowFunction(u as ts.Node),
+);
 
 const FunctionNode = Schema.Union(
 	Schema.declare(isFunctionDeclaration),
