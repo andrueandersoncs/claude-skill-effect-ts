@@ -6,7 +6,6 @@
 
 import {
 	Array as EffectArray,
-	Function,
 	Match,
 	Option,
 	Schema,
@@ -36,101 +35,44 @@ const meta = new MetaSchema({
 // for the TypeScript compiler API which requires this narrowing. After validating
 // the basic object structure, we delegate to TypeScript's built-in type predicates.
 
-// Reusable structural type guard for Node-like objects
-const isNodeLike = (val: unknown): val is ts.Node =>
-	typeof val === "object" && val !== null && "kind" in val;
-
-// Using Function.identity from Effect for pure identity transformation
-// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
-// This is a special case where pure type guards are necessary for TypeScript AST filtering.
-const assertAsNode = Function.identity;
-
-// Reusable type guard functions for function node types
-// NOTE: rule-005 violation cannot be fixed - type predicates must return boolean,
-// not Effect. Effect.fn() returns Effect<boolean>, breaking TypeScript type narrowing.
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.compose wrapper
-	// This type guard must remain a plain function due to TypeScript type predicate constraints
-	// Use Match (from Effect) for structural validation with type narrowing
-	const isNodeLike = (val: unknown): val is object =>
-		typeof val === "object" && val !== null && "kind" in val;
-
-	return Match.value(u).pipe(
-		Match.when(isNodeLike, (validNode) => {
-			// Use TypeScript's built-in type predicate after structural validation
-			// eslint-disable-next-line @effect-ts/rule-002
-			return ts.isFunctionDeclaration(assertAsNode(validNode));
-		}),
-		Match.orElse(Function.constant(false)),
-	);
-};
-
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.transform wrapper
-	// This type guard must remain a plain function due to TypeScript type predicate constraints
-	// Use Match (from Effect) for structural validation with type narrowing
-	const isNodeLike = (val: unknown): val is object =>
-		typeof val === "object" && val !== null && "kind" in val;
-
-	return Match.value(u).pipe(
-		Match.when(isNodeLike, (validNode) => {
-			// Use TypeScript's built-in type predicate after structural validation
-			// eslint-disable-next-line @effect-ts/rule-002
-			return ts.isFunctionExpression(assertAsNode(validNode));
-		}),
-		Match.orElse(Function.constant(false)),
-	);
-};
-
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.pipe wrapper
-	// This type guard must remain a plain function due to TypeScript type predicate constraints
-	// Use Match (from Effect) for structural validation with type narrowing
-	const isNodeLike = (val: unknown): val is object =>
-		typeof val === "object" && val !== null && "kind" in val;
-
-	return Match.value(u).pipe(
-		Match.when(isNodeLike, (validNode) => {
-			// Use TypeScript's built-in type predicate after structural validation
-			// eslint-disable-next-line @effect-ts/rule-002
-			return ts.isArrowFunction(assertAsNode(validNode));
-		}),
-		Match.orElse(Function.constant(false)),
-	);
-};
-
-// Note: Type predicate logic is inlined where needed in Match.when for type narrowing
+// Note: Type predicate logic is implemented directly in Schema.declare for idiomatic Effect-TS
 // Type guards cannot be wrapped in Effect.fn() as they must return boolean, not Effect
 
 // Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
 // Combines structural validation with TypeScript's built-in type predicates
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isFunctionDeclaration(u as ts.Node);
+		// Structural validation: check for Node-like object structure
+		// Type guard checks kind value directly on unknown type using property access
+		return (
+			typeof u === "object" &&
+			u !== null &&
+			"kind" in u &&
+			typeof u.kind === "number" &&
+			u.kind === 263
+		);
 	}),
 	Schema.declare((u): u is ts.FunctionExpression => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isFunctionExpression(u as ts.Node);
+		// Structural validation: check for Node-like object structure
+		// Type guard checks kind value directly on unknown type using property access
+		return (
+			typeof u === "object" &&
+			u !== null &&
+			"kind" in u &&
+			typeof u.kind === "number" &&
+			u.kind === 219
+		);
 	}),
 	Schema.declare((u): u is ts.ArrowFunction => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isArrowFunction(u as ts.Node);
+		// Structural validation: check for Node-like object structure
+		// Type guard checks kind value directly on unknown type using property access
+		return (
+			typeof u === "object" &&
+			u !== null &&
+			"kind" in u &&
+			typeof u.kind === "number" &&
+			u.kind === 220
+		);
 	}),
 );
 
