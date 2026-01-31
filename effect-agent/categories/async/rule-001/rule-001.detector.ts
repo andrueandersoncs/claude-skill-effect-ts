@@ -40,8 +40,9 @@ const meta = new MetaSchema({
 // Using Schema.declare() is the idiomatic Effect-TS pattern for type guards that must
 // return boolean rather than Effect.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const assertAsNode = (u: any): ts.Node => u;
+// Use Function.identity from Effect instead of identity function
+// Identity function is already imported from effect package
+const assertAsNode = Function.identity;
 
 // Reusable type guard functions for function node types
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
