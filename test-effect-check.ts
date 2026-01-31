@@ -1,11 +1,10 @@
-// Test file with known violations
+import { Function, Option } from "effect";
+
 const x = null;
-if (x === null) {
-  console.log("null check - should use Match");
-}
 
-Array.from({ length: 10 }, (_, i) => i).forEach((i) => {
-  console.log(i); // loop - should use Array methods
-});
-
-const result = x ? "yes" : "no"; // ternary - should use Match
+Option.fromNullable(x).pipe(
+  Option.match({
+    onNone: () => console.log("null check - should use Match"),
+    onSome: Function.constant(undefined),
+  })
+);
