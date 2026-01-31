@@ -34,15 +34,20 @@ Type errors MUST be caught EARLY, not just in Phase 5. Validation happens at:
 |-------|---------------|---------------|-------------------|
 | Task-worker BEFORE commit | Task-worker | `bun run check` | Revert, report UNFIXABLE |
 | Merge-worker BEFORE merge | Merge-worker | `bun run check` on branch | REJECT branch |
-| Phase 5 AFTER tournament | Primary agent | `bun run check` on main | REVERT all changes |
+| **⛔ PRE-MAIN-MERGE GATE** | **Primary agent** | **`bun run check` + suppression grep on surviving branch** | **ABORT: DO NOT MERGE TO MAIN** |
+| Phase 5 AFTER merge | Primary agent | `bun run check` on main | REVERT all changes |
 
-**WHY 3 LAYERS?**
+**WHY 4 LAYERS?**
 - Task-workers catch bad fixes IMMEDIATELY (prevents bad commits)
 - Merge-workers catch missed validation (prevents bad branches from merging)
-- Phase 5 catches anything that slipped through (final safety net)
+- **PRE-MAIN-MERGE GATE catches anything that slipped through BEFORE affecting main** ← CRITICAL
+- Phase 5 is the final safety net (should rarely fail if gate works)
+
+**The PRE-MAIN-MERGE GATE is the LAST CHANCE to prevent bad changes from reaching main.**
+If this gate fails, DO NOT merge. The user's code remains unchanged. This is CORRECT behavior.
 
 **If task-workers validated properly, Phase 5 should NEVER find type errors.**
-If Phase 5 finds type errors, it means task-workers FAILED to validate.
+If Phase 5 finds type errors, it means task-workers AND the pre-main-merge gate BOTH failed.
 
 ## ⛔⛔⛔ THE GOLDEN RULE: UNFIXABLE ≠ SUPPRESS ⛔⛔⛔
 
@@ -550,6 +555,24 @@ Rule documentation: ${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/[category]/rul
 ⛔⛔⛔ CRITICAL: REAL FIXES ONLY ⛔⛔⛔
 You MUST rewrite the code to follow Effect-TS patterns.
 
+## ⛔⛔⛔ ABSOLUTE REJECTION CRITERIA - AUTOMATIC FAILURE ⛔⛔⛔
+
+**If you add ANY of these, your fix is INVALID and will be REJECTED during merge:**
+
+| Pattern | Why FORBIDDEN | Consequence |
+|---------|---------------|-------------|
+| `// eslint-disable` | Hides violation, doesn't fix | Branch REJECTED |
+| `// @ts-ignore` | Hides type error, doesn't fix | Branch REJECTED |
+| `// @ts-expect-error` | Hides type error, doesn't fix | Branch REJECTED |
+| `// biome-ignore` | Hides violation, doesn't fix | Branch REJECTED |
+| `// prettier-ignore` | Hides formatting issue | Branch REJECTED |
+| `// @ts-nocheck` | Disables ALL type checking | Branch REJECTED |
+| `as any` | Escapes type system | Branch REJECTED |
+| `as unknown` | Escapes type system | Branch REJECTED |
+
+**There is NO scenario where adding suppression comments is acceptable.**
+**"Cannot fix" = leave code UNCHANGED. "Cannot fix" ≠ add suppression.**
+
 FORBIDDEN (these are NOT fixes - using any of these is a FAILURE):
 - eslint-disable comments
 - @ts-ignore or @ts-expect-error
@@ -870,6 +893,58 @@ If odd number of branches, the LAST branch passes to next round unchanged (gets 
 
 After tournament completes (exactly ONE branch remains):
 
+## ⛔⛔⛔ MANDATORY PRE-MAIN-MERGE VALIDATION GATE ⛔⛔⛔
+
+**BEFORE merging to main, you MUST run ALL validation checks on the surviving branch.**
+
+**This is the FINAL SAFETY NET before affecting the user's code. DO NOT SKIP.**
+
+```bash
+# Step 1: Checkout the surviving branch
+cd <project_root>
+git checkout <surviving-branch>
+
+# Step 2: Check for suppression comments in ALL changed files
+git diff main...<surviving-branch> --name-only | xargs -I {} sh -c 'grep -l "eslint-disable\|@ts-ignore\|@ts-expect-error\|biome-ignore\|prettier-ignore\|@ts-nocheck" {} 2>/dev/null && echo "SUPPRESSION FOUND IN: {}"'
+
+# Step 3: Check for dangerous type assertions in ALL changed files
+git diff main...<surviving-branch> | grep -E "^\+.*as (any|unknown)" && echo "DANGEROUS TYPE ASSERTIONS FOUND"
+
+# Step 4: Run FULL type check
+bun run check 2>&1
+
+# Step 5: Count errors vs main
+git checkout main
+bun run check 2>&1 | wc -l > /tmp/main-errors
+git checkout <surviving-branch>
+bun run check 2>&1 | wc -l > /tmp/branch-errors
+# If branch-errors > main-errors: REJECT
+```
+
+### ⛔ PRE-MAIN-MERGE VALIDATION RULES
+
+| Check | Condition | Action |
+|-------|-----------|--------|
+| Suppression comments | ANY found | **ABORT MERGE. Report FAILURE.** |
+| Type assertions `as any`/`as unknown` | ANY added | **ABORT MERGE. Report FAILURE.** |
+| Type errors | Count increased from main | **ABORT MERGE. Report FAILURE.** |
+| All checks pass | All 3 pass | Proceed with merge to main |
+
+### ⛔ IF ANY CHECK FAILS - DO NOT MERGE TO MAIN
+
+```bash
+# ABORT: Return to main without merging
+git checkout main
+
+# Clean up the failed branch
+git worktree remove ../worktree-<surviving-branch> --force
+git branch -D <surviving-branch>
+```
+
+**Report:** "❌ FIX FAILED: Pre-merge validation failed. [specific reason]. No changes made to main."
+
+### ⛔ ONLY IF ALL CHECKS PASS - MERGE TO MAIN
+
 ```bash
 cd <project_root>
 git checkout main
@@ -893,6 +968,10 @@ git branch -d <surviving-branch>
 - ❌ **Merging a branch without running `bun run check` first**
 - ❌ **Accepting a branch that introduces type errors**
 - ❌ **Skipping the 3-check validation (suppression, type assertions, type errors)**
+- ❌ **Merging surviving branch to main WITHOUT running pre-main-merge validation gate**
+- ❌ **Proceeding to main merge if ANY suppression comments found in surviving branch**
+- ❌ **Proceeding to main merge if ANY `as any`/`as unknown` type assertions added**
+- ❌ **Proceeding to main merge if type error count increased vs main**
 
 ## REQUIRED BEHAVIORS IN PHASE 4
 
@@ -901,10 +980,12 @@ git branch -d <surviving-branch>
 - ✅ Use a SINGLE message with MULTIPLE Task tool calls per round
 - ✅ WAIT for all agents in a round to complete before next round
 - ✅ Continue rounds until exactly 1 branch remains
-- ✅ Only then merge the final branch into main
+- ✅ **⛔ RUN PRE-MAIN-MERGE VALIDATION GATE on surviving branch (see "Final Merge to Main" section)**
+- ✅ **Only merge to main IF validation gate passes ALL checks**
 - ✅ **Each merge-worker MUST validate branches with `bun run check` BEFORE merging**
 - ✅ **REJECT any branch that increases type error count**
 - ✅ **Track rejected branches in the report**
+- ✅ **If validation gate FAILS: abort merge, clean up branch, report failure (NO changes to main)**
 
 ## Output Format
 
@@ -995,7 +1076,12 @@ Before reporting completion, verify ALL of these:
 - [ ] **Phase 4: Merge-workers checked each branch for suppression comments BEFORE merging**
 - [ ] **Phase 4: Rejected any branches containing suppression comments**
 - [ ] **Phase 4: Ran tournament merge rounds until 1 branch remained**
-- [ ] **Phase 4: Merged final branch into main**
+- [ ] **⛔ Phase 4: PRE-MAIN-MERGE VALIDATION GATE (MANDATORY BEFORE MERGING TO MAIN):**
+  - [ ] Ran `grep` for suppression comments on surviving branch - NONE found
+  - [ ] Ran `grep` for `as any`/`as unknown` type assertions - NONE added
+  - [ ] Ran `bun run check` on surviving branch - error count ≤ main's error count
+  - [ ] **IF ANY CHECK FAILED: ABORT - do NOT merge to main, report FAILURE**
+- [ ] **Phase 4: Only IF validation gate PASSED: Merged final branch into main**
 - [ ] **Phase 4: Cleaned up all worktrees and task branches**
 - [ ] **Phase 5: VERIFICATION - Re-run detectors on fixed file (record count: M)**
 - [ ] **Phase 5: Verify M < N (violation count DECREASED)**
@@ -1006,7 +1092,9 @@ Before reporting completion, verify ALL of these:
 
 **If ANY checkbox is not complete, the workflow is INCOMPLETE. Continue working.**
 
-**If verification fails (suppression comments, type errors, or increased violations), REVERT and report failure.**
+**If validation gate fails (suppression comments, type assertions, or type errors), DO NOT merge to main. Report failure.**
+
+**If Phase 5 verification fails after merge (should be rare if validation gate worked), REVERT and report failure.**
 
 ## ⛔ MANDATORY PHASE 5: VERIFICATION
 
