@@ -43,9 +43,18 @@ const NodeLikeSchema = Schema.Struct({
 	kind: Schema.Unknown,
 });
 
+// Schema for validating kind is a number
+const KindSchema = Schema.Struct({
+	kind: Schema.Number,
+});
+
 // Reusable structural type guard using Schema.is() for type-safe validation
 const isNodeLike = (val: unknown): val is ts.Node =>
 	Schema.is(NodeLikeSchema)(val) && val !== null;
+
+// Type guard for checking if a node has a numeric kind property
+const isNumericKind = (val: unknown): boolean =>
+	Schema.is(KindSchema)(val);
 
 // Reusable type guard functions for function node types
 // NOTE: rule-005 violation cannot be fixed - type predicates must return boolean,
@@ -57,10 +66,10 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 
 	return Match.value(u).pipe(
 		Match.when(isNodeLike, (validNode) => {
-			// Check kind property using Schema.is() instead of manual typeof check
+			// Check kind property directly without type assertion
 			// ts.SyntaxKind.FunctionDeclaration === 263
 			const kind = validNode["kind"];
-			if (Schema.is(FunctionDeclarationKindSchema)(kind)) {
+			if (isNumericKind(validNode) && kind === 263) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -77,10 +86,10 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 
 	return Match.value(u).pipe(
 		Match.when(isNodeLike, (validNode) => {
-			// Check kind property using Schema.is() instead of manual typeof check
+			// Check kind property directly without type assertion
 			// ts.SyntaxKind.FunctionExpression === 219
 			const kind = validNode["kind"];
-			if (Schema.is(FunctionExpressionKindSchema)(kind)) {
+			if (isNumericKind(validNode) && kind === 219) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -97,10 +106,10 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 
 	return Match.value(u).pipe(
 		Match.when(isNodeLike, (validNode) => {
-			// Check kind property using Schema.is() instead of manual typeof check
+			// Check kind property directly without type assertion
 			// ts.SyntaxKind.ArrowFunction === 220
 			const kind = validNode["kind"];
-			if (Schema.is(ArrowFunctionKindSchema)(kind)) {
+			if (isNumericKind(validNode) && kind === 220) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -120,19 +129,6 @@ const NodeLikeStructure = Schema.Object.pipe(
 	Schema.filter((u): u is object & { kind: unknown } => "kind" in u),
 );
 
-// Schema for validating kind property is a specific number
-const FunctionDeclarationKindSchema = Schema.Number.pipe(
-	Schema.filter((n): n is typeof n => n === 263),
-);
-
-const FunctionExpressionKindSchema = Schema.Number.pipe(
-	Schema.filter((n): n is typeof n => n === 219),
-);
-
-const ArrowFunctionKindSchema = Schema.Number.pipe(
-	Schema.filter((n): n is typeof n => n === 220),
-);
-
 // Note: Type predicate logic is implemented directly in Schema.declare for idiomatic Effect-TS
 // Type guards cannot be wrapped in Effect.fn() as they must return boolean, not Effect
 
@@ -144,10 +140,10 @@ const FunctionNode = Schema.Union(
 		if (!isNodeLike(u)) {
 			return false;
 		}
-		// Check kind property using Schema.is() instead of manual typeof check
+		// Check kind property directly without type assertion
 		// ts.SyntaxKind.FunctionDeclaration === 263
 		const kind = u["kind"];
-		if (Schema.is(FunctionDeclarationKindSchema)(kind)) {
+		if (isNumericKind(u) && kind === 263) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
@@ -158,10 +154,10 @@ const FunctionNode = Schema.Union(
 		if (!isNodeLike(u)) {
 			return false;
 		}
-		// Check kind property using Schema.is() instead of manual typeof check
+		// Check kind property directly without type assertion
 		// ts.SyntaxKind.FunctionExpression === 219
 		const kind = u["kind"];
-		if (Schema.is(FunctionExpressionKindSchema)(kind)) {
+		if (isNumericKind(u) && kind === 219) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
@@ -172,10 +168,10 @@ const FunctionNode = Schema.Union(
 		if (!isNodeLike(u)) {
 			return false;
 		}
-		// Check kind property using Schema.is() instead of manual typeof check
+		// Check kind property directly without type assertion
 		// ts.SyntaxKind.ArrowFunction === 220
 		const kind = u["kind"];
-		if (Schema.is(ArrowFunctionKindSchema)(kind)) {
+		if (isNumericKind(u) && kind === 220) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
