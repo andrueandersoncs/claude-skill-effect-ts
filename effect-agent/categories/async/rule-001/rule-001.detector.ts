@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Effect,
 	Function,
 	flow,
 	Match,
@@ -40,19 +41,50 @@ class IsPromiseExpression extends Schema.Class<IsPromiseExpression>("IsPromiseEx
 
 // Schema for function node types
 // Using type predicates with proper narrowing for TypeScript AST nodes
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
-	ts.isFunctionDeclaration(u as ts.Node);
+// Validate TypeScript AST nodes using Schema validation for runtime type safety
+const AstNodeSchema = Schema.Struct({
+	kind: Schema.Number,
+});
 
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
-	ts.isFunctionExpression(u as ts.Node);
+// Pure transformation functions with explicit naming for traceability
+const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
+	// First validate structure using Schema.is
+	if (!Schema.is(AstNodeSchema)(u)) return false;
+	// Then delegate to ts.isFunctionDeclaration for final validation
+	return ts.isFunctionDeclaration(u as ts.Node);
+};
 
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
-	ts.isArrowFunction(u as ts.Node);
+const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
+	if (!Schema.is(AstNodeSchema)(u)) return false;
+	return ts.isFunctionExpression(u as ts.Node);
+};
+
+const isArrowFunction = Effect.fn("isArrowFunction")(
+	(u: unknown): u is ts.ArrowFunction => {
+		if (!Schema.is(AstNodeSchema)(u)) return false;
+		return ts.isArrowFunction(u as ts.Node);
+	},
+);
 
 const FunctionNode = Schema.Union(
-	Schema.declare(isFunctionDeclaration),
-	Schema.declare(isFunctionExpression),
-	Schema.declare(isArrowFunction),
+	Schema.declare(
+		(u): u is ts.FunctionDeclaration => {
+			if (typeof u !== "object" || u === null) return false;
+			return ts.isFunctionDeclaration(u as ts.Node);
+		},
+	),
+	Schema.declare(
+		(u): u is ts.FunctionExpression => {
+			if (typeof u !== "object" || u === null) return false;
+			return ts.isFunctionExpression(u as ts.Node);
+		},
+	),
+	Schema.declare(
+		(u): u is ts.ArrowFunction => {
+			if (typeof u !== "object" || u === null) return false;
+			return ts.isArrowFunction(u as ts.Node);
+		},
+	),
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
@@ -104,18 +136,6 @@ class ValidViolationWithoutSuggestion extends Schema.Class<ValidViolationWithout
 	...BaseViolationFields.fields,
 }) {}
 
-// Schema.transform for converting raw violation input to validated Violation
-// Using transformation to validate and process the input data
-const ViolationTransformer = Schema.transform(
-	ViolationDataSchema,
-	ViolationDataSchema,
-	{
-		decode: Function.identity,
-		encode: Function.identity,
-		strict: false,
-	},
-);
-
 // Helper to validate promise objects using Schema
 const validateIsPromiseExpression = (obj: {
 	isNewExpr: boolean;
@@ -125,8 +145,9 @@ const validateIsPromiseExpression = (obj: {
 	isNewExpr: boolean;
 	isIdentifierExpr: boolean;
 	isPromiseText: boolean;
-}> =>
-	Match.value(obj).pipe(
+}> => {
+	// Using Effect.Option for validation - pure transformation in sync context
+	return Match.value(obj).pipe(
 		Match.when(Schema.is(IsPromiseExpression), () =>
 			Option.some({
 				isNewExpr: true,
@@ -136,6 +157,7 @@ const validateIsPromiseExpression = (obj: {
 		),
 		Match.orElse(() => Option.none()),
 	);
+};
 
 // Helper to route violations to appropriate schema based on suggestion presence
 const normalizeViolation = (
