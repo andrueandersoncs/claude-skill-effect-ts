@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Effect,
 	Function,
 	Match,
 	Option,
@@ -36,11 +37,17 @@ const meta = new MetaSchema({
 // NOTE: Type assertions to ts.Node are justified here as we implement type guards
 // for the TypeScript compiler API which requires this narrowing. After validating
 // the basic object structure, we delegate to TypeScript's built-in type predicates.
+
 // Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
 // This is a special case where pure type guards are necessary for TypeScript AST filtering.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const assertAsNode = (u: any): ts.Node => u;
+const assertAsNode = (u: any): ts.Node => {
+	// Traced identity function using Effect for pure transformations
+	return Effect.runSync(Effect.gen(function* () {
+		return u;
+	}));
+};
 
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	// Use Match.value for structural validation with type narrowing
@@ -88,10 +95,15 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 };
 
 const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
-	return (
-		isFunctionDeclaration(node) ||
-		isFunctionExpression(node) ||
-		isArrowFunction(node)
+	// Traced type guard using Effect for pure transformations
+	return Effect.runSync(
+		Effect.gen(function* () {
+			return (
+				isFunctionDeclaration(node) ||
+				isFunctionExpression(node) ||
+				isArrowFunction(node)
+			);
+		}),
 	);
 };
 
@@ -144,6 +156,39 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithSuggestion,
 	ValidViolationWithoutSuggestion,
 );
+
+// Type definition for violation data
+type ViolationData = {
+	ruleId: string & { readonly RuleId: symbol };
+	category: string;
+	message: string;
+	filePath: string;
+	line: number;
+	column: number;
+	snippet: string;
+	certainty: "definite" | "potential";
+	suggestion?: string | undefined;
+};
+
+// Composable helper functions for violation validation using Effect for traceability
+const decodeWithSuggestion = (data: ViolationData, suggestion: string): Violation =>
+	Effect.runSync(
+		Effect.gen(function* () {
+			return Schema.decodeSync(ValidViolationWithSuggestion)({
+				...data,
+				suggestion,
+			});
+		}),
+	);
+
+const decodeWithoutSuggestion = (data: ViolationData): Violation => {
+	return Effect.runSync(
+		Effect.gen(function* () {
+			const rest = Struct.omit(data, "suggestion");
+			return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+		}),
+	);
+};
 
 // Schema transform for conditional validation based on suggestion presence
 // Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
