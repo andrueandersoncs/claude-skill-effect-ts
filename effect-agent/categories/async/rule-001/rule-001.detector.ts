@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Either,
 	Function,
 	Match,
 	Option,
@@ -42,35 +43,38 @@ const meta = new MetaSchema({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const assertAsNode = (u: any): ts.Node => u;
 
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isFunctionDeclaration(assertAsNode(u));
-};
+// Schema defining a Node-like object with structural properties
+// This validates the basic structure before delegating to TypeScript's type predicates
+const NodeLike = Schema.Struct({
+	kind: Schema.Number,
+});
 
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isFunctionExpression(assertAsNode(u));
-};
+const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
+	pipe(
+		Schema.decodeUnknownEither(NodeLike)(u),
+		Either.match({
+			onRight: () => ts.isFunctionDeclaration(assertAsNode(u)),
+			onLeft: () => false,
+		}),
+	);
 
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isArrowFunction(assertAsNode(u));
-};
+const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
+	pipe(
+		Schema.decodeUnknownEither(NodeLike)(u),
+		Either.match({
+			onRight: () => ts.isFunctionExpression(assertAsNode(u)),
+			onLeft: () => false,
+		}),
+	);
+
+const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
+	pipe(
+		Schema.decodeUnknownEither(NodeLike)(u),
+		Either.match({
+			onRight: () => ts.isArrowFunction(assertAsNode(u)),
+			onLeft: () => false,
+		}),
+	);
 
 const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
 	return (
