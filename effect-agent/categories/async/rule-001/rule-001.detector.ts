@@ -40,6 +40,7 @@ const IsPromiseExpression = Schema.Struct({
 
 // Schema for function node types
 // Using type predicates with proper narrowing for TypeScript AST nodes
+// Pure transformation functions with explicit naming for traceability
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
 	ts.isFunctionDeclaration(u as ts.Node);
 
