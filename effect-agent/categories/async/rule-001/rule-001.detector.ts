@@ -42,7 +42,16 @@ const assertAsNode = (u: any): ts.Node => u;
 
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
+	// Use Option.match for nullable handling
+	const isNodeLike = Option.match(
+		Option.fromNullable(u as Record<string, unknown> | null),
+		{
+			onSome: (obj) =>
+				typeof obj === "object" && "kind" in obj,
+			onNone: () => false,
+		},
+	);
+	if (!isNodeLike) {
 		return false;
 	}
 	// Use TypeScript's built-in type predicate after structural validation
@@ -52,7 +61,16 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
+	// Use Option.match for nullable handling
+	const isNodeLike = Option.match(
+		Option.fromNullable(u as Record<string, unknown> | null),
+		{
+			onSome: (obj) =>
+				typeof obj === "object" && "kind" in obj,
+			onNone: () => false,
+		},
+	);
+	if (!isNodeLike) {
 		return false;
 	}
 	// Use TypeScript's built-in type predicate after structural validation
@@ -62,7 +80,16 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
+	// Use Option.match for nullable handling
+	const isNodeLike = Option.match(
+		Option.fromNullable(u as Record<string, unknown> | null),
+		{
+			onSome: (obj) =>
+				typeof obj === "object" && "kind" in obj,
+			onNone: () => false,
+		},
+	);
+	if (!isNodeLike) {
 		return false;
 	}
 	// Use TypeScript's built-in type predicate after structural validation
