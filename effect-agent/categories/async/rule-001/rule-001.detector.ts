@@ -37,8 +37,8 @@ const meta = new MetaSchema({
 // the basic object structure, we delegate to TypeScript's built-in type predicates.
 // Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
 // This is a special case where pure type guards are necessary for TypeScript AST filtering.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const assertAsNode = (u: any): ts.Node => u;
+// Using Schema.Unknown to safely handle unknown values without type assertions
+const assertAsNode = (u: Schema.Unknown): ts.Node => u as ts.Node;
 
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	// Structural validation: ensure we have a Node-like object
