@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Effect,
 	Function,
 	flow,
 	Match,
@@ -47,8 +48,10 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
 	ts.isFunctionExpression(u as ts.Node);
 
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
-	ts.isArrowFunction(u as ts.Node);
+const isArrowFunction = Effect.fn("isArrowFunction")(
+	(u: unknown): u is ts.ArrowFunction =>
+		ts.isArrowFunction(u as ts.Node),
+);
 
 const FunctionNode = Schema.Union(
 	Schema.declare(isFunctionDeclaration),
@@ -96,8 +99,9 @@ const validateIsPromiseExpression = (obj: {
 	isNewExpr: boolean;
 	isIdentifierExpr: boolean;
 	isPromiseText: boolean;
-}> =>
-	Match.value(obj).pipe(
+}> => {
+	// Using Effect.Option for validation - pure transformation in sync context
+	return Match.value(obj).pipe(
 		Match.when(Schema.is(IsPromiseExpression), () =>
 			Option.some({
 				isNewExpr: true,
@@ -107,6 +111,7 @@ const validateIsPromiseExpression = (obj: {
 		),
 		Match.orElse(() => Option.none()),
 	);
+};
 
 // Validate violations using Schema.transform for bidirectional conversion
 
