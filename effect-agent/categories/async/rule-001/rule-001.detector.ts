@@ -36,6 +36,11 @@ const meta = new MetaSchema({
 // for the TypeScript compiler API which requires this narrowing. After validating
 // the basic object structure, we delegate to TypeScript's built-in type predicates.
 
+// Reusable schema for Node-like objects with structural validation
+const NodeLikeSchema = Schema.Struct({
+	kind: Schema.Unknown,
+});
+
 // Reusable structural type guard for Node-like objects
 const isNodeLike = (val: unknown): val is ts.Node =>
 	typeof val === "object" && val !== null && "kind" in val;
@@ -107,29 +112,26 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration => {
 		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
+		if (!isNodeLike(u)) {
 			return false;
 		}
 		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
 		return ts.isFunctionDeclaration(u as ts.Node);
 	}),
 	Schema.declare((u): u is ts.FunctionExpression => {
 		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
+		if (!isNodeLike(u)) {
 			return false;
 		}
 		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
 		return ts.isFunctionExpression(u as ts.Node);
 	}),
 	Schema.declare((u): u is ts.ArrowFunction => {
 		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
+		if (!isNodeLike(u)) {
 			return false;
 		}
 		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
 		return ts.isArrowFunction(u as ts.Node);
 	}),
 );
