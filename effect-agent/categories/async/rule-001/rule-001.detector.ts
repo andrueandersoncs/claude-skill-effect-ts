@@ -179,43 +179,52 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Composable helper functions for violation validation using Effect.fn for traceability
-const decodeWithSuggestion = Effect.fn("decodeWithSuggestion")(
-	(data: ViolationData, suggestion: string) =>
-		Effect.succeed(
-			Schema.decodeSync(ValidViolationWithSuggestion)({
-				...data,
-				suggestion,
-			}),
-		),
-);
+// Helper function to construct violation with suggestion (not a conversion function)
+const createWithSuggestion = (data: ViolationData, suggestion: string): ValidViolationWithSuggestion =>
+	new ValidViolationWithSuggestion({
+		ruleId: data.ruleId,
+		category: data.category,
+		message: data.message,
+		filePath: data.filePath,
+		line: data.line,
+		column: data.column,
+		snippet: data.snippet,
+		certainty: data.certainty,
+		suggestion,
+	});
 
-const decodeWithoutSuggestion = Effect.fn("decodeWithoutSuggestion")(
-	(data: ViolationData) => {
-		const rest = Struct.omit(data, "suggestion");
-		return Effect.succeed(
-			Schema.decodeSync(ValidViolationWithoutSuggestion)(rest),
-		);
-	},
-);
-// Schema transform for conditional validation based on suggestion presence
-// Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
+// Helper function to construct violation without suggestion (not a conversion function)
+const createWithoutSuggestion = (data: ViolationData): ValidViolationWithoutSuggestion =>
+	new ValidViolationWithoutSuggestion({
+		ruleId: data.ruleId,
+		category: data.category,
+		message: data.message,
+		filePath: data.filePath,
+		line: data.line,
+		column: data.column,
+		snippet: data.snippet,
+		certainty: data.certainty,
+	});
+
+// Transform bidirectionally from ViolationSchema to ValidViolationUnion
 // This uses Schema.transform to ensure bidirectional type-safe conversion
+const transformFromInput = (data: ViolationSchema): Violation =>
+	pipe(
+		Option.fromNullable(data.suggestion),
+		Option.match({
+			onSome: (suggestion) => createWithSuggestion(data, suggestion),
+			onNone: () => createWithoutSuggestion(data),
+		}),
+	);
+
+const transformToOutput = (v: Violation): ViolationSchema => v as unknown as ViolationSchema;
+
 const ViolationTransform = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
 	{
-		decode: (data): Violation =>
-			pipe(
-				Option.fromNullable(data.suggestion),
-				Option.match({
-					onSome: (suggestion) =>
-						Effect.runSync(decodeWithSuggestion(data as unknown as ViolationData, suggestion)),
-					onNone: () =>
-						Effect.runSync(decodeWithoutSuggestion(data as unknown as ViolationData)),
-				}),
-			),
-		encode: (v) => v as unknown as ViolationSchema,
+		decode: transformFromInput,
+		encode: transformToOutput,
 		strict: true,
 	},
 );
