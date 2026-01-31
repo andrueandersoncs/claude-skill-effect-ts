@@ -40,36 +40,47 @@ const IsPromiseExpression = Schema.Struct({
 
 // Schema for function node types
 // Using type predicates with proper narrowing for TypeScript AST nodes
-// Type guards for TypeScript AST nodes
-// These replace unsafe casts like `u as ts.Node` with proper runtime validation
+// Validate TypeScript AST nodes using Schema validation for runtime type safety
+const AstNodeSchema = Schema.Struct({
+	kind: Schema.Number,
+});
+
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	if (typeof u !== "object" || u === null) return false;
-	if (!("kind" in u)) return false;
-	const kind = (u as Record<PropertyKey, unknown>).kind;
-	if (typeof kind !== "number") return false;
-	return ts.isFunctionDeclaration(u as any);
+	// First validate structure using Schema.is
+	if (!Schema.is(AstNodeSchema)(u)) return false;
+	// Then delegate to ts.isFunctionDeclaration for final validation
+	return ts.isFunctionDeclaration(u as ts.Node);
 };
 
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	if (typeof u !== "object" || u === null) return false;
-	if (!("kind" in u)) return false;
-	const kind = (u as Record<PropertyKey, unknown>).kind;
-	if (typeof kind !== "number") return false;
-	return ts.isFunctionExpression(u as any);
+	if (!Schema.is(AstNodeSchema)(u)) return false;
+	return ts.isFunctionExpression(u as ts.Node);
 };
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	if (typeof u !== "object" || u === null) return false;
-	if (!("kind" in u)) return false;
-	const kind = (u as Record<PropertyKey, unknown>).kind;
-	if (typeof kind !== "number") return false;
-	return ts.isArrowFunction(u as any);
+	if (!Schema.is(AstNodeSchema)(u)) return false;
+	return ts.isArrowFunction(u as ts.Node);
 };
 
 const FunctionNode = Schema.Union(
-	Schema.declare(isFunctionDeclaration),
-	Schema.declare(isFunctionExpression),
-	Schema.declare(isArrowFunction),
+	Schema.declare(
+		(u): u is ts.FunctionDeclaration => {
+			if (typeof u !== "object" || u === null) return false;
+			return ts.isFunctionDeclaration(u as ts.Node);
+		},
+	),
+	Schema.declare(
+		(u): u is ts.FunctionExpression => {
+			if (typeof u !== "object" || u === null) return false;
+			return ts.isFunctionExpression(u as ts.Node);
+		},
+	),
+	Schema.declare(
+		(u): u is ts.ArrowFunction => {
+			if (typeof u !== "object" || u === null) return false;
+			return ts.isArrowFunction(u as ts.Node);
+		},
+	),
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
