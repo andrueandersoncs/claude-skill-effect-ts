@@ -116,37 +116,122 @@ const classify = Match.type<number>().pipe(
 
 // Good: Define union schema with type refinements
 const FunctionNode = Schema.Union(
-	Schema.declare((u): u is ts.FunctionDeclaration =>
-		ts.isFunctionDeclaration(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.FunctionExpression =>
-		ts.isFunctionExpression(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.ArrowFunction =>
-		ts.isArrowFunction(u as ts.Node),
-	),
+	Schema.declare((u): u is ts.FunctionDeclaration => {
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.FunctionDeclaration === 263
+		const kind = u["kind"];
+		if (typeof kind === "number" && kind === 263) {
+			return true;
+		}
+		return false;
+	}),
+	Schema.declare((u): u is ts.FunctionExpression => {
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.FunctionExpression === 219
+		const kind = u["kind"];
+		if (typeof kind === "number" && kind === 219) {
+			return true;
+		}
+		return false;
+	}),
+	Schema.declare((u): u is ts.ArrowFunction => {
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.ArrowFunction === 220
+		const kind = u["kind"];
+		if (typeof kind === "number" && kind === 220) {
+			return true;
+		}
+		return false;
+	}),
 );
 
 // Good: Define union schema for loop statements
 const LoopStatement = Schema.Union(
-	Schema.declare((u): u is ts.ForStatement => ts.isForStatement(u as ts.Node)),
-	Schema.declare((u): u is ts.WhileStatement =>
-		ts.isWhileStatement(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.DoStatement => ts.isDoStatement(u as ts.Node)),
+	Schema.declare((u): u is ts.ForStatement => {
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.ForStatement === 242
+		const kind = u["kind"];
+		if (typeof kind === "number" && kind === 242) {
+			return true;
+		}
+		return false;
+	}),
+	Schema.declare((u): u is ts.WhileStatement => {
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.WhileStatement === 243
+		const kind = u["kind"];
+		if (typeof kind === "number" && kind === 243) {
+			return true;
+		}
+		return false;
+	}),
+	Schema.declare((u): u is ts.DoStatement => {
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.DoStatement === 244
+		const kind = u["kind"];
+		if (typeof kind === "number" && kind === 244) {
+			return true;
+		}
+		return false;
+	}),
 );
 
 // Good: Define union schema for declarations
 const DeclarationNode = Schema.Union(
-	Schema.declare((u): u is ts.VariableDeclaration =>
-		ts.isVariableDeclaration(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.FunctionDeclaration =>
-		ts.isFunctionDeclaration(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.ClassDeclaration =>
-		ts.isClassDeclaration(u as ts.Node),
-	),
+	Schema.declare((u): u is ts.VariableDeclaration => {
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.VariableDeclaration === 254
+		const kind = u["kind"];
+		if (typeof kind === "number" && kind === 254) {
+			return true;
+		}
+		return false;
+	}),
+	Schema.declare((u): u is ts.FunctionDeclaration => {
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.FunctionDeclaration === 263
+		const kind = u["kind"];
+		if (typeof kind === "number" && kind === 263) {
+			return true;
+		}
+		return false;
+	}),
+	Schema.declare((u): u is ts.ClassDeclaration => {
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.ClassDeclaration === 265
+		const kind = u["kind"];
+		if (typeof kind === "number" && kind === 265) {
+			return true;
+		}
+		return false;
+	}),
 );
 
 // Good: Use Match.when with Schema.is for pattern matching
