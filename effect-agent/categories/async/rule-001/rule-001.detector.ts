@@ -204,12 +204,26 @@ const ViolationTransform = Schema.transform(
 );
 
 // Helper to create validated violations using Schema
-// Combines both approaches: validation with proper typing
-const createViolation = (data: Omit<Violation, never>): Violation => {
-	const decoded = Schema.decodeSync(ViolationTransform)(data);
-	// Cast to Violation - schema validation ensures type safety at runtime
-	return decoded as Violation;
-};
+// Combines both approaches: validation with proper typing and Effect.fn for traceability
+const createViolation = Effect.fn("createViolation")(
+	(data: Omit<Violation, never>): Violation => {
+		const decoded = Schema.decodeSync(ViolationTransform)(data);
+		// Validate and return the violation based on whether suggestion is present
+		return Option.fromNullable(decoded.suggestion).pipe(
+			Option.match({
+				onSome: (suggestion) =>
+					Schema.decodeSync(ValidViolationWithSuggestion)({
+						...decoded,
+						suggestion,
+					}),
+				onNone: () => {
+					const rest = Struct.omit(decoded, "suggestion");
+					return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+				},
+			}),
+		);
+	},
+);
 
 export const detect = (
 	filePath: string,
