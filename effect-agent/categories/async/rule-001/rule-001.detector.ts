@@ -43,9 +43,18 @@ const NodeLikeSchema = Schema.Struct({
 	kind: Schema.Unknown,
 });
 
+// Schema for validating kind is a number
+const KindSchema = Schema.Struct({
+	kind: Schema.Number,
+});
+
 // Reusable structural type guard using Schema.is() for type-safe validation
 const isNodeLike = (val: unknown): val is ts.Node =>
 	Schema.is(NodeLikeSchema)(val) && val !== null;
+
+// Type guard for checking if a node has a numeric kind property
+const isNumericKind = (val: unknown): boolean =>
+	Schema.is(KindSchema)(val);
 
 // Reusable type guard functions for function node types
 // NOTE: rule-005 violation cannot be fixed - type predicates must return boolean,
@@ -60,7 +69,7 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 			// Check kind property directly without type assertion
 			// ts.SyntaxKind.FunctionDeclaration === 263
 			const kind = validNode["kind"];
-			if (Schema.is(Schema.Number)(kind) && kind === 263) {
+			if (isNumericKind(validNode) && kind === 263) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -80,7 +89,7 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 			// Check kind property directly without type assertion
 			// ts.SyntaxKind.FunctionExpression === 219
 			const kind = validNode["kind"];
-			if (Schema.is(Schema.Number)(kind) && kind === 219) {
+			if (isNumericKind(validNode) && kind === 219) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -100,7 +109,7 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 			// Check kind property directly without type assertion
 			// ts.SyntaxKind.ArrowFunction === 220
 			const kind = validNode["kind"];
-			if (Schema.is(Schema.Number)(kind) && kind === 220) {
+			if (isNumericKind(validNode) && kind === 220) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -134,7 +143,7 @@ const FunctionNode = Schema.Union(
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.FunctionDeclaration === 263
 		const kind = u["kind"];
-		if (Schema.is(Schema.Number)(kind) && kind === 263) {
+		if (isNumericKind(u) && kind === 263) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
@@ -148,7 +157,7 @@ const FunctionNode = Schema.Union(
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.FunctionExpression === 219
 		const kind = u["kind"];
-		if (Schema.is(Schema.Number)(kind) && kind === 219) {
+		if (isNumericKind(u) && kind === 219) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
@@ -162,7 +171,7 @@ const FunctionNode = Schema.Union(
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.ArrowFunction === 220
 		const kind = u["kind"];
-		if (Schema.is(Schema.Number)(kind) && kind === 220) {
+		if (isNumericKind(u) && kind === 220) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
@@ -212,6 +221,19 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithSuggestion,
 	ValidViolationWithoutSuggestion,
 );
+
+// Type definition for violation data
+type ViolationData = {
+	ruleId: string & { readonly RuleId: symbol };
+	category: string;
+	message: string;
+	filePath: string;
+	line: number;
+	column: number;
+	snippet: string;
+	certainty: "definite" | "potential";
+	suggestion?: string | undefined;
+};
 
 // Build violation from validated data - accepts well-formed violation data
 // ViolationSchema handles validation and branding, then ValidViolationUnion ensures proper format
