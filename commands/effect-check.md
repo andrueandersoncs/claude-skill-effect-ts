@@ -877,7 +877,19 @@ Pair 1: task-1 + task-5 → task-1 survives
 ```
 WAIT for it to complete. Surviving: [task-1]
 
-**Final: Merge task-1 into main**
+**Final: Merge task-1 into main** ← ⛔ THIS IS MANDATORY, NOT A SUGGESTION
+
+---
+
+## ⛔⛔⛔ THE MERGE TO MAIN IS PART OF PHASE 4 ⛔⛔⛔
+
+**The tournament is NOT complete when one branch survives. It is complete when that branch is MERGED INTO MAIN.**
+
+```
+Tournament rounds complete → ONE branch survives → PRE-MERGE VALIDATION → MERGE TO MAIN → PHASE 4 COMPLETE
+                                                                                    ↑
+                                                                    WITHOUT THIS STEP, PHASE 4 FAILED
+```
 
 ---
 
@@ -889,9 +901,17 @@ If odd number of branches, the LAST branch passes to next round unchanged (gets 
 
 ---
 
-### Final Merge to Main
+### ⛔⛔⛔ FINAL MERGE TO MAIN - THIS IS MANDATORY ⛔⛔⛔
+
+**THE TOURNAMENT IS NOT COMPLETE UNTIL THE WINNING BRANCH IS MERGED INTO MAIN.**
 
 After tournament completes (exactly ONE branch remains):
+
+**⛔ FORBIDDEN: Stopping after tournament merge leaves one branch**
+**⛔ FORBIDDEN: Reporting "partial success" without merging to main**
+**⛔ FORBIDDEN: Leaving fixes on a task branch instead of main**
+
+**⛔ REQUIRED: Run `git checkout main && git merge <winning-branch>` AFTER validation passes**
 
 ## ⛔⛔⛔ MANDATORY PRE-MAIN-MERGE VALIDATION GATE ⛔⛔⛔
 
@@ -943,7 +963,9 @@ git branch -D <surviving-branch>
 
 **Report:** "❌ FIX FAILED: Pre-merge validation failed. [specific reason]. No changes made to main."
 
-### ⛔ ONLY IF ALL CHECKS PASS - MERGE TO MAIN
+### ⛔⛔⛔ ONLY IF ALL CHECKS PASS - MERGE TO MAIN (MANDATORY FINAL STEP) ⛔⛔⛔
+
+**THIS MERGE IS MANDATORY. WITHOUT IT, THE USER'S CODE IS UNCHANGED AND THE FIX FAILED.**
 
 ```bash
 cd <project_root>
@@ -952,6 +974,33 @@ git merge <surviving-branch> --no-edit
 git worktree remove ../worktree-<surviving-branch> --force
 git branch -d <surviving-branch>
 ```
+
+**⛔ VERIFY AFTER MERGE:**
+```bash
+git branch | grep task-  # Should return NOTHING - all task branches deleted
+git log -1 --oneline     # Should show merge commit on main
+```
+
+**If task branches still exist OR you're not on main: PHASE 4 IS INCOMPLETE.**
+
+---
+
+## ⛔⛔⛔ PHASE 4 COMPLETION CRITERIA - ALL MUST BE TRUE ⛔⛔⛔
+
+Phase 4 is ONLY complete when ALL of these are true:
+
+1. ✅ Tournament merge ran until ONE branch remained
+2. ✅ Pre-main-merge validation gate PASSED on surviving branch
+3. ✅ **`git checkout main` was executed**
+4. ✅ **`git merge <surviving-branch>` was executed**
+5. ✅ All worktrees cleaned up
+6. ✅ All task-* branches deleted
+7. ✅ `git branch | grep task-` returns NOTHING
+8. ✅ Current branch is `main` (run `git branch --show-current` to verify)
+
+**FORBIDDEN: Reporting "Phase 4 complete" without running `git merge` to main**
+**FORBIDDEN: Leaving the surviving branch unmerged**
+**FORBIDDEN: Proceeding to Phase 5 without merging to main first**
 
 ---
 
@@ -986,6 +1035,9 @@ git branch -d <surviving-branch>
 - ✅ **REJECT any branch that increases type error count**
 - ✅ **Track rejected branches in the report**
 - ✅ **If validation gate FAILS: abort merge, clean up branch, report failure (NO changes to main)**
+- ✅ **⛔⛔⛔ MANDATORY: Run `git checkout main && git merge <surviving-branch>` AFTER validation passes**
+- ✅ **⛔⛔⛔ MANDATORY: Verify current branch is `main` with `git branch --show-current`**
+- ✅ **⛔⛔⛔ MANDATORY: Verify no task branches remain with `git branch | grep task-`**
 
 ## Output Format
 
@@ -1081,8 +1133,10 @@ Before reporting completion, verify ALL of these:
   - [ ] Ran `grep` for `as any`/`as unknown` type assertions - NONE added
   - [ ] Ran `bun run check` on surviving branch - error count ≤ main's error count
   - [ ] **IF ANY CHECK FAILED: ABORT - do NOT merge to main, report FAILURE**
-- [ ] **Phase 4: Only IF validation gate PASSED: Merged final branch into main**
-- [ ] **Phase 4: Cleaned up all worktrees and task branches**
+- [ ] **Phase 4: Only IF validation gate PASSED: Ran `git checkout main && git merge <surviving-branch>`**
+- [ ] **Phase 4: Verified current branch is `main` with `git branch --show-current`**
+- [ ] **Phase 4: Verified `git branch | grep task-` returns NOTHING (all task branches deleted)**
+- [ ] **Phase 4: Cleaned up all worktrees**
 - [ ] **Phase 5: VERIFICATION - Re-run detectors on fixed file (record count: M)**
 - [ ] **Phase 5: Verify M < N (violation count DECREASED)**
 - [ ] **Phase 5: Check for suppression comments - if found, FIX FAILED**
@@ -1179,9 +1233,30 @@ The most common failure mode is stopping after Phase 3. Check yourself:
 
 - Did you run `git branch | grep task-`? **If NO, you skipped Phase 4.**
 - Did you spawn merge-worker agents? **If NO, you skipped Phase 4.**
-- Did you see "Merged ... into main" message? **If NO, fixes are NOT applied.**
+- Did you run `git checkout main && git merge <surviving-branch>`? **If NO, fixes are NOT in main.**
+- Did you verify `git branch --show-current` returns `main`? **If NO, you're on the wrong branch.**
+- Did you verify `git branch | grep task-` returns NOTHING? **If NO, task branches weren't cleaned up.**
 
 **Stopping after Phase 3 means the user's code is UNCHANGED. This is a FAILURE.**
+
+### ⛔⛔⛔ CRITICAL: FIXES ON BRANCHES ≠ FIXES APPLIED ⛔⛔⛔
+
+**A common catastrophic failure: Tournament merge completes but winning branch is NEVER merged to main.**
+
+| State | User's Code | Result |
+|-------|-------------|--------|
+| Fixes on task-001 branch | UNCHANGED | ❌ FAILURE |
+| Fixes merged to main | UPDATED | ✅ SUCCESS |
+
+**If you report "X of Y violations fixed" but the fixes are on a task branch, you LIED. The user's code is unchanged.**
+
+**After tournament merge, you MUST run:**
+```bash
+git checkout main
+git merge <winning-branch> --no-edit
+```
+
+**WITHOUT THIS COMMAND, PHASE 4 IS INCOMPLETE.**
 
 ## Usage
 
