@@ -177,31 +177,25 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Composable helper functions for violation validation
-const decodeWithSuggestion = (data: ViolationData, suggestion: string): Violation =>
-	Schema.decodeSync(ValidViolationWithSuggestion)({
-		...data,
-		suggestion,
-	});
-
-const decodeWithoutSuggestion = (data: ViolationData): Violation => {
-	const rest = Struct.omit(data, "suggestion");
-	return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-};
-
-// Schema transform for conditional validation based on suggestion presence
-// Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
-// using Schema.transform pattern for type-safe transformation
-const ViolationTransform = Schema.transform(
+// Helper to transform violation data using Schema.transform pattern
+// Uses Option.match for functional, Effect-idiomatic approach
+const transformToValidViolation = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
 	{
-		decode: (data: ViolationData): Violation =>
+		decode: (data: ViolationData) =>
 			pipe(
 				Option.fromNullable(data.suggestion),
 				Option.match({
-					onSome: (suggestion) => decodeWithSuggestion(data, suggestion),
-					onNone: () => decodeWithoutSuggestion(data),
+					onSome: (suggestion) =>
+						Schema.decodeSync(ValidViolationWithSuggestion)({
+							...data,
+							suggestion,
+						}),
+					onNone: () =>
+						Schema.decodeSync(ValidViolationWithoutSuggestion)(
+							Struct.omit(data, "suggestion"),
+						),
 				}),
 			),
 		encode: Function.identity,
@@ -210,7 +204,7 @@ const ViolationTransform = Schema.transform(
 );
 
 // Helper to create validated violations using Schema.transform
-const createViolation = Schema.decodeSync(ViolationTransform);
+const createViolation = Schema.decodeSync(transformToValidViolation);
 
 export const detect = (
 	filePath: string,
