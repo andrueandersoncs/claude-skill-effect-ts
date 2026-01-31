@@ -8,7 +8,6 @@ export * from "./rule-001/rule-001.js";
 export * from "./rule-002/rule-002.js";
 export * from "./rule-006/rule-006.js";
 export * from "./rule-008/rule-008.js";
-export * from "./rule-009/rule-009.js";
 export * from "./rule-010/rule-010.js";
 
 /**
@@ -38,12 +37,6 @@ export const rules = [
 		category: "conditionals",
 		name: "result-effect-match",
 		rule: "Never use result/error flag checks; use Either.match or Effect.match with Schema.TaggedClass",
-	},
-	{
-		id: "rule-009",
-		category: "conditionals",
-		name: "switch-to-match-tag",
-		rule: "Never use switch/case statements; use Match.type with Match.tag for discriminated unions",
 	},
 	{
 		id: "rule-010",
