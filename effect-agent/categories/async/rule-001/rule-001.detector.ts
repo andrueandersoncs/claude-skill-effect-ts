@@ -43,48 +43,72 @@ const meta = new MetaSchema({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const assertAsNode = (u: any): ts.Node => u;
 
-// Schema defining a Node-like object with structural properties
-// This validates the basic structure before delegating to TypeScript's type predicates
+// Schema-based node validation with structural safety
+// Combines Schema pattern matching with robust null/undefined handling via Option
+// This ensures we validate the structure before applying TypeScript's built-in predicates
 const NodeLike = Schema.Struct({
-	kind: Schema.Number,
+	kind: Schema.Unknown,
 });
 
-const isNodeLike = (u: unknown): boolean =>
-	pipe(
-		Schema.decodeUnknownEither(NodeLike)(u),
-		Either.match({
-			onRight: () => true,
-			onLeft: () => false,
+const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
+	// Structural validation using Option for null/undefined safety
+	// Then apply Schema validation and TypeScript type predicate
+	return pipe(
+		Option.fromNullable(u),
+		Option.filter((v): v is object => typeof v === "object"),
+		Option.filter((v): v is object & { kind: unknown } => "kind" in v),
+		Option.match({
+			onSome: (node) =>
+				Match.value(node).pipe(
+					Match.when(Schema.is(NodeLike), (validated) =>
+						ts.isFunctionDeclaration(assertAsNode(validated)),
+					),
+					Match.orElse(() => false),
+				),
+			onNone: () => false,
 		}),
 	);
+};
 
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
-	pipe(
-		Schema.decodeUnknownEither(NodeLike)(u),
-		Either.match({
-			onRight: () => ts.isFunctionDeclaration(assertAsNode(u)),
-			onLeft: () => false,
+const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
+	// Structural validation using Option for null/undefined safety
+	// Then apply Schema validation and TypeScript type predicate
+	return pipe(
+		Option.fromNullable(u),
+		Option.filter((v): v is object => typeof v === "object"),
+		Option.filter((v): v is object & { kind: unknown } => "kind" in v),
+		Option.match({
+			onSome: (node) =>
+				Match.value(node).pipe(
+					Match.when(Schema.is(NodeLike), (validated) =>
+						ts.isFunctionExpression(assertAsNode(validated)),
+					),
+					Match.orElse(() => false),
+				),
+			onNone: () => false,
 		}),
 	);
+};
 
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
-	pipe(
-		Schema.decodeUnknownEither(NodeLike)(u),
-		Either.match({
-			onRight: () => ts.isFunctionExpression(assertAsNode(u)),
-			onLeft: () => false,
+const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
+	// Structural validation using Option for null/undefined safety
+	// Then apply Schema validation and TypeScript type predicate
+	return pipe(
+		Option.fromNullable(u),
+		Option.filter((v): v is object => typeof v === "object"),
+		Option.filter((v): v is object & { kind: unknown } => "kind" in v),
+		Option.match({
+			onSome: (node) =>
+				Match.value(node).pipe(
+					Match.when(Schema.is(NodeLike), (validated) =>
+						ts.isArrowFunction(assertAsNode(validated)),
+					),
+					Match.orElse(() => false),
+				),
+			onNone: () => false,
 		}),
 	);
-
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
-	pipe(
-		Schema.decodeUnknownEither(NodeLike)(u),
-		Either.match({
-			onRight: () => ts.isArrowFunction(assertAsNode(u)),
-			onLeft: () => false,
-		}),
-	);
-	);
+};
 
 const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
 	return (
