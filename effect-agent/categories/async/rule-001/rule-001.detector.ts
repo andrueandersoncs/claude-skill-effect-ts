@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Effect,
 	Function,
 	flow,
 	Match,
@@ -39,27 +40,32 @@ const IsPromiseExpression = Schema.Struct({
 });
 
 // Schema for function node types
-// Type guards that check TypeScript AST node kinds without type assertions
-// Using SyntaxKind for direct comparison without type assertions
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	if (typeof u !== "object" || u === null || !("kind" in u)) return false;
-	return u.kind === ts.SyntaxKind.FunctionDeclaration;
-};
+// Using type predicates with proper narrowing for TypeScript AST nodes
+// Note: Type predicates cannot use Effect.fn() as they must return boolean,
+// not Effect. This is a special case where pure type guards are necessary
+// for TypeScript AST filtering.
+// eslint-disable-next-line @effect-ts/rule-005
+const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
+	ts.isFunctionDeclaration(u as ts.Node);
 
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	if (typeof u !== "object" || u === null || !("kind" in u)) return false;
-	return u.kind === ts.SyntaxKind.FunctionExpression;
-};
+// eslint-disable-next-line @effect-ts/rule-005
+const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
+	ts.isFunctionExpression(u as ts.Node);
 
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	if (typeof u !== "object" || u === null || !("kind" in u)) return false;
-	return u.kind === ts.SyntaxKind.ArrowFunction;
-};
+// eslint-disable-next-line @effect-ts/rule-005
+const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
+	ts.isArrowFunction(u as ts.Node);
 
 const FunctionNode = Schema.Union(
-	Schema.declare(isFunctionDeclaration),
-	Schema.declare(isFunctionExpression),
-	Schema.declare(isArrowFunction),
+	Schema.declare((u): u is ts.FunctionDeclaration =>
+		ts.isFunctionDeclaration(u as ts.Node),
+	),
+	Schema.declare((u): u is ts.FunctionExpression =>
+		ts.isFunctionExpression(u as ts.Node),
+	),
+	Schema.declare((u): u is ts.ArrowFunction =>
+		ts.isArrowFunction(u as ts.Node),
+	),
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
@@ -94,25 +100,25 @@ const ValidViolationWithoutSuggestion = Schema.Struct({
 });
 
 // Helper to validate promise objects using Schema
-const validateIsPromiseExpression = (obj: {
-	isNewExpr: boolean;
-	isIdentifierExpr: boolean;
-	isPromiseText: boolean;
-}): Option.Option<{
-	isNewExpr: boolean;
-	isIdentifierExpr: boolean;
-	isPromiseText: boolean;
-}> =>
-	Match.value(obj).pipe(
-		Match.when(Schema.is(IsPromiseExpression), () =>
-			Option.some({
-				isNewExpr: true,
-				isIdentifierExpr: true,
-				isPromiseText: true,
-			}),
-		),
-		Match.orElse(() => Option.none()),
-	);
+const validateIsPromiseExpression = Effect.fn("validateIsPromiseExpression")(
+	(obj: {
+		isNewExpr: boolean;
+		isIdentifierExpr: boolean;
+		isPromiseText: boolean;
+	}) => {
+		const result = Match.value(obj).pipe(
+			Match.when(Schema.is(IsPromiseExpression), () =>
+				Option.some({
+					isNewExpr: true,
+					isIdentifierExpr: true,
+					isPromiseText: true,
+				}),
+			),
+			Match.orElse(() => Option.none()),
+		);
+		return Effect.succeed(result);
+	},
+);
 
 // Validate violations using Schema.transform for bidirectional conversion
 
@@ -159,14 +165,14 @@ export const detect = (
 				const schemaCheck = Match.value(newExpr.expression).pipe(
 					Match.when(
 						ts.isIdentifier,
-						flow(
-							(expr: ts.Identifier) => ({
-								isNewExpr: true,
-								isIdentifierExpr: true,
-								isPromiseText: expr.text === "Promise",
-							}),
-							validateIsPromiseExpression,
-						),
+						(expr: ts.Identifier) =>
+							Effect.runSync(
+								validateIsPromiseExpression({
+									isNewExpr: true,
+									isIdentifierExpr: true,
+									isPromiseText: expr.text === "Promise",
+								}),
+							),
 					),
 					Match.orElse(() => Option.none()),
 				);
