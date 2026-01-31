@@ -6,8 +6,15 @@
 
 import { processResult, someFunction } from "../../_fixtures.js";
 
-// ✅ Good: Use the result instead of ignoring lint error
+// GOOD: Use the result instead of ignoring lint error
 const result = someFunction();
 const processed = processResult(result);
 
-export { processed };
+// GOOD: Remove truly unused variables entirely
+// (Don't declare variables you won't use)
+
+// GOOD: Use underscore prefix for intentionally ignored values (destructuring)
+const [firstItem, _ignored, thirdItem] = [1, 2, 3];
+
+// GOOD: Export values that are part of the module's API
+export { processed, firstItem, thirdItem };

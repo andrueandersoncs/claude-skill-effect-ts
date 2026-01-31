@@ -18,32 +18,54 @@ export const detect = (
 	sourceFile: ts.SourceFile,
 ): Violation[] => {
 	const violations: Violation[] = [];
+	const fullText = sourceFile.getFullText();
+	const seenPositions = new Set<number>();
 
-	const visit = (node: ts.Node) => {
-		// Detect unused variables (underscore prefix or _unused pattern)
-		if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
-			const name = node.name.text;
-			// Skip if it's a destructuring ignore pattern
-			if (name.startsWith("_") && name !== "_" && !name.startsWith("__")) {
-				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-					node.getStart(),
-				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Variable prefixed with underscore may indicate unused value",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, 60),
-					severity: "info",
-					certainty: "potential",
-					suggestion: "Remove unused variables or use them",
-				});
+	// Patterns for eslint-disable comments that suppress unused variable warnings
+	const eslintDisablePatterns = [
+		/eslint-disable(?:-next-line|-line)?\s+(?:@typescript-eslint\/)?no-unused-vars/,
+		/eslint-disable(?:-next-line|-line)?\s+.*(?:@typescript-eslint\/)?no-unused-vars/,
+	];
+
+	// Get all comments in the file
+	const scanComments = (pos: number) => {
+		const leadingComments = ts.getLeadingCommentRanges(fullText, pos) || [];
+		const trailingComments = ts.getTrailingCommentRanges(fullText, pos) || [];
+
+		for (const comment of [...leadingComments, ...trailingComments]) {
+			// Skip already processed comments
+			if (seenPositions.has(comment.pos)) continue;
+			seenPositions.add(comment.pos);
+
+			const commentText = fullText.slice(comment.pos, comment.end);
+
+			for (const pattern of eslintDisablePatterns) {
+				if (pattern.test(commentText)) {
+					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+						comment.pos,
+					);
+					violations.push({
+						ruleId: meta.id,
+						category: meta.category,
+						message:
+							"eslint-disable comment suppresses unused variable warning; fix the underlying issue instead",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: commentText.slice(0, 80),
+						severity: "warning",
+						certainty: "definite",
+						suggestion:
+							"Remove the unused variable or use it in your code; avoid suppressing lint errors",
+					});
+					break; // Only report once per comment
+				}
 			}
 		}
+	};
 
+	const visit = (node: ts.Node) => {
+		scanComments(node.getFullStart());
 		ts.forEachChild(node, visit);
 	};
 
