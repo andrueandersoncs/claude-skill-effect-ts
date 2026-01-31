@@ -39,21 +39,21 @@ const IsPromiseExpression = Schema.Struct({
 });
 
 // Schema for function node types
-// Using type predicates with proper narrowing for TypeScript AST nodes
-// These are type guards that work with the TypeScript compiler API
+// Type guards that check TypeScript AST node kinds without type assertions
+// Using SyntaxKind for direct comparison without type assertions
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	if (typeof u !== "object" || u === null) return false;
-	return ts.isFunctionDeclaration(u as ts.Node);
+	if (typeof u !== "object" || u === null || !("kind" in u)) return false;
+	return u.kind === ts.SyntaxKind.FunctionDeclaration;
 };
 
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	if (typeof u !== "object" || u === null) return false;
-	return ts.isFunctionExpression(u as ts.Node);
+	if (typeof u !== "object" || u === null || !("kind" in u)) return false;
+	return u.kind === ts.SyntaxKind.FunctionExpression;
 };
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	if (typeof u !== "object" || u === null) return false;
-	return ts.isArrowFunction(u as ts.Node);
+	if (typeof u !== "object" || u === null || !("kind" in u)) return false;
+	return u.kind === ts.SyntaxKind.ArrowFunction;
 };
 
 const FunctionNode = Schema.Union(
@@ -89,9 +89,9 @@ const ValidViolationWithSuggestion = Schema.Struct({
 	suggestion: Schema.String,
 });
 
-class ValidViolationWithoutSuggestion extends Schema.Class<ValidViolationWithoutSuggestion>("ValidViolationWithoutSuggestion")({
+const ValidViolationWithoutSuggestion = Schema.Struct({
 	...BaseViolationFields.fields,
-}) {}
+});
 
 // Helper to validate promise objects using Schema
 const validateIsPromiseExpression = (obj: {
