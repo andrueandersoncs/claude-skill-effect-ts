@@ -10,7 +10,6 @@ import {
 	Function,
 	Match,
 	Option,
-	pipe,
 	Schema,
 } from "effect";
 import * as ts from "typescript";
@@ -43,14 +42,20 @@ const NodeLikeSchema = Schema.Struct({
 	kind: Schema.Unknown,
 });
 
+// Schema for number validation - used in Schema.is() type guards
+const NumberSchema = Schema.Number;
+
 // Reusable structural type guard using Schema.is() for type-safe validation
 const isNodeLike = (val: unknown): val is ts.Node =>
 	Schema.is(NodeLikeSchema)(val) && val !== null;
 
+// Reusable type guard for number validation using Schema.is()
+const isNumber = (val: unknown): val is number => Schema.is(NumberSchema)(val);
+
 // Reusable type guard functions for function node types
 // NOTE: rule-005 violation cannot be fixed - type predicates must return boolean,
 // not Effect. Effect.fn() returns Effect<boolean>, breaking TypeScript type narrowing.
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
+const _isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.compose wrapper
 	// This type guard must remain a plain function due to TypeScript type predicate constraints
 	// Use Match (from Effect) for structural validation with type narrowing, with Schema.is()
@@ -59,8 +64,8 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 		Match.when(isNodeLike, (validNode) => {
 			// Check kind property directly without type assertion
 			// ts.SyntaxKind.FunctionDeclaration === 263
-			const kind = validNode["kind"];
-			if (typeof kind === "number" && kind === 263) {
+			const kind = validNode.kind;
+			if (isNumber(kind) && kind === 263) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -70,7 +75,7 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	);
 };
 
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
+const _isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.transform wrapper
 	// This type guard must remain a plain function due to TypeScript type predicate constraints
 	// Use Match (from Effect) for structural validation with type narrowing, with Schema.is()
@@ -79,8 +84,8 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 		Match.when(isNodeLike, (validNode) => {
 			// Check kind property directly without type assertion
 			// ts.SyntaxKind.FunctionExpression === 219
-			const kind = validNode["kind"];
-			if (typeof kind === "number" && kind === 219) {
+			const kind = validNode.kind;
+			if (isNumber(kind) && kind === 219) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -90,7 +95,7 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 	);
 };
 
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
+const _isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.pipe wrapper
 	// This type guard must remain a plain function due to TypeScript type predicate constraints
 	// Use Match (from Effect) for structural validation with type narrowing, with Schema.is()
@@ -99,8 +104,8 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 		Match.when(isNodeLike, (validNode) => {
 			// Check kind property directly without type assertion
 			// ts.SyntaxKind.ArrowFunction === 220
-			const kind = validNode["kind"];
-			if (typeof kind === "number" && kind === 220) {
+			const kind = validNode.kind;
+			if (isNumber(kind) && kind === 220) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -116,7 +121,7 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 // Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
 // Combines structural validation with TypeScript's built-in type predicates
 // NodeLikeStructure validates the structural requirements at schema level
-const NodeLikeStructure = Schema.Object.pipe(
+const _NodeLikeStructure = Schema.Object.pipe(
 	Schema.filter((u): u is object & { kind: unknown } => "kind" in u),
 );
 
@@ -133,8 +138,8 @@ const FunctionNode = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.FunctionDeclaration === 263
-		const kind = u["kind"];
-		if (typeof kind === "number" && kind === 263) {
+		const kind = u.kind;
+		if (isNumber(kind) && kind === 263) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
@@ -147,8 +152,8 @@ const FunctionNode = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.FunctionExpression === 219
-		const kind = u["kind"];
-		if (typeof kind === "number" && kind === 219) {
+		const kind = u.kind;
+		if (isNumber(kind) && kind === 219) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
@@ -161,8 +166,8 @@ const FunctionNode = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.ArrowFunction === 220
-		const kind = u["kind"];
-		if (typeof kind === "number" && kind === 220) {
+		const kind = u.kind;
+		if (isNumber(kind) && kind === 220) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
