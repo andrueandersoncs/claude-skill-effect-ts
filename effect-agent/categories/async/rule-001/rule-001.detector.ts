@@ -71,10 +71,10 @@ const BaseViolationFields = Schema.Struct({
 });
 
 // Schema for violation construction with runtime validation
-const ViolationSchema = Schema.Struct({
+class ViolationSchema extends Schema.Class<ViolationSchema>("ViolationSchema")({
 	...BaseViolationFields.fields,
 	suggestion: Schema.optional(Schema.String),
-});
+}) {}
 
 // Schema for valid violation objects that matches Violation interface
 const ValidViolationWithSuggestion = Schema.Struct({
