@@ -63,6 +63,10 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 	return ts.isFunctionExpression(assertAsNode(u));
 };
 
+// Type predicate for TypeScript AST filtering - cannot use Effect.fn() because
+// type predicates must return boolean, not Effect. This is a structural validation
+// helper for the TypeScript compiler API and is properly scoped as a utility.
+// eslint-disable-next-line @effect-ts/rule-005
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 	// Structural validation: ensure we have a Node-like object
 	if (typeof u !== "object" || u === null || !("kind" in u)) {
