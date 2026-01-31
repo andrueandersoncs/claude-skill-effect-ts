@@ -5,13 +5,13 @@
  */
 
 import {
-	Array as EffectArray,
 	Effect,
+	Array as EffectArray,
 	Function,
 	Match,
 	Option,
-	Schema,
 	pipe,
+	Schema,
 } from "effect";
 import * as ts from "typescript";
 import {
@@ -239,8 +239,7 @@ const buildViolationEffectFn = Effect.fn("buildViolation")(
 		snippet: string;
 		certainty: "definite" | "potential";
 		suggestion?: string;
-	}) =>
-		Effect.sync(() => Schema.decodeSync(ValidViolationUnion)(data)),
+	}) => Effect.sync(() => Schema.decodeSync(ValidViolationUnion)(data)),
 );
 
 // Synchronous wrapper that evaluates the Effect immediately
