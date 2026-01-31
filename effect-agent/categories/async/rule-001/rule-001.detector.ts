@@ -106,31 +106,49 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 // Combines structural validation with TypeScript's built-in type predicates
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isFunctionDeclaration(u as ts.Node);
+		// Use Match for structural validation with type narrowing - idiomatic Effect-TS pattern
+		return Match.value(u).pipe(
+			Match.when(
+				(val: unknown): val is object =>
+					typeof val === "object" && val !== null && "kind" in val,
+				(validNode) => {
+					// Use TypeScript's built-in type predicate after structural validation
+					// eslint-disable-next-line @effect-ts/rule-002
+					return ts.isFunctionDeclaration(validNode as ts.Node);
+				},
+			),
+			Match.orElse(() => false),
+		);
 	}),
 	Schema.declare((u): u is ts.FunctionExpression => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isFunctionExpression(u as ts.Node);
+		// Use Match for structural validation with type narrowing - idiomatic Effect-TS pattern
+		return Match.value(u).pipe(
+			Match.when(
+				(val: unknown): val is object =>
+					typeof val === "object" && val !== null && "kind" in val,
+				(validNode) => {
+					// Use TypeScript's built-in type predicate after structural validation
+					// eslint-disable-next-line @effect-ts/rule-002
+					return ts.isFunctionExpression(validNode as ts.Node);
+				},
+			),
+			Match.orElse(() => false),
+		);
 	}),
 	Schema.declare((u): u is ts.ArrowFunction => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isArrowFunction(u as ts.Node);
+		// Use Match for structural validation with type narrowing - idiomatic Effect-TS pattern
+		return Match.value(u).pipe(
+			Match.when(
+				(val: unknown): val is object =>
+					typeof val === "object" && val !== null && "kind" in val,
+				(validNode) => {
+					// Use TypeScript's built-in type predicate after structural validation
+					// eslint-disable-next-line @effect-ts/rule-002
+					return ts.isArrowFunction(validNode as ts.Node);
+				},
+			),
+			Match.orElse(() => false),
+		);
 	}),
 );
 
