@@ -14,17 +14,16 @@ export { UserNotFound as Rule002UserNotFound } from "./rule-002/rule-002.js";
 // rule-003: parse-json
 export * from "./rule-003/rule-003.js";
 
-// rule-004: schema-class-methods
-export { Order as Rule004Order } from "./rule-004/rule-004.js";
-
-// rule-005: schema-class
+// rule-005: schema-class (comprehensive - includes methods and constructors)
 export {
 	Order as Rule005Order,
 	User as Rule005User,
+	OrderItem as Rule005OrderItem,
+	OrderWithItems as Rule005OrderWithItems,
+	user,
+	order,
+	orderWithItems,
 } from "./rule-005/rule-005.js";
-
-// rule-006: schema-constructor
-export { order, user } from "./rule-006/rule-006.js";
 
 // rule-007: schema-filters
 export { User as Rule007User } from "./rule-007/rule-007.js";
@@ -96,22 +95,10 @@ export const rules = [
 		rule: "Never use JSON.parse(); use Schema.parseJson()",
 	},
 	{
-		id: "rule-004",
-		category: "schema",
-		name: "schema-class-methods",
-		rule: "Never use Schema.Struct for entities with methods; use Schema.Class",
-	},
-	{
 		id: "rule-005",
 		category: "schema",
 		name: "schema-class",
-		rule: "Never use TypeScript type or interface for data structures; use Schema.Class or Schema.TaggedClass",
-	},
-	{
-		id: "rule-006",
-		category: "schema",
-		name: "schema-constructor",
-		rule: "Never construct object literals; use Schema class constructors",
+		rule: "Use Schema.Class for data structures: prefer over types/interfaces, include methods, and use constructors",
 	},
 	{
 		id: "rule-007",
