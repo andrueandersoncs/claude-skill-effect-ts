@@ -52,6 +52,17 @@ const isNodeLike = (val: unknown): val is ts.Node =>
 // Reusable type guard for number validation using Schema.is()
 const isNumber = (val: unknown): val is number => Schema.is(NumberSchema)(val);
 
+// Schema for objects with a number kind property - validates numeric type using Schema.Number
+class NodeWithNumberKind extends Schema.Class<NodeWithNumberKind>(
+	"NodeWithNumberKind",
+)({
+	kind: Schema.Number,
+}) {}
+
+// Type guard using Schema.is() for type-safe numeric validation
+const isNodeWithNumberKind = (u: unknown): u is { kind: number } =>
+	Schema.is(NodeWithNumberKind)(u);
+
 // Reusable type guard functions for function node types
 // NOTE: rule-005 violation cannot be fixed - type predicates must return boolean,
 // not Effect. Effect.fn() returns Effect<boolean>, breaking TypeScript type narrowing.
@@ -62,8 +73,11 @@ const _isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 
 	return Match.value(u).pipe(
 		Match.when(isNodeLike, (validNode) => {
-			// Check kind property using Schema.is() for type-safe validation
+			// Use Schema.is() type guard for type-safe numeric validation
 			// ts.SyntaxKind.FunctionDeclaration === 263
+			if (!isNodeWithNumberKind(validNode)) {
+				return false;
+			}
 			const kind = validNode.kind;
 			if (isNumber(kind) && kind === 263) {
 				return true;
@@ -82,8 +96,11 @@ const _isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 
 	return Match.value(u).pipe(
 		Match.when(isNodeLike, (validNode) => {
-			// Check kind property using Schema.is() for type-safe validation
+			// Use Schema.is() type guard for type-safe numeric validation
 			// ts.SyntaxKind.FunctionExpression === 219
+			if (!isNodeWithNumberKind(validNode)) {
+				return false;
+			}
 			const kind = validNode.kind;
 			if (isNumber(kind) && kind === 219) {
 				return true;
@@ -102,8 +119,11 @@ const _isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 
 	return Match.value(u).pipe(
 		Match.when(isNodeLike, (validNode) => {
-			// Check kind property using Schema.is() for type-safe validation
+			// Use Schema.is() type guard for type-safe numeric validation
 			// ts.SyntaxKind.ArrowFunction === 220
+			if (!isNodeWithNumberKind(validNode)) {
+				return false;
+			}
 			const kind = validNode.kind;
 			if (isNumber(kind) && kind === 220) {
 				return true;
@@ -136,8 +156,11 @@ const FunctionNode = Schema.Union(
 		if (!isNodeLike(u)) {
 			return false;
 		}
-		// Check kind property using Schema.is() for type-safe validation
+		// Use Schema.is() type guard for type-safe numeric validation
 		// ts.SyntaxKind.FunctionDeclaration === 263
+		if (!isNodeWithNumberKind(u)) {
+			return false;
+		}
 		const kind = u.kind;
 		if (isNumber(kind) && kind === 263) {
 			return true;
@@ -150,8 +173,11 @@ const FunctionNode = Schema.Union(
 		if (!isNodeLike(u)) {
 			return false;
 		}
-		// Check kind property using Schema.is() for type-safe validation
+		// Use Schema.is() type guard for type-safe numeric validation
 		// ts.SyntaxKind.FunctionExpression === 219
+		if (!isNodeWithNumberKind(u)) {
+			return false;
+		}
 		const kind = u.kind;
 		if (isNumber(kind) && kind === 219) {
 			return true;
@@ -164,8 +190,11 @@ const FunctionNode = Schema.Union(
 		if (!isNodeLike(u)) {
 			return false;
 		}
-		// Check kind property using Schema.is() for type-safe validation
+		// Use Schema.is() type guard for type-safe numeric validation
 		// ts.SyntaxKind.ArrowFunction === 220
+		if (!isNodeWithNumberKind(u)) {
+			return false;
+		}
 		const kind = u.kind;
 		if (isNumber(kind) && kind === 220) {
 			return true;
