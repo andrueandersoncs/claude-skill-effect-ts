@@ -72,13 +72,9 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 	return ts.isArrowFunction(assertAsNode(u));
 };
 
-const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
-	return (
-		isFunctionDeclaration(node) ||
-		isFunctionExpression(node) ||
-		isArrowFunction(node)
-	);
-};
+// Note: Type predicate logic is inlined where needed in Match.when for type narrowing
+// Type guards cannot be wrapped in Effect.fn() as they must return boolean, not Effect
+// See lines 225+ for inline usage of this pattern
 
 // Schema for function node types using discriminated union of type guards
 const FunctionNode = Schema.Union(
@@ -222,7 +218,8 @@ export const detect = (
 
 		// Detect callback patterns (functions with callback parameter names)
 		const functionCheckResult = Match.value(node).pipe(
-			Match.when((n): n is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => isFunctionNode(n), (typedNode) => {
+			Match.when((n): n is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction =>
+				isFunctionDeclaration(n) || isFunctionExpression(n) || isArrowFunction(n), (typedNode) => {
 				return Option.fromNullable(typedNode.parameters.at(-1)).pipe(
 					Option.flatMap((lastParam) => {
 						const paramName = lastParam.name.getText(sourceFile).toLowerCase();
