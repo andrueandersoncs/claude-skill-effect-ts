@@ -5,13 +5,12 @@
  */
 
 import {
-	Effect,
 	Array as EffectArray,
 	Match,
 	Option,
-	pipe,
 	Schema,
 	Struct,
+	pipe,
 } from "effect";
 import * as ts from "typescript";
 import {
@@ -48,37 +47,31 @@ const isNodeLike = (val: unknown): val is ts.Node =>
 // Combines structural validation with TypeScript's built-in type predicates
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration => {
-		// Use declarative pattern matching with Match.when for structural validation
-		return Match.value(u).pipe(
-			Match.when(isNodeLike, (validNode) => {
-				// Use TypeScript's built-in type predicate after structural validation
-				// eslint-disable-next-line @effect-ts/rule-002
-				return ts.isFunctionDeclaration(validNode);
-			}),
-			Match.orElse(() => false),
-		);
+		// Structural validation: ensure we have a Node-like object
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Use TypeScript's built-in type predicate after structural validation
+		// eslint-disable-next-line @effect-ts/rule-002
+		return ts.isFunctionDeclaration(u as ts.Node);
 	}),
 	Schema.declare((u): u is ts.FunctionExpression => {
-		// Use declarative pattern matching with Match.when for structural validation
-		return Match.value(u).pipe(
-			Match.when(isNodeLike, (validNode) => {
-				// Use TypeScript's built-in type predicate after structural validation
-				// eslint-disable-next-line @effect-ts/rule-002
-				return ts.isFunctionExpression(validNode);
-			}),
-			Match.orElse(() => false),
-		);
+		// Structural validation: ensure we have a Node-like object
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Use TypeScript's built-in type predicate after structural validation
+		// eslint-disable-next-line @effect-ts/rule-002
+		return ts.isFunctionExpression(u as ts.Node);
 	}),
 	Schema.declare((u): u is ts.ArrowFunction => {
-		// Use declarative pattern matching with Match.when for structural validation
-		return Match.value(u).pipe(
-			Match.when(isNodeLike, (validNode) => {
-				// Use TypeScript's built-in type predicate after structural validation
-				// eslint-disable-next-line @effect-ts/rule-002
-				return ts.isArrowFunction(validNode);
-			}),
-			Match.orElse(() => false),
-		);
+		// Structural validation: ensure we have a Node-like object
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Use TypeScript's built-in type predicate after structural validation
+		// eslint-disable-next-line @effect-ts/rule-002
+		return ts.isArrowFunction(u as ts.Node);
 	}),
 );
 
@@ -138,25 +131,18 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Composable helper functions for violation validation using Effect.fn for traceability
-const decodeWithSuggestion = Effect.fn("decodeWithSuggestion")(
-	(data: ViolationData, suggestion: string) =>
-		Effect.succeed(
-			Schema.decodeSync(ValidViolationWithSuggestion)({
-				...data,
-				suggestion,
-			}),
-		),
-);
+// Pure synchronous decoders without Effect - suitable for Schema.transform
+const decodeWithSuggestion = (data: ViolationData, suggestion: string) =>
+	Schema.decodeSync(ValidViolationWithSuggestion)({
+		...data,
+		suggestion,
+	});
 
-const decodeWithoutSuggestion = Effect.fn("decodeWithoutSuggestion")(
-	(data: ViolationData) => {
-		const rest = Struct.omit(data, "suggestion");
-		return Effect.succeed(
-			Schema.decodeSync(ValidViolationWithoutSuggestion)(rest),
-		);
-	},
-);
+const decodeWithoutSuggestion = (data: ViolationData) => {
+	const rest = Struct.omit(data, "suggestion");
+	return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+};
+
 // Schema transform for conditional validation based on suggestion presence
 // Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
 // This uses Schema.transform to ensure bidirectional type-safe conversion
@@ -169,16 +155,9 @@ const ViolationTransform = Schema.transform(
 				Option.fromNullable(data.suggestion),
 				Option.match({
 					onSome: (suggestion) =>
-						Effect.runSync(
-							decodeWithSuggestion(
-								data as unknown as ViolationData,
-								suggestion,
-							),
-						),
+						decodeWithSuggestion(data as unknown as ViolationData, suggestion),
 					onNone: () =>
-						Effect.runSync(
-							decodeWithoutSuggestion(data as unknown as ViolationData),
-						),
+						decodeWithoutSuggestion(data as unknown as ViolationData),
 				}),
 			),
 		encode: (v) => v as unknown as ViolationSchema,
