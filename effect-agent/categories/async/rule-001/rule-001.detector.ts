@@ -40,19 +40,26 @@ const IsPromiseExpression = Schema.Struct({
 
 // Schema for function node types
 // Using type predicates with proper narrowing for TypeScript AST nodes
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
-	ts.isFunctionDeclaration(u as ts.Node);
-
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
-	ts.isFunctionExpression(u as ts.Node);
-
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
-	ts.isArrowFunction(u as ts.Node);
-
+// Validate input structure before delegating to ts.* type guards
 const FunctionNode = Schema.Union(
-	Schema.declare(isFunctionDeclaration),
-	Schema.declare(isFunctionExpression),
-	Schema.declare(isArrowFunction),
+	Schema.declare(
+		(u): u is ts.FunctionDeclaration => {
+			if (typeof u !== "object" || u === null) return false;
+			return ts.isFunctionDeclaration(u as ts.Node);
+		},
+	),
+	Schema.declare(
+		(u): u is ts.FunctionExpression => {
+			if (typeof u !== "object" || u === null) return false;
+			return ts.isFunctionExpression(u as ts.Node);
+		},
+	),
+	Schema.declare(
+		(u): u is ts.ArrowFunction => {
+			if (typeof u !== "object" || u === null) return false;
+			return ts.isArrowFunction(u as ts.Node);
+		},
+	),
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
