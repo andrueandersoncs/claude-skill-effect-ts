@@ -103,34 +103,37 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 // Type guards cannot be wrapped in Effect.fn() as they must return boolean, not Effect
 
 // Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
-// Combines structural validation with TypeScript's built-in type predicates
+// Combines structural validation with kind property checking (no type assertions)
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration => {
 		// Structural validation: ensure we have a Node-like object
 		if (typeof u !== "object" || u === null || !("kind" in u)) {
 			return false;
 		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isFunctionDeclaration(u as ts.Node);
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.FunctionDeclaration === 263
+		const kind = u["kind"];
+		return typeof kind === "number" && kind === 263;
 	}),
 	Schema.declare((u): u is ts.FunctionExpression => {
 		// Structural validation: ensure we have a Node-like object
 		if (typeof u !== "object" || u === null || !("kind" in u)) {
 			return false;
 		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isFunctionExpression(u as ts.Node);
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.FunctionExpression === 219
+		const kind = u["kind"];
+		return typeof kind === "number" && kind === 219;
 	}),
 	Schema.declare((u): u is ts.ArrowFunction => {
 		// Structural validation: ensure we have a Node-like object
 		if (typeof u !== "object" || u === null || !("kind" in u)) {
 			return false;
 		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isArrowFunction(u as ts.Node);
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.ArrowFunction === 220
+		const kind = u["kind"];
+		return typeof kind === "number" && kind === 220;
 	}),
 );
 
