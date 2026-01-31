@@ -213,36 +213,32 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithoutSuggestion,
 );
 
-// Type definition for violation data
-type ViolationData = {
-	ruleId: string & { readonly RuleId: symbol };
-	category: string;
-	message: string;
-	filePath: string;
-	line: number;
-	column: number;
-	snippet: string;
-	certainty: "definite" | "potential";
-	suggestion?: string | undefined;
-};
-
-// Build violation from validated data - accepts well-formed violation data
-// ViolationSchema handles validation and branding, then ValidViolationUnion ensures proper format
-const buildViolationEffectFn = Effect.fn("buildViolation")(
-	(data: {
-		ruleId: string;
-		category: string;
-		message: string;
-		filePath: string;
-		line: number;
-		column: number;
-		snippet: string;
-		certainty: "definite" | "potential";
-		suggestion?: string;
-	}) => Effect.sync(() => Schema.decodeSync(ValidViolationUnion)(data)),
+// Schema for converting unbranded input to branded violation output
+// Uses Schema.transform for idiomatic Effect-TS bidirectional conversion
+const ViolationTransform = Schema.transform(
+	Schema.Struct({
+		ruleId: Schema.String,
+		category: Schema.String,
+		message: Schema.String,
+		filePath: Schema.String,
+		line: Schema.Number,
+		column: Schema.Number,
+		snippet: Schema.String,
+		certainty: Schema.Union(
+			Schema.Literal("definite"),
+			Schema.Literal("potential"),
+		),
+		suggestion: Schema.optional(Schema.String),
+	}),
+	ValidViolationUnion,
+	{
+		decode: Function.identity,
+		encode: Function.identity,
+		strict: true,
+	},
 );
 
-// Synchronous wrapper that evaluates the Effect immediately
+// Build violation from input data using schema-based transformation
 const buildViolation = (data: {
 	ruleId: string;
 	category: string;
@@ -253,7 +249,7 @@ const buildViolation = (data: {
 	snippet: string;
 	certainty: "definite" | "potential";
 	suggestion?: string;
-}): Violation => Effect.runSync(buildViolationEffectFn(data));
+}): Violation => Schema.decodeSync(ViolationTransform)(data);
 
 // Alias for backward compatibility with existing code
 const createViolationWithTransform = buildViolation;
