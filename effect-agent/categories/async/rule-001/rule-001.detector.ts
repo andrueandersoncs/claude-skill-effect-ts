@@ -87,7 +87,19 @@ const ValidViolationWithoutSuggestion = Schema.Struct({
 	...BaseViolationFields.fields,
 });
 
-// Helper to validate promise objects using Schema
+// Reusable pipeline step: apply when clause for promise expression
+const applyPromiseExpressionWhen = Match.when(Schema.is(IsPromiseExpression), () =>
+	Option.some({
+		isNewExpr: true,
+		isIdentifierExpr: true,
+		isPromiseText: true,
+	}),
+);
+
+// Reusable pipeline step: apply else clause
+const applyOrElse = Match.orElse(() => Option.none());
+
+// Helper to validate promise objects using Schema with composable pipeline
 const validateIsPromiseExpression = (obj: {
 	isNewExpr: boolean;
 	isIdentifierExpr: boolean;
@@ -97,16 +109,10 @@ const validateIsPromiseExpression = (obj: {
 	isIdentifierExpr: boolean;
 	isPromiseText: boolean;
 }> =>
-	Match.value(obj).pipe(
-		Match.when(Schema.is(IsPromiseExpression), () =>
-			Option.some({
-				isNewExpr: true,
-				isIdentifierExpr: true,
-				isPromiseText: true,
-			}),
-		),
-		Match.orElse(() => Option.none()),
-	);
+	flow(
+		Match.value,
+		(matcher) => matcher.pipe(applyPromiseExpressionWhen, applyOrElse),
+	)(obj);
 
 // Validate violations using Schema.transform for bidirectional conversion
 
