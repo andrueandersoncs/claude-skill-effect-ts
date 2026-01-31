@@ -91,31 +91,61 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithoutSuggestion,
 );
 
-// Apply Schema.transform for bidirectional violation validation
-// Schema.transform handles both directions: decode validates incoming data,
-// encode converts violations back to schema format
+// Helper to decode violation data, handling the conditional suggestion
+// Uses Schema.decodeSync for type-safe validation with proper schema routing
+const decodeViolation = (_: ViolationSchema, data: {
+	readonly message: string;
+	readonly category: string;
+	readonly filePath: string;
+	readonly line: number;
+	readonly column: number;
+	readonly snippet: string;
+	readonly ruleId: string;
+	readonly certainty: "definite" | "potential";
+	readonly suggestion?: string | undefined;
+}): Violation => {
+	const suggestion = Option.fromNullable(data.suggestion);
+	if (Option.isSome(suggestion)) {
+		return Schema.decodeSync(ValidViolationWithSuggestion)({
+			...data,
+			suggestion: suggestion.value,
+		});
+	}
+	return Schema.decodeSync(ValidViolationWithoutSuggestion)({
+		ruleId: data.ruleId,
+		category: data.category,
+		message: data.message,
+		filePath: data.filePath,
+		line: data.line,
+		column: data.column,
+		snippet: data.snippet,
+		certainty: data.certainty,
+	});
+};
+
+// Helper to encode violation back to schema format
+const encodeViolation = (violation: Violation): ViolationSchema =>
+	({
+		ruleId: violation.ruleId,
+		category: violation.category,
+		message: violation.message,
+		filePath: violation.filePath,
+		line: violation.line,
+		column: violation.column,
+		snippet: violation.snippet,
+		certainty: violation.certainty,
+		suggestion: violation.suggestion,
+	}) as ViolationSchema;
+
+// Schema transform for conditional validation based on suggestion presence
+// Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
+// using Schema.transform pattern for type-safe transformation
 const ViolationTransform = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
 	{
-		decode: (data: ViolationSchema): Violation =>
-			Option.fromNullable(data.suggestion).pipe(
-				Option.match({
-					onSome: (suggestion) =>
-						Schema.decodeSync(ValidViolationWithSuggestion)({
-							...data,
-							suggestion,
-						}),
-					onNone: () => {
-						const rest = Struct.omit(data, "suggestion");
-						return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-					},
-				}),
-			),
-		encode: (violation: Violation): ViolationSchema =>
-			({
-				...violation,
-			} as unknown as ViolationSchema),
+		decode: decodeViolation,
+		encode: encodeViolation,
 		strict: true,
 	},
 );
