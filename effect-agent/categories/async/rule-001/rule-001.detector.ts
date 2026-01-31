@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Effect,
 	Function,
 	flow,
 	Match,
@@ -110,23 +111,25 @@ const validateIsPromiseExpression = (obj: {
 // Validate violations using Schema.transform for bidirectional conversion
 
 // Helper to create validated violations using Schema
-const createViolation = (data: Omit<Violation, never>): Violation => {
-	const decoded = Schema.decodeSync(ViolationSchema)(data);
-	// Validate and return the violation based on whether suggestion is present
-	return Option.fromNullable(decoded.suggestion).pipe(
-		Option.match({
-			onSome: (suggestion) =>
-				Schema.decodeSync(ValidViolationWithSuggestion)({
-					...decoded,
-					suggestion,
-				}),
-			onNone: () => {
-				const rest = Struct.omit(decoded, "suggestion");
-				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-			},
-		}),
-	);
-};
+const createViolation = Effect.fn("createViolation")(
+	(data: Omit<Violation, never>): Violation => {
+		const decoded = Schema.decodeSync(ViolationSchema)(data);
+		// Validate and return the violation based on whether suggestion is present
+		return Option.fromNullable(decoded.suggestion).pipe(
+			Option.match({
+				onSome: (suggestion) =>
+					Schema.decodeSync(ValidViolationWithSuggestion)({
+						...decoded,
+						suggestion,
+					}),
+				onNone: () => {
+					const rest = Struct.omit(decoded, "suggestion");
+					return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+				},
+			}),
+		);
+	},
+);
 
 export const detect = (
 	filePath: string,
