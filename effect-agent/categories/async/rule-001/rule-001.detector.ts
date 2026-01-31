@@ -6,9 +6,7 @@
 
 import {
 	Array as EffectArray,
-	Effect,
 	Function,
-	flow,
 	Match,
 	Option,
 	Schema,
@@ -32,29 +30,11 @@ const meta = new MetaSchema({
 	name: "callback-api",
 });
 
-// Schema for detecting new Promise() patterns
-class IsPromiseExpression extends Schema.Class<IsPromiseExpression>("IsPromiseExpression")({
-	isNewExpr: Schema.Literal(true),
-	isIdentifierExpr: Schema.Literal(true),
-	isPromiseText: Schema.Literal(true),
-}) {}
-
 // Schema for function node types
 // Using type predicates with proper narrowing for TypeScript AST nodes
 // Note: Type predicates cannot use Effect.fn() as they must return boolean,
 // not Effect. This is a special case where pure type guards are necessary
 // for TypeScript AST filtering.
-// eslint-disable-next-line @effect-ts/rule-005
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
-	ts.isFunctionDeclaration(u as ts.Node);
-
-// eslint-disable-next-line @effect-ts/rule-005
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
-	ts.isFunctionExpression(u as ts.Node);
-
-// eslint-disable-next-line @effect-ts/rule-005
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
-	ts.isArrowFunction(u as ts.Node);
 
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration =>
@@ -69,7 +49,9 @@ const FunctionNode = Schema.Union(
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
-class BaseViolationFields extends Schema.Class<BaseViolationFields>("BaseViolationFields")({
+class BaseViolationFields extends Schema.Class<BaseViolationFields>(
+	"BaseViolationFields",
+)({
 	ruleId: Schema.String.pipe(Schema.brand("RuleId")),
 	category: Schema.String,
 	message: Schema.String,
@@ -102,27 +84,6 @@ class ValidViolationWithoutSuggestion extends Schema.Class<ValidViolationWithout
 )({
 	...BaseViolationFields.fields,
 }) {}
-
-// Helper to validate promise objects using Schema
-const validateIsPromiseExpression = Effect.fn("validateIsPromiseExpression")(
-	(obj: {
-		isNewExpr: boolean;
-		isIdentifierExpr: boolean;
-		isPromiseText: boolean;
-	}) => {
-		const result = Match.value(obj).pipe(
-			Match.when(Schema.is(IsPromiseExpression), () =>
-				Option.some({
-					isNewExpr: true,
-					isIdentifierExpr: true,
-					isPromiseText: true,
-				}),
-			),
-			Match.orElse(() => Option.none()),
-		);
-		return Effect.succeed(result);
-	},
-);
 
 // Schema union for violations - either with or without suggestion
 const ValidViolationUnion = Schema.Union(
@@ -179,38 +140,10 @@ export const detect = (
 		// Combined approach: Use the simpler Option-based method from HEAD with Schema validation from task-4
 		const promiseCheck = Match.value(node).pipe(
 			Match.when(ts.isNewExpression, (newExpr) => {
-				// Try the straightforward Option.filter approach first (from HEAD)
+				// Direct Option-based check without Effect.runSync()
 				const directCheck = Option.fromNullable(newExpr.expression).pipe(
 					Option.filter(ts.isIdentifier),
 					Option.filter((expr) => expr.text === "Promise"),
-					Option.map(() => ({
-						isNewExpr: true,
-						isIdentifierExpr: true,
-						isPromiseText: true,
-					})),
-				);
-
-				// Also support the Schema validation approach (from task-4) as a fallback
-				const schemaCheck = Match.value(newExpr.expression).pipe(
-					Match.when(
-						ts.isIdentifier,
-						(expr: ts.Identifier) =>
-							Effect.runSync(
-								validateIsPromiseExpression({
-									isNewExpr: true,
-									isIdentifierExpr: true,
-									isPromiseText: expr.text === "Promise",
-								}),
-							),
-					),
-					Match.orElse(() => Option.none()),
-				);
-
-				// Use whichever check succeeds
-				return Option.match(directCheck, {
-					onSome: Function.constant(directCheck),
-					onNone: Function.constant(schemaCheck),
-				}).pipe(
 					Option.flatMap(() => {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
@@ -229,6 +162,8 @@ export const detect = (
 						);
 					}),
 				);
+
+				return directCheck;
 			}),
 			Match.orElse(() => Option.none()),
 		);
