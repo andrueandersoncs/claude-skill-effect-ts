@@ -109,24 +109,18 @@ class ViolationSchema extends Schema.Class<ViolationSchema>("ViolationSchema")({
 	suggestion: Schema.optional(Schema.String),
 }) {}
 
-// Schema for valid violation objects that matches Violation interface
-class ValidViolationWithSuggestion extends Schema.Class<ValidViolationWithSuggestion>(
-	"ValidViolationWithSuggestion",
-)({
-	...BaseViolationFields.fields,
-	suggestion: Schema.String,
-}) {}
-
-class ValidViolationWithoutSuggestion extends Schema.Class<ValidViolationWithoutSuggestion>(
-	"ValidViolationWithoutSuggestion",
-)({
-	...BaseViolationFields.fields,
-}) {}
-
-// Schema union for violations - either with or without suggestion
-const ValidViolationUnion = Schema.Union(
-	ValidViolationWithSuggestion,
-	ValidViolationWithoutSuggestion,
+// Schema for valid violation objects using Schema.transform to normalize optional suggestion
+const ValidViolation = Schema.transform(
+	ViolationSchema,
+	Schema.Struct({
+		...BaseViolationFields.fields,
+		suggestion: Schema.optional(Schema.String),
+	}),
+	{
+		decode: Function.identity,
+		encode: Function.identity,
+		strict: true,
+	},
 );
 
 // Type definition for violation data
@@ -142,66 +136,8 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Decode transformation: convert optional suggestion to required/omitted variant
-const decodeViolation = (violation: ViolationSchema): ValidViolationWithSuggestion | ValidViolationWithoutSuggestion =>
-	Option.fromNullable(violation.suggestion).pipe(
-		Option.match({
-			onSome: (suggestion) =>
-				new ValidViolationWithSuggestion({
-					ruleId: violation.ruleId,
-					category: violation.category,
-					message: violation.message,
-					filePath: violation.filePath,
-					line: violation.line,
-					column: violation.column,
-					snippet: violation.snippet,
-					certainty: violation.certainty,
-					suggestion,
-				}),
-			onNone: () =>
-				new ValidViolationWithoutSuggestion({
-					ruleId: violation.ruleId,
-					category: violation.category,
-					message: violation.message,
-					filePath: violation.filePath,
-					line: violation.line,
-					column: violation.column,
-					snippet: violation.snippet,
-					certainty: violation.certainty,
-				}),
-		}),
-	);
-
-// Encode transformation: convert variant back to optional suggestion form
-const encodeViolation = (output: ValidViolationWithSuggestion | ValidViolationWithoutSuggestion): ViolationSchema =>
-	new ViolationSchema({
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		ruleId: output.ruleId as any,
-		category: output.category,
-		message: output.message,
-		filePath: output.filePath,
-		line: output.line,
-		column: output.column,
-		snippet: output.snippet,
-		certainty: output.certainty,
-		suggestion: "suggestion" in output ? output.suggestion : undefined,
-	});
-
-// Schema transform for domain transformation from optional suggestion to required/omitted
-// Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
-// using Schema.transform pattern for type-safe bidirectional conversion
-const ViolationTransform = Schema.transform(
-	ViolationSchema,
-	ValidViolationUnion,
-	{
-		decode: decodeViolation,
-		encode: encodeViolation,
-		strict: true,
-	},
-);
-
 // Helper to create validated violations using Schema.transform
-const createViolation = Schema.decodeSync(ViolationTransform);
+const createViolation = Schema.decodeSync(ValidViolation);
 
 export const detect = (
 	filePath: string,
