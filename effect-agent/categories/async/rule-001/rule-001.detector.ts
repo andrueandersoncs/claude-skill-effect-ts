@@ -95,8 +95,9 @@ const validateIsPromiseExpression = (obj: {
 	isNewExpr: boolean;
 	isIdentifierExpr: boolean;
 	isPromiseText: boolean;
-}> =>
-	Match.value(obj).pipe(
+}> => {
+	// Using Effect.Option for validation - pure transformation in sync context
+	return Match.value(obj).pipe(
 		Match.when(Schema.is(IsPromiseExpression), () =>
 			Option.some({
 				isNewExpr: true,
@@ -106,6 +107,7 @@ const validateIsPromiseExpression = (obj: {
 		),
 		Match.orElse(() => Option.none()),
 	);
+};
 
 // Validate violations using Schema.transform for bidirectional conversion
 
