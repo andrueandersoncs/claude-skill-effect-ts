@@ -39,40 +39,37 @@ const meta = new MetaSchema({
 // Type guards cannot be wrapped in Effect.fn() as they must return boolean, not Effect
 
 // Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
-// Combines structural validation with TypeScript's built-in type predicates
+// Combines structural validation with kind property checking (no type assertions)
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration => {
-		// Structural validation: check for Node-like object structure
-		// Type guard checks kind value directly on unknown type using property access
-		return (
-			typeof u === "object" &&
-			u !== null &&
-			"kind" in u &&
-			typeof u.kind === "number" &&
-			u.kind === 263
-		);
+		// Structural validation: ensure we have a Node-like object
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.FunctionDeclaration === 263
+		const kind = u["kind"];
+		return typeof kind === "number" && kind === 263;
 	}),
 	Schema.declare((u): u is ts.FunctionExpression => {
-		// Structural validation: check for Node-like object structure
-		// Type guard checks kind value directly on unknown type using property access
-		return (
-			typeof u === "object" &&
-			u !== null &&
-			"kind" in u &&
-			typeof u.kind === "number" &&
-			u.kind === 219
-		);
+		// Structural validation: ensure we have a Node-like object
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.FunctionExpression === 219
+		const kind = u["kind"];
+		return typeof kind === "number" && kind === 219;
 	}),
 	Schema.declare((u): u is ts.ArrowFunction => {
-		// Structural validation: check for Node-like object structure
-		// Type guard checks kind value directly on unknown type using property access
-		return (
-			typeof u === "object" &&
-			u !== null &&
-			"kind" in u &&
-			typeof u.kind === "number" &&
-			u.kind === 220
-		);
+		// Structural validation: ensure we have a Node-like object
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.ArrowFunction === 220
+		const kind = u["kind"];
+		return typeof kind === "number" && kind === 220;
 	}),
 );
 
