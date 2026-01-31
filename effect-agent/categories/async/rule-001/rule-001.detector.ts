@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Effect,
 	Function,
 	Match,
 	Option,
@@ -191,6 +192,22 @@ type ViolationData = {
 };
 
 // Build violation from validated data - accepts well-formed violation data
+const buildViolationEffectFn = Effect.fn("buildViolation")(
+	(data: {
+		ruleId: string;
+		category: string;
+		message: string;
+		filePath: string;
+		line: number;
+		column: number;
+		snippet: string;
+		certainty: "definite" | "potential";
+		suggestion?: string;
+	}) =>
+		Effect.sync(() => Schema.decodeSync(ValidViolationUnion)(data)),
+);
+
+// Synchronous wrapper that evaluates the Effect immediately
 const buildViolation = (data: {
 	ruleId: string;
 	category: string;
@@ -201,8 +218,7 @@ const buildViolation = (data: {
 	snippet: string;
 	certainty: "definite" | "potential";
 	suggestion?: string;
-}): Violation =>
-	Schema.decodeSync(ValidViolationUnion)(data);
+}): Violation => Effect.runSync(buildViolationEffectFn(data));
 
 export const detect = (
 	filePath: string,
