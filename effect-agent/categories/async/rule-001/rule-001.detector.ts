@@ -131,6 +131,7 @@ const ValidViolationUnion = Schema.Union(
 );
 
 // Helper to decode violation data, handling the conditional suggestion
+// Uses Schema.decodeSync for type-safe validation with proper schema routing
 const decodeViolation = (_: ViolationSchema, data: {
 	readonly message: string;
 	readonly category: string;
@@ -141,16 +142,25 @@ const decodeViolation = (_: ViolationSchema, data: {
 	readonly ruleId: string;
 	readonly certainty: "definite" | "potential";
 	readonly suggestion?: string | undefined;
-}): Violation =>
-	Option.fromNullable(data.suggestion).pipe(
-		Option.match({
-			onSome: (suggestion) => ({
-				...data,
-				suggestion,
-			}),
-			onNone: () => Struct.omit(data, "suggestion"),
-		}),
-	) as Violation;
+}): Violation => {
+	const suggestion = Option.fromNullable(data.suggestion);
+	if (Option.isSome(suggestion)) {
+		return Schema.decodeSync(ValidViolationWithSuggestion)({
+			...data,
+			suggestion: suggestion.value,
+		});
+	}
+	return Schema.decodeSync(ValidViolationWithoutSuggestion)({
+		ruleId: data.ruleId,
+		category: data.category,
+		message: data.message,
+		filePath: data.filePath,
+		line: data.line,
+		column: data.column,
+		snippet: data.snippet,
+		certainty: data.certainty,
+	});
+};
 
 // Helper to encode violation back to schema format
 const encodeViolation = (violation: Violation): ViolationSchema =>
@@ -167,6 +177,8 @@ const encodeViolation = (violation: Violation): ViolationSchema =>
 	}) as ViolationSchema;
 
 // Schema transform for conditional validation based on suggestion presence
+// Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
+// using Schema.transform pattern for type-safe transformation
 const ViolationTransform = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
