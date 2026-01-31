@@ -142,8 +142,8 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Transform for violations with suggestion present
-const WithSuggestionTransform = Schema.transform(
+// Transform schemas for the two branches: with and without suggestion
+const WithSuggestionSchema = Schema.transform(
 	Schema.Struct({
 		ruleId: Schema.String.pipe(Schema.brand("RuleId")),
 		category: Schema.String,
@@ -166,8 +166,7 @@ const WithSuggestionTransform = Schema.transform(
 	},
 );
 
-// Transform for violations without suggestion
-const WithoutSuggestionTransform = Schema.transform(
+const WithoutSuggestionSchema = Schema.transform(
 	Schema.Struct({
 		ruleId: Schema.String.pipe(Schema.brand("RuleId")),
 		category: Schema.String,
@@ -189,38 +188,31 @@ const WithoutSuggestionTransform = Schema.transform(
 	},
 );
 
-// Decoder that handles conditional routing based on suggestion presence
-const decodeViolation = (data: ViolationData): Violation =>
-	Option.fromNullable(data.suggestion).pipe(
-		Option.match({
-			onSome: (suggestion) =>
-				Schema.decodeSync(WithSuggestionTransform)({
-					ruleId: data.ruleId,
-					category: data.category,
-					message: data.message,
-					filePath: data.filePath,
-					line: data.line,
-					column: data.column,
-					snippet: data.snippet,
-					certainty: data.certainty,
-					suggestion,
-				}),
-			onNone: () =>
-				Schema.decodeSync(WithoutSuggestionTransform)({
-					ruleId: data.ruleId,
-					category: data.category,
-					message: data.message,
-					filePath: data.filePath,
-					line: data.line,
-					column: data.column,
-					snippet: data.snippet,
-					certainty: data.certainty,
-				}),
-		}),
-	);
+// Route violation data through appropriate schema based on suggestion presence
+const buildViolation = (data: ViolationData): Violation => {
+	const baseData = {
+		ruleId: data.ruleId,
+		category: data.category,
+		message: data.message,
+		filePath: data.filePath,
+		line: data.line,
+		column: data.column,
+		snippet: data.snippet,
+		certainty: data.certainty,
+	};
 
-// Helper to create validated violations using conditional decoder
-const createViolation = decodeViolation;
+	if (data.suggestion !== undefined) {
+		return Schema.decodeSync(WithSuggestionSchema)({
+			...baseData,
+			suggestion: data.suggestion,
+		});
+	}
+
+	return Schema.decodeSync(WithoutSuggestionSchema)(baseData);
+};
+
+// Alias for backward compatibility
+const createViolation = buildViolation;
 
 export const detect = (
 	filePath: string,
