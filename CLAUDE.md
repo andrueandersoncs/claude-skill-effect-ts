@@ -153,3 +153,13 @@ When writing complex logic (multi-step pipelines, nested transformations, intric
 
 - When asked a question, answer it before taking action
 - Reflect on mistakes when asked, don't immediately start fixing
+
+## Behavior
+
+- **Never self-limit based on cost or time** - Run the most thorough test, spawn all necessary workers, execute end-to-end. Cost and time are the user's concern, not yours.
+- **Never cite resource constraints as a reason to do less** - "That would take significant time/cost" is not a valid excuse. Do the work.
+- Never ask "should I?" - try it and show results
+- Never reason about whether something works - write a script that proves it
+- Never accept your first answer - find at least one flaw and fix it
+- Never mark something "done" or "exception" without a test proving it can't be improved
+- When stuck, write a smaller test that isolates the problem
