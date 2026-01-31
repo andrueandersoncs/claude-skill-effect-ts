@@ -41,6 +41,81 @@ Two-phase analysis: fast AST-based detection followed by LLM-powered analysis.
 
 **MANDATORY: Investigate EVERY violation.** Do NOT filter, skip, or prioritize. Spawn an agent for EVERY error, warning, AND info violation found. No exceptions.
 
+## ⛔⛔⛔ CRITICAL: NO EXCUSES - SPAWN TASK-WORKERS FOR ALL VIOLATIONS ⛔⛔⛔
+
+**YOU (the primary agent) do NOT decide what can or cannot be fixed. Task-workers decide.**
+
+### FORBIDDEN - Primary Agent MUST NOT:
+
+- ❌ Classify violations as "false positives" without spawning task-workers
+- ❌ Decide that a pattern "cannot use Effect" (e.g., "type predicates can't be Effect")
+- ❌ Skip violations because you think they're unfixable
+- ❌ Say "No fixes applied" without spawning task-workers first
+- ❌ Make ANY fix/skip decisions - that is the task-worker's job
+- ❌ Reason about whether code CAN be converted to Effect patterns
+- ❌ Filter out violations based on your own analysis
+- ❌ Report violations as "acknowledged but not fixable"
+
+### REQUIRED - Primary Agent MUST:
+
+- ✅ Spawn a task-worker for EVERY violation - NO EXCEPTIONS
+- ✅ Let task-workers evaluate each violation individually
+- ✅ Only report "unfixable" if a task-worker explicitly documents WHY with code-level justification
+- ✅ Trust the detector - if it flagged something, it needs a task-worker to evaluate it
+
+### WHY THIS MATTERS
+
+The detector flagged 20 violations. You classified all 20 as "false positives" and said "No fixes applied." This is WRONG because:
+
+1. **You didn't spawn task-workers** - You made the decision yourself instead of delegating
+2. **You assumed limitations** - "Type predicates can't use Effect" is an assumption, not a fact
+3. **You provided ZERO value** - The user ran `--fix` and got nothing
+
+### CORRECT WORKFLOW
+
+```
+Detector found 20 violations
+  ↓
+PRIMARY AGENT: "Spawning 20 task-workers"  ← YOU ARE HERE
+  ↓
+[20 Task tool calls in ONE message]
+  ↓
+Each task-worker evaluates ONE violation:
+  - CAN fix → Apply fix, commit
+  - CANNOT fix → Document WHY with specific code (not "type predicates can't use Effect")
+  ↓
+Tournament merge all branches
+  ↓
+Report: "15 fixed, 5 unfixable (with justification from task-workers)"
+```
+
+### WRONG WORKFLOW (WHAT YOU DID)
+
+```
+Detector found 20 violations
+  ↓
+PRIMARY AGENT: "These look like false positives"  ← FORBIDDEN
+PRIMARY AGENT: "Type predicates can't use Effect"  ← FORBIDDEN
+PRIMARY AGENT: "No fixes applied"  ← FORBIDDEN
+  ↓
+[0 task-workers spawned]  ← FAILURE
+  ↓
+User gets NOTHING
+```
+
+### ONLY TASK-WORKERS CAN SAY "UNFIXABLE"
+
+If a violation truly cannot be fixed, the task-worker must document:
+
+1. **The specific code** that cannot be changed
+2. **The technical reason** (not "Effect doesn't support this" - be specific)
+3. **What they tried** and why it failed
+4. **Evidence** (type error messages, test failures, etc.)
+
+Without this documentation FROM A TASK-WORKER, assume it CAN be fixed.
+
+**TL;DR: If detector found N violations, you MUST spawn N task-workers. Period.**
+
 ## STRICT REQUIREMENTS - DO NOT DEVIATE
 
 **Every violation gets a task. Every task gets a parallel agent. No exceptions.**
@@ -62,6 +137,11 @@ FORBIDDEN:
 - ❌ Reading background agent output files
 - ❌ Spawning agents "in batches to avoid overwhelming the system"
 - ❌ Any reasoning about system resources, limits, or throttling
+- ❌ **Classifying violations as "false positives" without spawning task-workers**
+- ❌ **Saying "No fixes applied" without spawning task-workers first**
+- ❌ **Deciding that code "cannot use Effect patterns"**
+- ❌ **Making ANY fix/skip decision yourself (task-workers do this)**
+- ❌ **Reasoning about what can/cannot be converted to Effect**
 
 **THE SYSTEM IS DESIGNED FOR THIS.** Each task-worker creates an isolated worktree branch. Phase 4's tournament merge algorithm handles all conflicts by keeping fixes from both sides. Even 100+ violations in one file will be correctly merged. This is not your concern—just spawn the agents.
 
@@ -114,13 +194,16 @@ This provides visibility into progress and enables parallel execution tracking.
 
 ### Phase 3: Spawn Agents
 
-**NO FILTERING. NO EXCEPTIONS. NO PRIORITIZATION.**
+**NO FILTERING. NO EXCEPTIONS. NO PRIORITIZATION. NO EXCUSES.**
 
 - Spawn an agent for EVERY violation found
 - Do NOT skip info-level violations
 - Do NOT skip "less important" violations
 - Do NOT reduce the number of agents for performance reasons
 - Investigate ALL violations equally
+- **Do NOT classify violations as "false positives" - task-workers evaluate that**
+- **Do NOT decide what "can't be fixed" - task-workers decide that**
+- **Do NOT make ANY fix/skip decisions yourself**
 
 **CRITICAL**: Spawn ALL agents in a SINGLE message. One agent per violation = maximum parallelism.
 
@@ -271,6 +354,25 @@ Apply the idiomatic Effect-TS fix in your worktree. Commit to your task branch.
 
 ⛔ DO NOT remove the worktree or delete the branch after committing.
    Leave them intact - they will be merged by merge-workers in Phase 4.
+
+⛔ IF YOU CANNOT FIX THIS VIOLATION:
+   You MUST still commit something. Create a commit with message:
+   "UNFIXABLE: [ruleId] at [file]:[line] - [specific technical reason]"
+
+   The commit message MUST include:
+   1. The specific code construct that prevents fixing
+   2. What you tried and why it failed
+   3. Type error messages or test failures as evidence
+
+   FORBIDDEN justifications (too vague):
+   - "Type predicates can't use Effect"
+   - "This pattern doesn't work with Effect"
+   - "Effect doesn't support this"
+
+   REQUIRED justifications (specific):
+   - "TypeScript requires type predicates to return boolean, but Effect.gen returns Effect<boolean>"
+   - "Cannot wrap in Effect because caller expects synchronous return at call site X:Y"
+   - "Type error: 'Type Effect<A> is not assignable to type A' at line Z"
 ```
 
 ---
