@@ -142,28 +142,60 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Schema transform for conditional validation based on suggestion presence
+// Decode transformation: convert optional suggestion to required/omitted variant
+const decodeViolation = (violation: ViolationSchema): ValidViolationWithSuggestion | ValidViolationWithoutSuggestion =>
+	Option.fromNullable(violation.suggestion).pipe(
+		Option.match({
+			onSome: (suggestion) =>
+				new ValidViolationWithSuggestion({
+					ruleId: violation.ruleId,
+					category: violation.category,
+					message: violation.message,
+					filePath: violation.filePath,
+					line: violation.line,
+					column: violation.column,
+					snippet: violation.snippet,
+					certainty: violation.certainty,
+					suggestion,
+				}),
+			onNone: () =>
+				new ValidViolationWithoutSuggestion({
+					ruleId: violation.ruleId,
+					category: violation.category,
+					message: violation.message,
+					filePath: violation.filePath,
+					line: violation.line,
+					column: violation.column,
+					snippet: violation.snippet,
+					certainty: violation.certainty,
+				}),
+		}),
+	);
+
+// Encode transformation: convert variant back to optional suggestion form
+const encodeViolation = (output: ValidViolationWithSuggestion | ValidViolationWithoutSuggestion): ViolationSchema =>
+	new ViolationSchema({
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		ruleId: output.ruleId as any,
+		category: output.category,
+		message: output.message,
+		filePath: output.filePath,
+		line: output.line,
+		column: output.column,
+		snippet: output.snippet,
+		certainty: output.certainty,
+		suggestion: "suggestion" in output ? output.suggestion : undefined,
+	});
+
+// Schema transform for domain transformation from optional suggestion to required/omitted
 // Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
-// using Schema.transform pattern for type-safe transformation
+// using Schema.transform pattern for type-safe bidirectional conversion
 const ViolationTransform = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
 	{
-		decode: (data: ViolationData): Violation =>
-			Option.fromNullable(data.suggestion).pipe(
-				Option.match({
-					onSome: (suggestion) =>
-						Schema.decodeSync(ValidViolationWithSuggestion)({
-							...data,
-							suggestion,
-						}),
-					onNone: () => {
-						const rest = Struct.omit(data, "suggestion");
-						return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-					},
-				}),
-			),
-		encode: Function.identity,
+		decode: decodeViolation,
+		encode: encodeViolation,
 		strict: true,
 	},
 );
