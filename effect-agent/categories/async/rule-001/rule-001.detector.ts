@@ -142,34 +142,85 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Schema transform for conditional validation based on suggestion presence
-// Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
-// using Schema.transform pattern for type-safe transformation
-const ViolationTransform = Schema.transform(
-	ViolationSchema,
-	ValidViolationUnion,
+// Transform for violations with suggestion present
+const WithSuggestionTransform = Schema.transform(
+	Schema.Struct({
+		ruleId: Schema.String.pipe(Schema.brand("RuleId")),
+		category: Schema.String,
+		message: Schema.String,
+		filePath: Schema.String,
+		line: Schema.Number,
+		column: Schema.Number,
+		snippet: Schema.String,
+		certainty: Schema.Union(
+			Schema.Literal("definite"),
+			Schema.Literal("potential"),
+		),
+		suggestion: Schema.String,
+	}),
+	ValidViolationWithSuggestion,
 	{
-		decode: (data: ViolationData): Violation =>
-			Option.fromNullable(data.suggestion).pipe(
-				Option.match({
-					onSome: (suggestion) =>
-						Schema.decodeSync(ValidViolationWithSuggestion)({
-							...data,
-							suggestion,
-						}),
-					onNone: () => {
-						const rest = Struct.omit(data, "suggestion");
-						return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-					},
-				}),
-			),
+		decode: Function.identity,
 		encode: Function.identity,
 		strict: true,
 	},
 );
 
-// Helper to create validated violations using Schema.transform
-const createViolation = Schema.decodeSync(ViolationTransform);
+// Transform for violations without suggestion
+const WithoutSuggestionTransform = Schema.transform(
+	Schema.Struct({
+		ruleId: Schema.String.pipe(Schema.brand("RuleId")),
+		category: Schema.String,
+		message: Schema.String,
+		filePath: Schema.String,
+		line: Schema.Number,
+		column: Schema.Number,
+		snippet: Schema.String,
+		certainty: Schema.Union(
+			Schema.Literal("definite"),
+			Schema.Literal("potential"),
+		),
+	}),
+	ValidViolationWithoutSuggestion,
+	{
+		decode: Function.identity,
+		encode: Function.identity,
+		strict: true,
+	},
+);
+
+// Decoder that handles conditional routing based on suggestion presence
+const decodeViolation = (data: ViolationData): Violation =>
+	Option.fromNullable(data.suggestion).pipe(
+		Option.match({
+			onSome: (suggestion) =>
+				Schema.decodeSync(WithSuggestionTransform)({
+					ruleId: data.ruleId,
+					category: data.category,
+					message: data.message,
+					filePath: data.filePath,
+					line: data.line,
+					column: data.column,
+					snippet: data.snippet,
+					certainty: data.certainty,
+					suggestion,
+				}),
+			onNone: () =>
+				Schema.decodeSync(WithoutSuggestionTransform)({
+					ruleId: data.ruleId,
+					category: data.category,
+					message: data.message,
+					filePath: data.filePath,
+					line: data.line,
+					column: data.column,
+					snippet: data.snippet,
+					certainty: data.certainty,
+				}),
+		}),
+	);
+
+// Helper to create validated violations using conditional decoder
+const createViolation = decodeViolation;
 
 export const detect = (
 	filePath: string,
