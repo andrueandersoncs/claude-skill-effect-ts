@@ -36,44 +36,95 @@ const meta = new MetaSchema({
 // for the TypeScript compiler API which requires this narrowing. After validating
 // the basic object structure, we delegate to TypeScript's built-in type predicates.
 
-// Reusable structural type guard for Node-like objects
-// Validates that a value is an object with a 'kind' property
-const isNodeLike = (val: unknown): val is ts.Node =>
-	typeof val === "object" && val !== null && "kind" in val;
-
-// Using Function.identity from Effect for pure identity transformation
-// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
-// This is a special case where pure type guards are necessary for TypeScript AST filtering.
-const assertAsNode = Function.identity;
-
-// Schema for Node-like objects - validates structural requirement for ts.Node
-// Used to replace inline multiple-OR conditionals with declarative Schema approach
-const NodeLike = Schema.Struct({
-	kind: Schema.Any,
+// Schema for Node-like objects - runtime validation using Schema.is()
+// Validates that an unknown value is an object with a "kind" property
+const NodeLikeSchema = Schema.Struct({
+	kind: Schema.Unknown,
 });
 
+// Reusable structural type guard using Schema.is() for type-safe validation
+const isNodeLike = (val: unknown): val is ts.Node =>
+	Schema.is(NodeLikeSchema)(val) && val !== null;
+
+// Reusable type guard functions for function node types
+// NOTE: rule-005 violation cannot be fixed - type predicates must return boolean,
+// not Effect. Effect.fn() returns Effect<boolean>, breaking TypeScript type narrowing.
+const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
+	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.compose wrapper
+	// This type guard must remain a plain function due to TypeScript type predicate constraints
+	// Use Match (from Effect) for structural validation with type narrowing, with Schema.is()
+
+	return Match.value(u).pipe(
+		Match.when(isNodeLike, (validNode) => {
+			// Use TypeScript's built-in type predicate after structural validation
+			return ts.isFunctionDeclaration(validNode);
+		}),
+		Match.orElse(Function.constant(false)),
+	);
+};
+
+const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
+	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.transform wrapper
+	// This type guard must remain a plain function due to TypeScript type predicate constraints
+	// Use Match (from Effect) for structural validation with type narrowing, with Schema.is()
+
+	return Match.value(u).pipe(
+		Match.when(isNodeLike, (validNode) => {
+			// Use TypeScript's built-in type predicate after structural validation
+			return ts.isFunctionExpression(validNode);
+		}),
+		Match.orElse(Function.constant(false)),
+	);
+};
+
+const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
+	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.pipe wrapper
+	// This type guard must remain a plain function due to TypeScript type predicate constraints
+	// Use Match (from Effect) for structural validation with type narrowing, with Schema.is()
+
+	return Match.value(u).pipe(
+		Match.when(isNodeLike, (validNode) => {
+			// Use TypeScript's built-in type predicate after structural validation
+			return ts.isArrowFunction(validNode);
+		}),
+		Match.orElse(Function.constant(false)),
+	);
+};
+
+// Note: Type predicate logic is inlined where needed in Match.when for type narrowing
+// Type guards cannot be wrapped in Effect.fn() as they must return boolean, not Effect
 
 // Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
 // Combines structural validation with TypeScript's built-in type predicates
-// Uses reusable isNodeLike check from task-007 for cleaner code while maintaining type safety
+// NodeLikeStructure validates the structural requirements at schema level
+const NodeLikeStructure = Schema.Object.pipe(
+	Schema.filter((u): u is object & { kind: unknown } => "kind" in u),
+);
+
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration => {
-		// Structural validation: ensure we have a Node-like object
-		return isNodeLike(u)
-			? ts.isFunctionDeclaration(u as ts.Node)
-			: false;
+		// Structural validation: ensure we have a Node-like object using Schema.is()
+		if (!isNodeLike(u)) {
+			return false;
+		}
+		// Use TypeScript's built-in type predicate after structural validation
+		return ts.isFunctionDeclaration(u);
 	}),
 	Schema.declare((u): u is ts.FunctionExpression => {
-		// Structural validation: ensure we have a Node-like object
-		return isNodeLike(u)
-			? ts.isFunctionExpression(u as ts.Node)
-			: false;
+		// Structural validation: ensure we have a Node-like object using Schema.is()
+		if (!isNodeLike(u)) {
+			return false;
+		}
+		// Use TypeScript's built-in type predicate after structural validation
+		return ts.isFunctionExpression(u);
 	}),
 	Schema.declare((u): u is ts.ArrowFunction => {
-		// Structural validation: ensure we have a Node-like object
-		return isNodeLike(u)
-			? ts.isArrowFunction(u as ts.Node)
-			: false;
+		// Structural validation: ensure we have a Node-like object using Schema.is()
+		if (!isNodeLike(u)) {
+			return false;
+		}
+		// Use TypeScript's built-in type predicate after structural validation
+		return ts.isArrowFunction(u);
 	}),
 );
 
@@ -120,19 +171,8 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithoutSuggestion,
 );
 
-// Type definition for violation data
-type ViolationData = {
-	ruleId: string & { readonly RuleId: symbol };
-	category: string;
-	message: string;
-	filePath: string;
-	line: number;
-	column: number;
-	snippet: string;
-	certainty: "definite" | "potential";
-	suggestion?: string | undefined;
-};
-
+// Build violation from unvalidated data - validates and applies branding via Schema.Class
+// ViolationSchema handles validation and branding, then ValidViolationUnion ensures proper format
 const buildViolation = (data: {
 	ruleId: string;
 	category: string;
@@ -146,54 +186,8 @@ const buildViolation = (data: {
 }): Violation =>
 	Schema.decodeSync(ValidViolationUnion)(data);
 
-// Schema transformation for violation conversion using Schema.transform
-// This defines bidirectional transformation from input data to validated Violation
-const createViolationWithTransform = Schema.decodeSync(
-	Schema.transform(
-		Schema.Struct({
-			ruleId: Schema.String,
-			category: Schema.String,
-			message: Schema.String,
-			filePath: Schema.String,
-			line: Schema.Number,
-			column: Schema.Number,
-			snippet: Schema.String,
-			certainty: Schema.Union(
-				Schema.Literal("definite"),
-				Schema.Literal("potential"),
-			),
-			suggestion: Schema.optional(Schema.String),
-		}), // External/encoded: plain object input
-		ValidViolationUnion, // Internal/decoded: validated Violation schema
-		{
-			decode: (plainData) => plainData,
-			encode: (validated) =>
-				"suggestion" in validated && validated.suggestion !== undefined
-					? {
-							ruleId: validated.ruleId,
-							category: validated.category,
-							message: validated.message,
-							filePath: validated.filePath,
-							line: validated.line,
-							column: validated.column,
-							snippet: validated.snippet,
-							certainty: validated.certainty,
-							suggestion: validated.suggestion,
-						}
-					: {
-							ruleId: validated.ruleId,
-							category: validated.category,
-							message: validated.message,
-							filePath: validated.filePath,
-							line: validated.line,
-							column: validated.column,
-							snippet: validated.snippet,
-							certainty: validated.certainty,
-						},
-			strict: true,
-		},
-	),
-);
+// Alias for backward compatibility with existing code
+const createViolationWithTransform = buildViolation;
 
 export const detect = (
 	filePath: string,
