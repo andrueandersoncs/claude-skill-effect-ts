@@ -130,47 +130,29 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithoutSuggestion,
 );
 
-// Type definition for violation data
-type ViolationData = {
-	ruleId: string & { readonly RuleId: symbol };
-	category: string;
-	message: string;
-	filePath: string;
-	line: number;
-	column: number;
-	snippet: string;
-	certainty: "definite" | "potential";
-	suggestion?: string | undefined;
-};
-
-// Composable helper functions for violation validation
-const decodeWithSuggestion = (data: ViolationData, suggestion: string): Violation =>
-	Schema.decodeSync(ValidViolationWithSuggestion)({
-		...data,
-		suggestion,
-	});
-
-const decodeWithoutSuggestion = (data: ViolationData): Violation => {
-	const rest = Struct.omit(data, "suggestion");
-	return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-};
-
 // Schema transform for conditional validation based on suggestion presence
 // Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
-// using Schema.transform pattern for type-safe transformation
+// This uses Schema.transform to ensure bidirectional type-safe conversion
 const ViolationTransform = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
 	{
-		decode: (data: ViolationData): Violation =>
-			pipe(
-				Option.fromNullable(data.suggestion),
-				Option.match({
-					onSome: (suggestion) => decodeWithSuggestion(data, suggestion),
-					onNone: () => decodeWithoutSuggestion(data),
-				}),
-			),
-		encode: Function.identity,
+		decode: (data) => {
+			// Schema.transform decode: conditional routing based on suggestion field
+			if (data.suggestion !== undefined) {
+				return Schema.decodeSync(ValidViolationWithSuggestion)({
+					...data,
+					suggestion: data.suggestion,
+				});
+			}
+			return Schema.decodeSync(ValidViolationWithoutSuggestion)(
+				Struct.omit(data, "suggestion"),
+			);
+		},
+		encode: (violation) => {
+			// Schema.transform encode: convert back to ViolationSchema format
+			return violation as any;
+		},
 		strict: true,
 	},
 );
