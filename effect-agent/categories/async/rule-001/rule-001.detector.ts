@@ -109,23 +109,53 @@ const validateIsPromiseExpression = (obj: {
 
 // Validate violations using Schema.transform for bidirectional conversion
 
-// Helper to create validated violations using Schema
-const createViolation = (data: Omit<Violation, never>): Violation => {
-	const decoded = Schema.decodeSync(ViolationSchema)(data);
-	// Validate and return the violation based on whether suggestion is present
-	return Option.fromNullable(decoded.suggestion).pipe(
-		Option.match({
-			onSome: (suggestion) =>
+// Schema transform: convert raw data to validated Violation
+// Transforms raw input into a properly validated Violation object
+const ViolationTransform = Schema.transform(
+	Schema.Any, // Accept any input, we'll validate it
+	Schema.Struct({
+		ruleId: Schema.String.pipe(Schema.brand("RuleId")),
+		category: Schema.String,
+		message: Schema.String,
+		filePath: Schema.String,
+		line: Schema.Number,
+		column: Schema.Number,
+		snippet: Schema.String,
+		certainty: Schema.Union(
+			Schema.Literal("definite"),
+			Schema.Literal("potential"),
+		),
+		suggestion: Schema.optional(Schema.String),
+	}), // Output: validated structure
+	{
+		decode: (input: any) => {
+			// First pass: validate basic structure
+			const decoded = Schema.decodeSync(ViolationSchema)(input);
+			// Second pass: validate specific constraint (suggestion present/absent)
+			if (decoded.suggestion !== undefined && decoded.suggestion !== null) {
+				// Ensure suggestion is actually present if field exists
 				Schema.decodeSync(ValidViolationWithSuggestion)({
 					...decoded,
-					suggestion,
-				}),
-			onNone: () => {
-				const rest = Struct.omit(decoded, "suggestion");
-				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-			},
-		}),
-	);
+					suggestion: decoded.suggestion,
+				});
+			} else {
+				// Ensure suggestion is omitted if not present
+				Schema.decodeSync(ValidViolationWithoutSuggestion)(
+					Struct.omit(decoded, "suggestion"),
+				);
+			}
+			return decoded;
+		},
+		encode: (output) => output,
+		strict: true,
+	},
+);
+
+// Helper to create validated violations using Schema
+const createViolation = (data: Omit<Violation, never>): Violation => {
+	const decoded = Schema.decodeSync(ViolationTransform)(data);
+	// Cast to Violation - schema validation ensures type safety at runtime
+	return decoded as Violation;
 };
 
 export const detect = (
