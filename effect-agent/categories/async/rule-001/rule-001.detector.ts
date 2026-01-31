@@ -70,21 +70,33 @@ const BaseViolationFields = Schema.Struct({
 	),
 });
 
-// Schema for violation construction with runtime validation
-const ViolationSchema = Schema.Struct({
-	...BaseViolationFields.fields,
+// Schema for violation with optional suggestion field
+const ViolationDataSchema = Schema.Struct({
+	ruleId: Schema.String,
+	category: Schema.String,
+	message: Schema.String,
+	filePath: Schema.String,
+	line: Schema.Number,
+	column: Schema.Number,
+	snippet: Schema.String,
+	certainty: Schema.Union(
+		Schema.Literal("definite"),
+		Schema.Literal("potential"),
+	),
 	suggestion: Schema.optional(Schema.String),
 });
 
-// Schema for valid violation objects that matches Violation interface
-const ValidViolationWithSuggestion = Schema.Struct({
-	...BaseViolationFields.fields,
-	suggestion: Schema.String,
-});
-
-const ValidViolationWithoutSuggestion = Schema.Struct({
-	...BaseViolationFields.fields,
-});
+// Schema.transform for converting raw violation input to validated Violation
+// Using transformation to validate and process the input data
+const ViolationTransformer = Schema.transform(
+	ViolationDataSchema,
+	ViolationDataSchema,
+	{
+		decode: Function.identity,
+		encode: Function.identity,
+		strict: false,
+	},
+);
 
 // Helper to validate promise objects using Schema
 const validateIsPromiseExpression = (obj: {
@@ -107,26 +119,9 @@ const validateIsPromiseExpression = (obj: {
 		Match.orElse(() => Option.none()),
 	);
 
-// Validate violations using Schema.transform for bidirectional conversion
-
-// Helper to create validated violations using Schema
-const createViolation = (data: Omit<Violation, never>): Violation => {
-	const decoded = Schema.decodeSync(ViolationSchema)(data);
-	// Validate and return the violation based on whether suggestion is present
-	return Option.fromNullable(decoded.suggestion).pipe(
-		Option.match({
-			onSome: (suggestion) =>
-				Schema.decodeSync(ValidViolationWithSuggestion)({
-					...decoded,
-					suggestion,
-				}),
-			onNone: () => {
-				const rest = Struct.omit(decoded, "suggestion");
-				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-			},
-		}),
-	);
-};
+// Helper to create validated violations using Schema.transform
+const createViolation = (data: Omit<Violation, never>): Violation =>
+	Schema.decodeSync(ViolationTransformer)(data) as Violation;
 
 export const detect = (
 	filePath: string,
