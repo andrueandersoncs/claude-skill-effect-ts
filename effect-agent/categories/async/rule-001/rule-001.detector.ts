@@ -40,37 +40,43 @@ const meta = new MetaSchema({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const assertAsNode = (u: any): ts.Node => u;
 
+// Schema to validate node-like objects with a 'kind' property
+// Using Schema.Struct for structural validation instead of imperative conditionals
+const NodeLike = Schema.Struct({
+	kind: Schema.Unknown,
+});
+
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isFunctionDeclaration(assertAsNode(u));
+	// Use Schema-based structural validation with Match for declarative pattern
+	return Match.value(u).pipe(
+		Match.when(Schema.is(NodeLike), () =>
+			ts.isFunctionDeclaration(assertAsNode(u)),
+		),
+		Match.orElse(() => false),
+	);
 };
 
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isFunctionExpression(assertAsNode(u));
+	// Use Schema-based structural validation with Match for declarative pattern
+	return Match.value(u).pipe(
+		Match.when(Schema.is(NodeLike), () =>
+			ts.isFunctionExpression(assertAsNode(u)),
+		),
+		Match.orElse(() => false),
+	);
 };
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isArrowFunction(assertAsNode(u));
+	// Use Schema-based structural validation with Match for declarative pattern
+	return Match.value(u).pipe(
+		Match.when(Schema.is(NodeLike), () =>
+			ts.isArrowFunction(assertAsNode(u)),
+		),
+		Match.orElse(() => false),
+	);
 };
 
-// Type narrowing helper for FunctionNode types using enhanced structural validation
+// Type narrowing helper for FunctionNode types using Schema-based validation
 const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
 	return (
 		isFunctionDeclaration(node) ||
