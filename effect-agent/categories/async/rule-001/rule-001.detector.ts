@@ -55,6 +55,7 @@ const NodeLike = Schema.Struct({
 
 // Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
 // Combines structural validation with TypeScript's built-in type predicates
+// Uses reusable isNodeLike check from task-007 for cleaner code while maintaining type safety
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration => {
 		// Structural validation: ensure we have a Node-like object
@@ -145,6 +146,55 @@ const buildViolation = (data: {
 }): Violation =>
 	Schema.decodeSync(ValidViolationUnion)(data);
 
+// Schema transformation for violation conversion using Schema.transform
+// This defines bidirectional transformation from input data to validated Violation
+const createViolationWithTransform = Schema.decodeSync(
+	Schema.transform(
+		Schema.Struct({
+			ruleId: Schema.String,
+			category: Schema.String,
+			message: Schema.String,
+			filePath: Schema.String,
+			line: Schema.Number,
+			column: Schema.Number,
+			snippet: Schema.String,
+			certainty: Schema.Union(
+				Schema.Literal("definite"),
+				Schema.Literal("potential"),
+			),
+			suggestion: Schema.optional(Schema.String),
+		}), // External/encoded: plain object input
+		ValidViolationUnion, // Internal/decoded: validated Violation schema
+		{
+			decode: (plainData) => plainData,
+			encode: (validated) =>
+				"suggestion" in validated && validated.suggestion !== undefined
+					? {
+							ruleId: validated.ruleId,
+							category: validated.category,
+							message: validated.message,
+							filePath: validated.filePath,
+							line: validated.line,
+							column: validated.column,
+							snippet: validated.snippet,
+							certainty: validated.certainty,
+							suggestion: validated.suggestion,
+						}
+					: {
+							ruleId: validated.ruleId,
+							category: validated.category,
+							message: validated.message,
+							filePath: validated.filePath,
+							line: validated.line,
+							column: validated.column,
+							snippet: validated.snippet,
+							certainty: validated.certainty,
+						},
+			strict: true,
+		},
+	),
+);
+
 export const detect = (
 	filePath: string,
 	sourceFile: ts.SourceFile,
@@ -162,7 +212,7 @@ export const detect = (
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
 						return Option.some(
-							buildViolation({
+							createViolationWithTransform({
 								ruleId: meta.id,
 								category: meta.category,
 								message: "new Promise() should be replaced with Effect.async()",
@@ -217,7 +267,7 @@ export const detect = (
 								const { line, character } =
 									sourceFile.getLineAndCharacterOfPosition(node.getStart());
 								return Option.some(
-									buildViolation({
+									createViolationWithTransform({
 										ruleId: meta.id,
 										category: meta.category,
 										message:
