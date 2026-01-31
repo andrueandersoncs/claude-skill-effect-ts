@@ -166,6 +166,63 @@ Each task-worker will:
 5. **DO NOT clean up the worktree** - leave it for the merge-worker
 6. Mark the task complete
 
+## ⛔⛔⛔ CRITICAL: REAL FIXES ONLY - NO SUPPRESSION COMMENTS ⛔⛔⛔
+
+**Task-workers MUST fix the actual code. Suppression comments are FORBIDDEN.**
+
+### FORBIDDEN - These are NOT fixes:
+
+- ❌ `// eslint-disable-next-line`
+- ❌ `// @ts-ignore`
+- ❌ `// @ts-expect-error`
+- ❌ `/* eslint-disable */`
+- ❌ `// biome-ignore`
+- ❌ `// prettier-ignore`
+- ❌ Any comment that suppresses, ignores, or disables a rule
+- ❌ Wrapping code in `try/catch` without fixing the underlying issue
+- ❌ Adding `as any` or `as unknown` type assertions to hide errors
+- ❌ Deleting the violating code without replacement
+
+### REQUIRED - What "fixing" means:
+
+- ✅ Rewrite the code to follow the Effect-TS pattern
+- ✅ Use the correct Effect-TS idiom shown in rule documentation
+- ✅ Transform imperative code to functional Effect code
+- ✅ Replace non-Effect patterns with Effect equivalents
+- ✅ The fixed code MUST pass the detector without violations
+
+### Example:
+
+**WRONG (suppression):**
+```typescript
+// eslint-disable-next-line effect/no-promise
+const result = await fetch(url);
+```
+
+**CORRECT (actual fix):**
+```typescript
+const result = yield* Effect.tryPromise(() => fetch(url));
+```
+
+### VERIFICATION REQUIREMENT
+
+After applying a fix, the task-worker MUST run:
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:all <file-path> --json 2>/dev/null | jq '.violations[] | select(.line == LINE_NUMBER)'
+```
+
+If the violation still appears, the fix is INCOMPLETE. Try again with a real fix.
+
+### WHY THIS MATTERS
+
+Suppression comments hide problems without solving them. The user ran `--fix` expecting their code to be transformed to idiomatic Effect-TS. If workers add suppression comments:
+- The code still has issues
+- Type safety is compromised
+- The violation will reappear when comments are removed
+- The user gets ZERO value from running `--fix`
+
+**A suppression comment is NOT a fix. It is a FAILURE.**
+
 **⛔ AFTER ALL TASK-WORKERS RETURN: GO TO PHASE 4 IMMEDIATELY. DO NOT STOP.**
 
 Example prompt for task-worker:
@@ -193,6 +250,22 @@ To see good/bad examples for this rule:
   cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:examples [category]/[ruleId]
 
 Rule documentation: ${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/[category]/rule-NNN/rule-NNN.md
+
+⛔⛔⛔ CRITICAL: REAL FIXES ONLY ⛔⛔⛔
+You MUST rewrite the code to follow Effect-TS patterns.
+
+FORBIDDEN (these are NOT fixes - using any of these is a FAILURE):
+- eslint-disable comments
+- @ts-ignore or @ts-expect-error
+- biome-ignore or prettier-ignore
+- Any suppression/ignore comment
+- Adding "as any" or "as unknown" type casts
+- Deleting code without proper replacement
+
+REQUIRED (what a real fix looks like):
+- Transform the code to use Effect-TS idioms
+- Follow the pattern shown in rule documentation
+- The fixed code must pass the detector
 
 Apply the idiomatic Effect-TS fix in your worktree. Commit to your task branch.
 
@@ -516,9 +589,51 @@ Before reporting completion, verify ALL of these:
 - [ ] **Phase 4: Ran tournament merge rounds until 1 branch remained**
 - [ ] **Phase 4: Merged final branch into main**
 - [ ] **Phase 4: Cleaned up all worktrees and task branches**
-- [ ] Output: Presented final compliance report
+- [ ] **Phase 5: VERIFICATION - Re-run detectors on fixed file**
+- [ ] **Phase 5: Confirm ZERO violations remain (or report failures)**
+- [ ] **Phase 5: Check for suppression comments - if found, FIX FAILED**
+- [ ] Output: Presented final compliance report WITH verification results
 
 **If ANY checkbox is not complete, the workflow is INCOMPLETE. Continue working.**
+
+## ⛔ MANDATORY PHASE 5: VERIFICATION
+
+After Phase 4 merges all fixes into main, you MUST verify the fixes worked:
+
+### Step 1: Re-run detectors
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:all <file-path> --json 2>/dev/null
+```
+
+### Step 2: Check for suppression comments
+```bash
+grep -n "eslint-disable\|@ts-ignore\|@ts-expect-error\|biome-ignore" <file-path>
+```
+
+### Step 3: Run type check
+```bash
+cd <project-root> && bun run check 2>&1 | grep -A2 "<file-path>"
+```
+
+### Verification Outcomes:
+
+**SUCCESS:** Zero violations AND zero suppression comments AND no type errors
+- Report: "✅ All N violations fixed. File is now compliant."
+
+**PARTIAL FAILURE:** Some violations remain
+- Report: "⚠️ X of N violations fixed. Y violations remain."
+- List the remaining violations
+
+**TOTAL FAILURE:** Suppression comments were added instead of fixes
+- Report: "❌ FIX FAILED: Workers added suppression comments instead of fixing code."
+- This is a BUG in the workflow - the user got ZERO value
+- List the suppression comments found
+
+**TYPE ERRORS:** Fixes introduced type errors
+- Report: "⚠️ Fixes applied but introduced type errors:"
+- List the type errors
+
+**NEVER report success if suppression comments exist.** They are evidence of failure.
 
 ### ⛔ PHASE 4 IS NOT OPTIONAL
 
