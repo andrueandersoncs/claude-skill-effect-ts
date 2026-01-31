@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Effect,
 	Function,
 	flow,
 	Match,
@@ -87,25 +88,25 @@ const ValidViolationWithoutSuggestion = Schema.Struct({
 });
 
 // Helper to validate promise objects using Schema
-const validateIsPromiseExpression = (obj: {
-	isNewExpr: boolean;
-	isIdentifierExpr: boolean;
-	isPromiseText: boolean;
-}): Option.Option<{
-	isNewExpr: boolean;
-	isIdentifierExpr: boolean;
-	isPromiseText: boolean;
-}> =>
-	Match.value(obj).pipe(
-		Match.when(Schema.is(IsPromiseExpression), () =>
-			Option.some({
-				isNewExpr: true,
-				isIdentifierExpr: true,
-				isPromiseText: true,
-			}),
-		),
-		Match.orElse(() => Option.none()),
-	);
+const validateIsPromiseExpression = Effect.fn("validateIsPromiseExpression")(
+	(obj: {
+		isNewExpr: boolean;
+		isIdentifierExpr: boolean;
+		isPromiseText: boolean;
+	}) => {
+		const result = Match.value(obj).pipe(
+			Match.when(Schema.is(IsPromiseExpression), () =>
+				Option.some({
+					isNewExpr: true,
+					isIdentifierExpr: true,
+					isPromiseText: true,
+				}),
+			),
+			Match.orElse(() => Option.none()),
+		);
+		return Effect.succeed(result);
+	},
+);
 
 // Validate violations using Schema.transform for bidirectional conversion
 
@@ -152,14 +153,14 @@ export const detect = (
 				const schemaCheck = Match.value(newExpr.expression).pipe(
 					Match.when(
 						ts.isIdentifier,
-						flow(
-							(expr: ts.Identifier) => ({
-								isNewExpr: true,
-								isIdentifierExpr: true,
-								isPromiseText: expr.text === "Promise",
-							}),
-							validateIsPromiseExpression,
-						),
+						(expr: ts.Identifier) =>
+							Effect.runSync(
+								validateIsPromiseExpression({
+									isNewExpr: true,
+									isIdentifierExpr: true,
+									isPromiseText: expr.text === "Promise",
+								}),
+							),
 					),
 					Match.orElse(() => Option.none()),
 				);
