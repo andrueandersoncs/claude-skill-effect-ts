@@ -2,6 +2,9 @@
  * Rule violation detection types
  */
 
+/** Maximum length of code snippets shown in violation output */
+export const SNIPPET_MAX_LENGTH = 200;
+
 export type ViolationSeverity = "error" | "warning" | "info";
 
 export type ViolationCertainty = "definite" | "potential";

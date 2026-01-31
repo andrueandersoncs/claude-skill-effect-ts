@@ -12,6 +12,7 @@
 		"detect:all": "bun run detectors/runner.ts -s info",
 		"detect:errors": "bun run detectors/runner.ts -s error --no-potential",
 		"detect:json": "bun run detectors/runner.ts --json",
+		"detect:examples": "bun run detectors/runner.ts examples",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:ui": "vitest --ui"

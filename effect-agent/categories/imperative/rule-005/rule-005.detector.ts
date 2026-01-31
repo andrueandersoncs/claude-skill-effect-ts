@@ -5,7 +5,7 @@
  */
 
 import * as ts from "typescript";
-import type { Violation } from "../../../detectors/types.js";
+import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-005",
@@ -32,7 +32,7 @@ export const detect = (
 				filePath,
 				line: line + 1,
 				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, 100),
+				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 				severity: "error",
 				certainty: "definite",
 				suggestion: "Replace with Effect.forEach() or Array.map/filter/reduce",
@@ -52,7 +52,7 @@ export const detect = (
 				filePath,
 				line: line + 1,
 				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, 100),
+				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 				severity: "error",
 				certainty: "definite",
 				suggestion: "Replace with Effect.forEach() or Array.map/filter/reduce",
@@ -72,7 +72,7 @@ export const detect = (
 				filePath,
 				line: line + 1,
 				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, 100),
+				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 				severity: "error",
 				certainty: "definite",
 				suggestion: "Replace with Record.toEntries() or Record.keys()",
@@ -92,7 +92,7 @@ export const detect = (
 				filePath,
 				line: line + 1,
 				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, 100),
+				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 				severity: "error",
 				certainty: "definite",
 				suggestion: "Replace with Effect.loop() or recursive Effect.gen()",
@@ -111,7 +111,7 @@ export const detect = (
 				filePath,
 				line: line + 1,
 				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, 100),
+				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 				severity: "error",
 				certainty: "definite",
 				suggestion: "Replace with Effect.loop() or recursive Effect.gen()",

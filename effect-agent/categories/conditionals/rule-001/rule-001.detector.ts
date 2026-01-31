@@ -5,7 +5,7 @@
  */
 
 import * as ts from "typescript";
-import type { Violation } from "../../../detectors/types.js";
+import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-001",
@@ -36,7 +36,7 @@ export const detect = (
 					filePath,
 					line: line + 1,
 					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, 150),
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 					severity: "error",
 					certainty: "definite",
 					suggestion: "Use Array.match() or Array.isEmptyArray()",
@@ -60,7 +60,7 @@ export const detect = (
 					filePath,
 					line: line + 1,
 					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, 150),
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 					severity: "error",
 					certainty: "definite",
 					suggestion: "Use Array.match() or Array.isEmptyArray()",

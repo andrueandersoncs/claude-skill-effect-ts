@@ -12,7 +12,7 @@
  */
 
 import * as ts from "typescript";
-import type { Violation } from "../../../detectors/types.js";
+import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-002",
@@ -46,7 +46,7 @@ export const detect = (
 						filePath,
 						line: line + 1,
 						column: character + 1,
-						snippet: parent.getText(sourceFile).slice(0, 80),
+						snippet: parent.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 						severity: "warning",
 						certainty: "potential",
 						suggestion: "Use Effect.catchTag() for type-safe error handling",
@@ -71,7 +71,7 @@ export const detect = (
 					filePath,
 					line: line + 1,
 					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, 100),
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 					severity: "error",
 					certainty: "definite",
 					suggestion:
@@ -104,7 +104,7 @@ export const detect = (
 					filePath,
 					line: line + 1,
 					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, 80),
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 					severity: "warning",
 					certainty: "definite",
 					suggestion:
@@ -128,7 +128,7 @@ export const detect = (
 					filePath,
 					line: line + 1,
 					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, 100),
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 					severity: "error",
 					certainty: "definite",
 					suggestion: "Use Effect.fail() with a typed error",
@@ -151,7 +151,7 @@ export const detect = (
 					filePath,
 					line: line + 1,
 					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, 80),
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 					severity: "info",
 					certainty: "potential",
 					suggestion: "Use Effect.log or structured error types instead",
@@ -201,7 +201,7 @@ export const detect = (
 								filePath,
 								line: line + 1,
 								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, 100),
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 								severity: "error",
 								certainty: "definite",
 								suggestion:
@@ -241,7 +241,7 @@ export const detect = (
 				filePath,
 				line: line + 1,
 				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, 100),
+				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 				severity: "error",
 				certainty: "definite",
 				suggestion,
@@ -280,7 +280,7 @@ export const detect = (
 					filePath,
 					line: line + 1,
 					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, 100),
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 					severity: "warning",
 					certainty: "potential",
 					suggestion: "Define typed errors using Schema.TaggedError class",

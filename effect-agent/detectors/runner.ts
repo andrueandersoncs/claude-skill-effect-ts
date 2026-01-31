@@ -6,6 +6,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
 	getAllDetectors,
 	getCategoryNames,
@@ -19,6 +20,60 @@ import type {
 	Violation,
 	ViolationSeverity,
 } from "./types.js";
+
+// Get the directory where this module is located
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const categoriesDir = path.join(__dirname, "..", "categories");
+
+/**
+ * Example files for a rule
+ */
+interface RuleExamples {
+	good: { path: string; content: string } | null;
+	bad: { path: string; content: string } | null;
+}
+
+/**
+ * Load example files for a rule
+ * - {ruleId}.ts = good example
+ * - {ruleId}.bad.ts = bad example
+ */
+const loadRuleExamples = (category: string, ruleId: string): RuleExamples => {
+	const result: RuleExamples = { good: null, bad: null };
+
+	const goodPath = path.join(categoriesDir, category, ruleId, `${ruleId}.ts`);
+	const badPath = path.join(
+		categoriesDir,
+		category,
+		ruleId,
+		`${ruleId}.bad.ts`,
+	);
+
+	try {
+		if (fs.existsSync(goodPath)) {
+			result.good = {
+				path: `${ruleId}.ts`,
+				content: fs.readFileSync(goodPath, "utf-8"),
+			};
+		}
+	} catch {
+		// Ignore errors reading example files
+	}
+
+	try {
+		if (fs.existsSync(badPath)) {
+			result.bad = {
+				path: `${ruleId}.bad.ts`,
+				content: fs.readFileSync(badPath, "utf-8"),
+			};
+		}
+	} catch {
+		// Ignore errors reading example files
+	}
+
+	return result;
+};
 
 /**
  * Glob pattern matching (simple implementation)
@@ -215,6 +270,25 @@ export const detectDirectory = (
 };
 
 /**
+ * Deduplicate violations by location and rule
+ * When same location has multiple violations for same rule, keep the first one
+ */
+const deduplicateViolations = (violations: Violation[]): Violation[] => {
+	const seen = new Set<string>();
+	const result: Violation[] = [];
+
+	for (const v of violations) {
+		const key = `${v.filePath}:${v.line}:${v.column}:${v.ruleId}`;
+		if (!seen.has(key)) {
+			seen.add(key);
+			result.push(v);
+		}
+	}
+
+	return result;
+};
+
+/**
  * Format violations for console output
  */
 export const formatViolations = (violations: Violation[]): string => {
@@ -239,18 +313,20 @@ export const formatViolations = (violations: Violation[]): string => {
 		lines.push("─".repeat(Math.min(file.length, 80)));
 
 		for (const v of fileViolations) {
-			const certaintyTag = v.certainty === "potential" ? " [potential]" : "";
-			const severityIcon =
-				v.severity === "error" ? "❌" : v.severity === "warning" ? "⚠️ " : "ℹ️ ";
-
-			lines.push(
-				`  ${severityIcon} ${v.line}:${v.column} [${v.category}/${v.ruleId}]${certaintyTag}`,
-			);
-			lines.push(`     ${v.message}`);
+			lines.push("  Violation:");
+			lines.push(`    Line: ${v.line}:${v.column}`);
+			lines.push(`    Rule: ${v.category}/${v.ruleId}`);
+			lines.push(`    Severity: ${v.severity}`);
+			lines.push(`    Certainty: ${v.certainty}`);
+			lines.push(`    Message: ${v.message}`);
 			if (v.suggestion) {
-				lines.push(`     💡 ${v.suggestion}`);
+				lines.push(`    Suggestion: ${v.suggestion}`);
 			}
-			lines.push(`     ${v.snippet.replace(/\n/g, " ").slice(0, 60)}...`);
+			lines.push("    Offending Snippet:");
+			const snippetLines = v.snippet.split("\n");
+			for (const snippetLine of snippetLines) {
+				lines.push(`      ${snippetLine}`);
+			}
 			lines.push("");
 		}
 	}
@@ -278,11 +354,13 @@ export const formatSummary = (result: DetectorResult): string => {
 		"═══════════════════════════════════════════════════════════════",
 		`Files analyzed: ${result.filesAnalyzed}`,
 		`Total violations: ${result.violations.length}`,
-		`  ❌ Errors: ${bySeverity.get("error") ?? 0}`,
-		`  ⚠️  Warnings: ${bySeverity.get("warning") ?? 0}`,
-		`  ℹ️  Info: ${bySeverity.get("info") ?? 0}`,
 		"",
-		`Certainty:`,
+		"By severity:",
+		`  Errors: ${bySeverity.get("error") ?? 0}`,
+		`  Warnings: ${bySeverity.get("warning") ?? 0}`,
+		`  Info: ${bySeverity.get("info") ?? 0}`,
+		"",
+		"By certainty:",
 		`  Definite: ${byCertainty.get("definite") ?? 0}`,
 		`  Potential: ${byCertainty.get("potential") ?? 0}`,
 		"",
@@ -313,12 +391,79 @@ export const formatSummary = (result: DetectorResult): string => {
 };
 
 /**
+ * Format examples for a rule
+ */
+export const formatRuleExamples = (ruleSpec: string): string => {
+	// Parse rule spec: "category/rule-id" or just "rule-id"
+	const parts = ruleSpec.split("/");
+	let category: string;
+	let ruleId: string;
+
+	if (parts.length === 2) {
+		[category, ruleId] = parts;
+	} else {
+		// Try to find the rule in any category
+		ruleId = parts[0];
+		const allCategories = getCategoryNames();
+		const found = allCategories.find((cat) => {
+			const examples = loadRuleExamples(cat, ruleId);
+			return examples.bad || examples.good;
+		});
+		if (!found) {
+			return `Rule "${ruleSpec}" not found. Use format: category/rule-id (e.g., code-style/rule-002)`;
+		}
+		category = found;
+	}
+
+	const examples = loadRuleExamples(category, ruleId);
+
+	if (!examples.bad && !examples.good) {
+		return `No examples found for rule "${category}/${ruleId}"`;
+	}
+
+	const lines: string[] = [];
+	lines.push(`\nExamples for: ${category}/${ruleId}`);
+	lines.push("═".repeat(60));
+
+	if (examples.bad) {
+		lines.push(`\nBad Example: ${examples.bad.path}`);
+		lines.push("─".repeat(40));
+		lines.push(examples.bad.content);
+	}
+
+	if (examples.good) {
+		lines.push(`\nGood Example: ${examples.good.path}`);
+		lines.push("─".repeat(40));
+		lines.push(examples.good.content);
+	}
+
+	lines.push(`\n${"═".repeat(60)}`);
+	return lines.join("\n");
+};
+
+/**
  * CLI entry point
  */
 export const main = async () => {
 	// Initialize per-rule detectors
 	await initializeDetectors();
 	const args = process.argv.slice(2);
+
+	// Check for examples subcommand
+	if (args[0] === "examples") {
+		const ruleSpec = args[1];
+		if (!ruleSpec) {
+			console.log(
+				"Usage: bun run detectors/runner.ts examples <category/rule-id>",
+			);
+			console.log(
+				"Example: bun run detectors/runner.ts examples code-style/rule-002",
+			);
+			process.exit(1);
+		}
+		console.log(formatRuleExamples(ruleSpec));
+		process.exit(0);
+	}
 
 	// Parse arguments
 	let directory = process.cwd();
@@ -335,6 +480,10 @@ export const main = async () => {
 Effect-TS Rule Violation Detector
 
 Usage: bun run detectors/runner.ts [options] [directory]
+       bun run detectors/runner.ts examples <category/rule-id>
+
+Commands:
+  examples <rule>           Show good/bad examples for a rule
 
 Options:
   --categories, -c <list>   Comma-separated categories to check
@@ -350,6 +499,7 @@ Examples:
   bun run detectors/runner.ts ./src
   bun run detectors/runner.ts -c imperative,conditionals ./src
   bun run detectors/runner.ts -s error --no-potential ./src
+  bun run detectors/runner.ts examples code-style/rule-002
 `);
 			process.exit(0);
 		}
@@ -374,12 +524,16 @@ Examples:
 		includePotential,
 	});
 
+	// Deduplicate violations (same location + same rule = single violation)
+	const dedupedViolations = deduplicateViolations(result.violations);
+	const dedupedResult = { ...result, violations: dedupedViolations };
+
 	// Output results
 	if (outputFormat === "json") {
-		console.log(JSON.stringify(result, null, 2));
+		console.log(JSON.stringify(dedupedResult, null, 2));
 	} else {
-		console.log(formatViolations(result.violations));
-		console.log(formatSummary(result));
+		console.log(formatViolations(dedupedViolations));
+		console.log(formatSummary(dedupedResult));
 	}
 
 	// Exit with error code if violations found

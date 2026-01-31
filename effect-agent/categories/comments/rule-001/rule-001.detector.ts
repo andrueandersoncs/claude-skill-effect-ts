@@ -6,7 +6,7 @@
  */
 
 import * as ts from "typescript";
-import type { Violation } from "../../../detectors/types.js";
+import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-001",
@@ -58,7 +58,7 @@ export const detect = (
 					filePath,
 					line: line + 1,
 					column: character + 1,
-					snippet: commentText.slice(0, 80),
+					snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
 					severity: "info",
 					certainty: "potential",
 					suggestion:
@@ -147,7 +147,7 @@ export const detect = (
 						filePath,
 						line: line + 1,
 						column: character + 1,
-						snippet: match[0].trim().slice(0, 60),
+						snippet: match[0].trim().slice(0, SNIPPET_MAX_LENGTH),
 						severity: "info",
 						certainty: "potential",
 						suggestion:
@@ -177,7 +177,7 @@ export const detect = (
 						filePath,
 						line: line + 1,
 						column: character + 1,
-						snippet: returnsMatch[0].trim().slice(0, 60),
+						snippet: returnsMatch[0].trim().slice(0, SNIPPET_MAX_LENGTH),
 						severity: "info",
 						certainty: "potential",
 						suggestion:
@@ -214,7 +214,7 @@ export const detect = (
 							filePath,
 							line: line + 1,
 							column: character + 1,
-							snippet: mainDesc.slice(0, 60),
+							snippet: mainDesc.slice(0, SNIPPET_MAX_LENGTH),
 							severity: "info",
 							certainty: "potential",
 							suggestion:
@@ -252,7 +252,7 @@ export const detect = (
 						filePath,
 						line: line + 1,
 						column: character + 1,
-						snippet: commentText.slice(0, 80),
+						snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
 						severity: "info",
 						certainty: "potential",
 						suggestion:
@@ -274,7 +274,7 @@ export const detect = (
 							filePath,
 							line: line + 1,
 							column: character + 1,
-							snippet: commentText.slice(0, 80),
+							snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
 							severity: "info",
 							certainty: "potential",
 							suggestion:

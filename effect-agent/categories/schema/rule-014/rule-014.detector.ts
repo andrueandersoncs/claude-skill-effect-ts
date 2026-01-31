@@ -8,7 +8,7 @@
  */
 
 import * as ts from "typescript";
-import type { Violation } from "../../../detectors/types.js";
+import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-014",
@@ -297,7 +297,7 @@ export const detect = (
 				violations.push({
 					ruleId: meta.id,
 					category: meta.category,
-					message: `Schema '${schema2.name}' duplicates ${overlapCount} fields from '${schema1.name}': ${overlapFields.slice(0, 5).join(", ")}${overlapFields.length > 5 ? "..." : ""}`,
+					message: `Schema '${schema2.name}' duplicates ${overlapCount} fields from '${schema1.name}': ${overlapFields.slice(0, SNIPPET_MAX_LENGTH).join(", ")}${overlapFields.length > 5 ? "..." : ""}`,
 					filePath,
 					line: schema2.line,
 					column: schema2.column,
