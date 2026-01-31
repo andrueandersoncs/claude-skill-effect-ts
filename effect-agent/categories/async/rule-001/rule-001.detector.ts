@@ -107,26 +107,35 @@ const validateIsPromiseExpression = (obj: {
 		Match.orElse(() => Option.none()),
 	);
 
-// Validate violations using Schema.transform for bidirectional conversion
-
-// Helper to create validated violations using Schema
-const createViolation = (data: Omit<Violation, never>): Violation => {
-	const decoded = Schema.decodeSync(ViolationSchema)(data);
-	// Validate and return the violation based on whether suggestion is present
-	return Option.fromNullable(decoded.suggestion).pipe(
+// Helper to route violations to appropriate schema based on suggestion presence
+const normalizeViolation = (
+	data: Omit<Violation, never>,
+): typeof ValidViolationWithSuggestion | typeof ValidViolationWithoutSuggestion =>
+	Option.fromNullable(data.suggestion).pipe(
 		Option.match({
-			onSome: (suggestion) =>
-				Schema.decodeSync(ValidViolationWithSuggestion)({
-					...decoded,
-					suggestion,
-				}),
-			onNone: () => {
-				const rest = Struct.omit(decoded, "suggestion");
-				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-			},
+			onSome: (suggestion) => ({
+				...data,
+				suggestion,
+			}),
+			onNone: () => Struct.omit(data, "suggestion"),
 		}),
 	);
-};
+
+// Schema for transforming raw input to validated violations
+// Uses Schema.transform to convert between internal and external representations
+const ViolationTransform = Schema.transform(
+	ViolationSchema,
+	Schema.Union(ValidViolationWithSuggestion, ValidViolationWithoutSuggestion),
+	{
+		decode: normalizeViolation,
+		encode: Function.identity,
+		strict: true,
+	},
+);
+
+// Helper to create validated violations using Schema
+const createViolation = (data: Omit<Violation, never>): Violation =>
+	Schema.decodeSync(ViolationTransform)(data);
 
 export const detect = (
 	filePath: string,
