@@ -72,6 +72,17 @@ export {
 	ViolationWithSuggestion,
 } from "./rule-014/rule-014.js";
 
+// rule-015: schema-class-over-struct
+export {
+	Order as Rule015Order,
+	OrderStatus as Rule015OrderStatus,
+	order as rule015Order,
+	Pending as Rule015Pending,
+	Shipped as Rule015Shipped,
+	User as Rule015User,
+	user as rule015User,
+} from "./rule-015/rule-015.js";
+
 /**
  * Rule metadata for this category
  */
@@ -147,6 +158,12 @@ export const rules = [
 		category: "schema",
 		name: "schema-field-composition",
 		rule: "Never duplicate Schema fields across multiple definitions; use `.fields` spread, `.extend()`, `.pick()`, `.omit()`, or TaggedClass",
+	},
+	{
+		id: "rule-015",
+		category: "schema",
+		name: "schema-class-over-struct",
+		rule: "Always use Schema.Class for named/exported schemas; Schema.Struct is only acceptable for inline anonymous schemas",
 	},
 ] as const;
 
