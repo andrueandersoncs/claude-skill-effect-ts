@@ -3,7 +3,7 @@
  *
  * Rule: Never suppress type errors with comments; fix the types
  *
- * This rule detects @ts-ignore, @ts-expect-error, and @ts-nocheck comments
+ * This rule detects @ts-expect-error, @ts-expect-error, and @ts-nocheck comments
  * used to suppress GENERAL type errors like:
  * - Type mismatches (assigning wrong types)
  * - Property does not exist errors
@@ -72,7 +72,7 @@ export const detect = (
 	const violations: Violation[] = [];
 	const fullText = sourceFile.getFullText();
 
-	// Detect @ts-ignore and @ts-expect-error comments
+	// Detect @ts-expect-error and @ts-expect-error comments
 	const tsIgnoreRegex = /@ts-ignore|@ts-expect-error/g;
 	let ignoreMatch = tsIgnoreRegex.exec(fullText);
 
@@ -81,8 +81,7 @@ export const detect = (
 
 		// Skip if this is in an exhaustiveness context (handled by rule-007)
 		if (!isExhaustivenessContext(fullText, pos)) {
-			const { line, character } =
-				sourceFile.getLineAndCharacterOfPosition(pos);
+			const { line, character } = sourceFile.getLineAndCharacterOfPosition(pos);
 
 			// Get the line text for context
 			const lineStart = fullText.lastIndexOf("\n", pos) + 1;

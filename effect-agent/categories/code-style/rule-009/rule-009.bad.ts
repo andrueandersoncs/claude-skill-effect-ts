@@ -4,7 +4,7 @@
 // @category: code-style
 // @original-name: fix-types
 
-// This rule detects @ts-ignore/@ts-expect-error for GENERAL type errors
+// This rule detects @ts-expect-error/@ts-expect-error for GENERAL type errors
 // (not exhaustiveness-related, which is handled by rule-007)
 
 interface User {
@@ -21,8 +21,8 @@ declare const getUserName: (user: User) => string;
 // @ts-expect-error - TODO fix types later
 export const result1 = processUser(data);
 
-// BAD: @ts-ignore to suppress argument type error
-// @ts-ignore
+// BAD: @ts-expect-error to suppress argument type error
+// @ts-expect-error
 export const result2 = getUserName({ id: 123, name: "test" });
 
 // BAD: @ts-expect-error to suppress property access on unknown

@@ -76,24 +76,35 @@ export const detect = (
 };
 
 /**
- * Check if a node represents TestClock.layer
- * Handles: TestClock.layer, Effect.TestClock.layer
+ * Check if a node represents TestClock layer provision
+ * Handles: TestClock.defaultTestClock, TestClock.live(...), Effect.TestClock.defaultTestClock
  */
 function isTestClockLayer(node: ts.Node): boolean {
-	// TestClock.layer
+	// TestClock.defaultTestClock
 	if (
 		ts.isPropertyAccessExpression(node) &&
-		node.name.text === "layer" &&
+		node.name.text === "defaultTestClock" &&
 		ts.isIdentifier(node.expression) &&
 		node.expression.text === "TestClock"
 	) {
 		return true;
 	}
 
-	// Effect.TestClock.layer
+	// TestClock.live(...)
+	if (
+		ts.isCallExpression(node) &&
+		ts.isPropertyAccessExpression(node.expression) &&
+		node.expression.name.text === "live" &&
+		ts.isIdentifier(node.expression.expression) &&
+		node.expression.expression.text === "TestClock"
+	) {
+		return true;
+	}
+
+	// Effect.TestClock.defaultTestClock
 	if (
 		ts.isPropertyAccessExpression(node) &&
-		node.name.text === "layer" &&
+		node.name.text === "defaultTestClock" &&
 		ts.isPropertyAccessExpression(node.expression) &&
 		node.expression.name.text === "TestClock"
 	) {

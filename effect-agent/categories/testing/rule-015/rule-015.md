@@ -5,7 +5,7 @@
 
 ## Rule
 
-Never provide TestClock.layer manually; it.effect includes it automatically
+Never provide TestClock layer (defaultTestClock/live) manually; it.effect includes it automatically
 
 ## Description
 

@@ -8,14 +8,19 @@
 
 **Maximize subagent parallelism.** Always spawn multiple Task tool subagents in a single message when tasks can run independently. Never work sequentially when parallel execution is possible.
 
-**For codebase exploration:** When searching for multiple things or exploring different aspects of the codebase, spawn multiple `Explore` agents in parallel in a single message. Never run Explore agents sequentially when the searches are independent.
+**For codebase exploration:** When searching for multiple things or exploring different aspects of the codebase, spawn multiple `Explore` agents in parallel **in a single message**. Never run Explore agents sequentially when the searches are independent.
 
-**For tasks requiring file changes:** Spawn `task-worker` agents in parallel, one per task ID. Each worker creates its own worktree/branch. After all workers complete, merge branches and clean up worktrees:
-```bash
-git merge task-<id> --no-edit
-git worktree remove ../worktree-task-<id>
-git branch -d task-<id>
-```
+- **One agent per directory/topic** - If analyzing N directories or N topics, spawn N agents
+- **Anti-pattern:** "Let me explore the full structure first" with a single agent
+- **Correct pattern:** Spawn one Explore agent per category/directory/topic simultaneously
+
+**For tasks requiring file changes:** Spawn `effect-ts:task-worker` agents in parallel (use fully qualified name with `subagent_type="effect-ts:task-worker"`), one per task ID. Each worker creates its own worktree/branch.
+
+**After all workers complete, use tournament merge (NOT manual merging):**
+- Pair branches and spawn `effect-ts:merge-worker` agents in parallel (one per pair)
+- Each merge-worker merges branch_b INTO branch_a, keeps fixes from BOTH, deletes branch_b
+- Repeat rounds until one branch remains, then merge that into main
+- **Never merge manually** - it wastes primary agent context. O(log n) parallel rounds vs O(n) sequential.
 
 ## Git Commits
 

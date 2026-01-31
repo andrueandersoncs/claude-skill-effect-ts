@@ -8,7 +8,7 @@
  * - @typescript-eslint/switch-exhaustiveness-check
  * - @typescript-eslint/no-unnecessary-condition (often used on default cases)
  * - noFallthroughCasesInSwitch related suppressions
- * - @ts-expect-error / @ts-ignore on switch statements with "not all code paths return"
+ * - @ts-expect-error / @ts-expect-error on switch statements with "not all code paths return"
  */
 
 import * as ts from "typescript";
@@ -60,7 +60,7 @@ const isSuppressionDirective = (commentText: string): boolean => {
 	// Match actual eslint-disable directives
 	const eslintDisablePattern =
 		/^\s*\/[/*]\s*eslint-disable(?:-next-line|-line)?/;
-	// Match actual @ts-ignore/@ts-expect-error directives
+	// Match actual @ts-expect-error/@ts-expect-error directives
 	const tsSuppressionPattern = /^\s*\/[/*]\s*@ts-(?:ignore|expect-error)/;
 
 	return (
@@ -118,7 +118,7 @@ export const detect = (
 			}
 		}
 
-		// Also check for @ts-ignore/@ts-expect-error directly before switch statements
+		// Also check for @ts-expect-error/@ts-expect-error directly before switch statements
 		if (ts.isSwitchStatement(node)) {
 			const switchLeadingComments = ts.getLeadingCommentRanges(
 				fullText,

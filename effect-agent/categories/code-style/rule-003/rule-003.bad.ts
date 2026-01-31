@@ -10,7 +10,8 @@ export const parseJson = (input: string): any => JSON.parse(input);
 
 // BAD: Disabling unsafe member access checks
 // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-export const getValue = (obj: unknown): string => (obj as { value: string }).value;
+export const getValue = (obj: unknown): string =>
+	(obj as { value: string }).value;
 
 // BAD: Disabling unsafe assignment checks
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
