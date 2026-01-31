@@ -22,9 +22,22 @@ A successful fix run MUST satisfy ALL of these invariants:
 1. **Violation count MUST decrease** (M < N where N=before, M=after)
 2. **ZERO suppression comments** (no eslint-disable, @ts-ignore, biome-ignore, etc.)
 3. **ZERO new type errors** (bun run check must not show new errors)
-4. **All 4 phases MUST complete** (Detection → Tasks → Workers → Tournament Merge)
+4. **All 5 phases MUST complete** (Detection → Tasks → Workers → Tournament Merge → Verification)
 
 **If ANY invariant is violated, the fix FAILED and changes MUST be reverted.**
+
+## ⛔⛔⛔ THE GOLDEN RULE: UNFIXABLE ≠ SUPPRESS ⛔⛔⛔
+
+**If code cannot be converted to Effect patterns, the ONLY valid action is NO CHANGE.**
+
+| Scenario | CORRECT Action | WRONG Action |
+|----------|----------------|--------------|
+| Type predicate `x is Foo` | Leave unchanged, commit UNFIXABLE | Add @ts-ignore |
+| Schema.declare callback | Leave unchanged, commit UNFIXABLE | Add as any |
+| Sync code with sync caller | Leave unchanged, commit UNFIXABLE | Wrap in Effect |
+| Cannot determine fix | Leave unchanged, commit UNFIXABLE | Add suppression |
+
+**Suppression comments are ALWAYS wrong. "Do nothing" is sometimes correct.**
 
 ## Modes
 
@@ -37,12 +50,13 @@ A successful fix run MUST satisfy ALL of these invariants:
 2. **Phase 2: Task Creation** - Create one task per violation for tracking
 3. **Phase 3: Analysis/Fix** - Spawn agents in parallel (one per EVERY violation)
 4. **Phase 4: Report/Merge** - ⛔ MANDATORY - Aggregate results; if fix mode, run tournament merge
+5. **Phase 5: Verification** - ⛔ MANDATORY - Re-run detectors, check for suppression comments, verify type safety
 
 **Always use task lists.** Create specific, independent tasks to maximize parallelization.
 
-## ⛔ CRITICAL: YOU MUST COMPLETE ALL 4 PHASES
+## ⛔ CRITICAL: YOU MUST COMPLETE ALL 5 PHASES
 
-**Phase 4 is NOT optional.** After all task-worker agents return in Phase 3:
+**Phase 4 AND Phase 5 are NOT optional.** After all task-worker agents return in Phase 3:
 - You MUST immediately proceed to Phase 4
 - You MUST NOT stop after receiving task worker results
 - You MUST run the tournament merge (fix mode) or aggregate results (analyze mode)
@@ -124,6 +138,37 @@ If a violation truly cannot be fixed, the task-worker must document:
 4. **Evidence** (type error messages, test failures, etc.)
 
 Without this documentation FROM A TASK-WORKER, assume it CAN be fixed.
+
+## ⛔⛔⛔ CRITICAL: UNFIXABLE ≠ ADD SUPPRESSION COMMENTS ⛔⛔⛔
+
+**When a violation is truly unfixable, task-workers MUST:**
+- ✅ Leave the original code UNCHANGED
+- ✅ Commit with message "UNFIXABLE: [reason]"
+- ✅ Document why in the commit message
+
+**When a violation is truly unfixable, task-workers MUST NOT:**
+- ❌ Add `// @ts-ignore` or `// @ts-expect-error`
+- ❌ Add `// eslint-disable` comments
+- ❌ Add any suppression comments
+- ❌ Add type assertions like `as any` or `as unknown`
+- ❌ Wrap synchronous code in Effect when the caller expects sync return
+
+**UNFIXABLE means "leave it alone", NOT "suppress the error".**
+
+### Type Predicates and Schema Callbacks Are Special
+
+Some violations occur in code that CANNOT be converted to Effect:
+- **Type predicates** (`function isFoo(x): x is Foo`) - TypeScript requires boolean return
+- **Schema.declare callbacks** - Must be synchronous
+- **Type guard functions** - Caller expects boolean, not Effect
+
+**For these patterns:**
+1. DO NOT wrap in Effect.gen (breaks caller contract)
+2. DO NOT add @ts-ignore (hides the problem)
+3. DO leave the code as-is
+4. DO commit with "UNFIXABLE: TypeScript type predicate requires boolean return, cannot return Effect"
+
+**The correct action for truly unfixable code is NO ACTION, not suppression.**
 
 **TL;DR: If detector found N violations, you MUST spawn N task-workers. Period.**
 
@@ -325,6 +370,31 @@ cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:all <file-path> --json 2
 
 If the violation still appears, the fix is INCOMPLETE. Try again with a real fix.
 
+### ⛔ TASK-WORKER SELF-VERIFICATION BEFORE COMMITTING
+
+**EVERY task-worker MUST run these checks BEFORE committing:**
+
+```bash
+# 1. Check for suppression comments (FORBIDDEN)
+grep -n "eslint-disable\|@ts-ignore\|@ts-expect-error\|biome-ignore\|prettier-ignore\|@ts-nocheck" <file>
+# If ANY output: YOUR FIX IS INVALID. Remove and fix properly, or report UNFIXABLE.
+
+# 2. Check for type errors (FORBIDDEN)
+cd <project-root> && bun run check 2>&1 | grep -A2 "<file>"
+# If errors: YOUR FIX INTRODUCED TYPE ERRORS. Revert and fix properly, or report UNFIXABLE.
+
+# 3. Check for dangerous type assertions (FORBIDDEN)
+grep -n "as any\|as unknown" <file>
+# If ANY new assertions added: YOUR FIX IS INVALID. Remove and fix properly.
+```
+
+**If ANY check fails, the task-worker MUST:**
+1. Revert the changes: `git checkout -- <file>`
+2. Report the violation as UNFIXABLE (with specific reason)
+3. Commit the UNCHANGED file with UNFIXABLE message
+
+**A fix that introduces type errors or suppression is WORSE than no fix.**
+
 ### WHY THIS MATTERS
 
 Suppression comments hide problems without solving them. The user ran `--fix` expecting their code to be transformed to idiomatic Effect-TS. If workers add suppression comments:
@@ -381,16 +451,39 @@ REQUIRED (what a real fix looks like):
 
 Apply the idiomatic Effect-TS fix in your worktree. Commit to your task branch.
 
-⛔ BEFORE COMMITTING - SELF-CHECK:
-   Run: grep -n "eslint-disable\|@ts-ignore\|@ts-expect-error\|biome-ignore" <your-file>
-   If ANY matches: YOUR FIX IS INVALID. Remove suppression comments and fix properly.
+⛔ BEFORE COMMITTING - MANDATORY SELF-CHECK (ALL 3 MUST PASS):
+
+   1. Suppression check:
+      Run: grep -n "eslint-disable\|@ts-ignore\|@ts-expect-error\|biome-ignore\|@ts-nocheck" <your-file>
+      If ANY matches: YOUR FIX IS INVALID. Remove suppression comments and fix properly OR report UNFIXABLE.
+
+   2. Type error check:
+      Run: cd <project-root> && bun run check 2>&1 | grep -A2 "<your-file>"
+      If ANY errors: YOUR FIX INTRODUCED TYPE ERRORS. Revert changes and report UNFIXABLE.
+
+   3. Type assertion check:
+      Run: git diff HEAD -- <your-file> | grep -E "^\+.*as (any|unknown)"
+      If ANY new assertions: YOUR FIX IS INVALID. Remove type casts and fix properly OR report UNFIXABLE.
+
+   ⛔ IF ANY CHECK FAILS:
+      - Run: git checkout -- <your-file>
+      - Report as UNFIXABLE with the specific failure reason
+      - Do NOT commit broken code
 
 ⛔ DO NOT remove the worktree or delete the branch after committing.
    Leave them intact - they will be merged by merge-workers in Phase 4.
 
 ⛔ IF YOU CANNOT FIX THIS VIOLATION:
-   You MUST still commit something. Create a commit with message:
-   "UNFIXABLE: [ruleId] at [file]:[line] - [specific technical reason]"
+   **DO NOT add suppression comments. DO NOT add type assertions. LEAVE THE CODE UNCHANGED.**
+
+   Commit with message: "UNFIXABLE: [ruleId] at [file]:[line] - [specific technical reason]"
+
+   ⛔⛔⛔ CRITICAL: "UNFIXABLE" means LEAVE THE CODE AS-IS ⛔⛔⛔
+   - ✅ CORRECT: Commit original code unchanged with UNFIXABLE message
+   - ❌ WRONG: Add @ts-ignore and commit
+   - ❌ WRONG: Add eslint-disable and commit
+   - ❌ WRONG: Add "as any" type assertion and commit
+   - ❌ WRONG: Wrap sync code in Effect when caller expects sync
 
    The commit message MUST include:
    1. The specific code construct that prevents fixing
@@ -406,6 +499,16 @@ Apply the idiomatic Effect-TS fix in your worktree. Commit to your task branch.
    - "TypeScript requires type predicates to return boolean, but Effect.gen returns Effect<boolean>"
    - "Cannot wrap in Effect because caller expects synchronous return at call site X:Y"
    - "Type error: 'Type Effect<A> is not assignable to type A' at line Z"
+
+   ⛔ SPECIAL CASE: Type predicates, Schema callbacks, and type guards
+   These are SYNCHRONOUS by TypeScript contract. If the violation is in:
+   - A function returning `x is Type` (type predicate)
+   - A Schema.declare callback
+   - A type guard function
+
+   Then the ONLY valid action is to leave the code UNCHANGED and report UNFIXABLE.
+   Wrapping in Effect will introduce type errors. Suppression comments hide bugs.
+   **DO NOTHING is the correct fix for synchronous contract violations.**
 ```
 
 ---
@@ -564,13 +667,29 @@ For each pair (branch_a, branch_b), use Task tool with:
     git diff main...branch_b | grep -E "(eslint-disable|@ts-ignore|@ts-expect-error|biome-ignore|prettier-ignore|@ts-nocheck)"
     ```
 
-    If suppression comments found in branch_b:
-    - DO NOT merge branch_b
-    - Delete branch_b and its worktree
-    - Report: "REJECTED [BRANCH_B]: Contains suppression comments"
-    - Continue with branch_a only
+    ⛔ BEFORE MERGING - VALIDATE BOTH BRANCHES:
 
-    If no suppression comments:
+    For EACH branch (branch_a AND branch_b), check:
+    ```bash
+    # Check for suppression comments
+    git diff main...<branch> | grep -E "(eslint-disable|@ts-ignore|@ts-expect-error|biome-ignore|prettier-ignore|@ts-nocheck)"
+
+    # Check for type assertions added
+    git diff main...<branch> | grep -E "^\+.*as (any|unknown)"
+    ```
+
+    If suppression comments OR dangerous type assertions found:
+    - DO NOT merge that branch
+    - Delete the branch and its worktree
+    - Report: "REJECTED [BRANCH]: Contains suppression comments or unsafe type casts"
+    - Continue with the other branch (or neither if both invalid)
+
+    If BOTH branches are invalid:
+    - Report: "BOTH BRANCHES REJECTED: Neither contains valid fixes"
+    - Clean up both worktrees and branches
+    - Return with no surviving branch
+
+    If no issues found:
     - Merge branch_b INTO branch_a. Keep ALL fixes from BOTH.
     - Clean up branch_b's worktree and delete branch_b after success.
 ```
