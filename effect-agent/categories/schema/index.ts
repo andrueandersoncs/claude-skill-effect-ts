@@ -17,12 +17,12 @@ export * from "./rule-003/rule-003.js";
 // rule-005: schema-class (comprehensive - includes methods and constructors)
 export {
 	Order as Rule005Order,
-	User as Rule005User,
 	OrderItem as Rule005OrderItem,
 	OrderWithItems as Rule005OrderWithItems,
-	user,
 	order,
 	orderWithItems,
+	User as Rule005User,
+	user,
 } from "./rule-005/rule-005.js";
 
 // rule-007: schema-filters
@@ -61,15 +61,15 @@ export {
 
 // rule-014: schema-field-composition
 export {
-	Violation as Rule014Violation,
-	ViolationWithSuggestion,
-	ViolationWithoutSuggestion,
-	Person as Rule014Person,
-	Employee as Rule014Employee,
-	Customer as Rule014Customer,
 	AdminUser,
+	Customer as Rule014Customer,
+	Employee as Rule014Employee,
 	GuestUser,
+	Person as Rule014Person,
 	User as Rule014User,
+	Violation as Rule014Violation,
+	ViolationWithoutSuggestion,
+	ViolationWithSuggestion,
 } from "./rule-014/rule-014.js";
 
 /**

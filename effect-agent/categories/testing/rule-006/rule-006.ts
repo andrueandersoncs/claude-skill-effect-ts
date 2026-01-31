@@ -5,7 +5,16 @@
 // @original-name: property-based-testing
 
 import { expect, it, layer } from "@effect/vitest";
-import { Arbitrary, Array, Context, Effect, Layer, Option, pipe, Schema } from "effect";
+import {
+	Arbitrary,
+	Array,
+	Context,
+	Effect,
+	Layer,
+	Option,
+	pipe,
+	Schema,
+} from "effect";
 import * as fc from "effect/FastCheck";
 import {
 	Order,

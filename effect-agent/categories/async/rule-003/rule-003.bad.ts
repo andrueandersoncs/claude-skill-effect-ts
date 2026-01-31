@@ -23,7 +23,7 @@ export async function getUserById(id: string): Promise<User> {
 }
 
 // ❌ Bad: Using Effect.runSync in a helper function
-export function getConfigValue(key: string): string {
+export function getConfigValue(_key: string): string {
 	const config = Effect.succeed({ apiUrl: "https://api.example.com" });
 	// BAD: Running Effect synchronously in utility
 	return Effect.runSync(Effect.map(config, (c) => c.apiUrl));

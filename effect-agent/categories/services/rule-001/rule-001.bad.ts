@@ -72,7 +72,7 @@ interface StripeClient {
 
 declare const Stripe: new (key: string | undefined) => StripeClient;
 
-const stripe = new Stripe(process.env["STRIPE_KEY"]);
+const stripe = new Stripe(process.env.STRIPE_KEY);
 
 // Direct SDK call in business logic - untestable!
 const processPayment = (amount: number) =>

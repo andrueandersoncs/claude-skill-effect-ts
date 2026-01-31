@@ -94,7 +94,8 @@ export const detect = (
 					violations.push({
 						ruleId: meta.id,
 						category: meta.category,
-						message: "'as unknown as T' double assertion; use Schema validation",
+						message:
+							"'as unknown as T' double assertion; use Schema validation",
 						filePath,
 						line: line + 1,
 						column: character + 1,

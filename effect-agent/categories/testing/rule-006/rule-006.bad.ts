@@ -5,13 +5,16 @@
 // @original-name: property-based-testing
 
 import { layer } from "@effect/vitest";
-import { Context, Effect, type Layer } from "effect";
+import { Context, Effect, Layer } from "effect";
 // BAD: Importing fast-check directly instead of using Schema
 import * as fc from "fast-check";
 
 // Declare external test functions
 declare function it(name: string, fn: () => void | Promise<void>): void;
-declare function expect<T>(value: T): { toBe(expected: unknown): void; toBeDefined(): void };
+declare function expect<T>(value: T): {
+	toBe(expected: unknown): void;
+	toBeDefined(): void;
+};
 
 // Declare types
 interface User {
@@ -45,7 +48,8 @@ declare const TestServicesLayer: Layer.Layer<never>;
 // BAD: Won't be able to test code paths that use these methods
 
 export const TestLayerBad = Layer.succeed(MyService, {
-	getUser: (id) => Effect.succeed({ id, name: "Hardcoded", email: "test@test.com" }),
+	getUser: (id) =>
+		Effect.succeed({ id, name: "Hardcoded", email: "test@test.com" }),
 	updateUser: () => Effect.fail(new Error("Not implemented")), // Won't test this path!
 	deleteUser: () => Effect.fail(new Error("Not implemented")),
 });

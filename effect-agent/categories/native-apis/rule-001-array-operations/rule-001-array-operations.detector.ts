@@ -77,7 +77,8 @@ const mutatingMethods: Record<string, { message: string; suggestion: string }> =
 			suggestion: "Use Array.reverse() from effect which is immutable",
 		},
 		fill: {
-			message: "Array.fill() mutates the array; consider immutable alternatives",
+			message:
+				"Array.fill() mutates the array; consider immutable alternatives",
 			suggestion: "Use Array.replicate() or Array.makeBy() from effect",
 		},
 		copyWithin: {

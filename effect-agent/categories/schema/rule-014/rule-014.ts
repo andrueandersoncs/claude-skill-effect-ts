@@ -55,7 +55,10 @@ type Violation = typeof Violation.Type;
 // ✅ Good: Pattern match on _tag for exhaustive handling
 const formatViolation = (v: Violation) =>
 	Match.value(v).pipe(
-		Match.tag("ViolationWithSuggestion", (v) => `${v.message}\n  💡 ${v.suggestion}`),
+		Match.tag(
+			"ViolationWithSuggestion",
+			(v) => `${v.message}\n  💡 ${v.suggestion}`,
+		),
 		Match.tag("ViolationWithoutSuggestion", (v) => v.message),
 		Match.exhaustive,
 	);
@@ -123,7 +126,10 @@ type User = typeof User.Type;
 // ✅ Good: Pattern match users by tag
 const describeUser = (u: User) =>
 	Match.value(u).pipe(
-		Match.tag("AdminUser", (u) => `Admin: ${u.name} (${u.permissions.length} perms)`),
+		Match.tag(
+			"AdminUser",
+			(u) => `Admin: ${u.name} (${u.permissions.length} perms)`,
+		),
 		Match.tag("GuestUser", (u) => `Guest: ${u.name} (expires: ${u.expiresAt})`),
 		Match.exhaustive,
 	);

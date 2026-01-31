@@ -8,5 +8,5 @@
 export const isValidInput = (input: unknown): boolean =>
 	typeof input === "object" &&
 	input !== null &&
-	typeof (input as Record<string, unknown>)["name"] === "string" &&
-	typeof (input as Record<string, unknown>)["age"] === "number";
+	typeof (input as Record<string, unknown>).name === "string" &&
+	typeof (input as Record<string, unknown>).age === "number";

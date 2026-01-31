@@ -30,12 +30,15 @@ interface SchemaDefinition {
  */
 const extractFieldNames = (
 	objectLiteral: ts.ObjectLiteralExpression,
-	sourceFile: ts.SourceFile,
+	_sourceFile: ts.SourceFile,
 ): Set<string> => {
 	const fields = new Set<string>();
 
 	for (const prop of objectLiteral.properties) {
-		if (ts.isPropertyAssignment(prop) || ts.isShorthandPropertyAssignment(prop)) {
+		if (
+			ts.isPropertyAssignment(prop) ||
+			ts.isShorthandPropertyAssignment(prop)
+		) {
 			const name = prop.name;
 			if (ts.isIdentifier(name)) {
 				// Skip spread properties (they indicate composition is already being used)
@@ -72,7 +75,7 @@ const isSchemaStruct = (node: ts.CallExpression): boolean => {
  */
 const isSchemaClass = (
 	node: ts.ClassDeclaration,
-	sourceFile: ts.SourceFile,
+	_sourceFile: ts.SourceFile,
 ): ts.ObjectLiteralExpression | null => {
 	// Look for: class X extends Schema.Class<X>("X")({ fields })
 	if (!node.heritageClauses) return null;
@@ -112,7 +115,7 @@ const isSchemaClass = (
  */
 const isSchemaTaggedClass = (
 	node: ts.ClassDeclaration,
-	sourceFile: ts.SourceFile,
+	_sourceFile: ts.SourceFile,
 ): ts.ObjectLiteralExpression | null => {
 	// Look for: class X extends Schema.TaggedClass<X>()("X", { fields })
 	if (!node.heritageClauses) return null;
@@ -150,9 +153,12 @@ const isSchemaTaggedClass = (
 /**
  * Gets the name of a schema definition from its variable/class declaration
  */
-const getSchemaName = (node: ts.Node, sourceFile: ts.SourceFile): string => {
+const getSchemaName = (node: ts.Node, _sourceFile: ts.SourceFile): string => {
 	// For variable declarations: const X = Schema.Struct({...})
-	if (ts.isVariableDeclaration(node.parent) && ts.isIdentifier(node.parent.name)) {
+	if (
+		ts.isVariableDeclaration(node.parent) &&
+		ts.isIdentifier(node.parent.name)
+	) {
 		return node.parent.name.text;
 	}
 	// For class declarations: class X extends Schema.Class...
@@ -193,7 +199,10 @@ export const detect = (
 	const visit = (node: ts.Node) => {
 		// Detect Schema.Struct definitions
 		if (ts.isCallExpression(node) && isSchemaStruct(node)) {
-			if (node.arguments.length > 0 && ts.isObjectLiteralExpression(node.arguments[0])) {
+			if (
+				node.arguments.length > 0 &&
+				ts.isObjectLiteralExpression(node.arguments[0])
+			) {
 				const fields = extractFieldNames(node.arguments[0], sourceFile);
 				if (fields.size > 0) {
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
@@ -273,7 +282,10 @@ export const detect = (
 			const overlapPercentage = overlapCount / minSize;
 
 			// Report if significant overlap
-			if (overlapCount >= MIN_SHARED_FIELDS && overlapPercentage >= MIN_OVERLAP_PERCENTAGE) {
+			if (
+				overlapCount >= MIN_SHARED_FIELDS &&
+				overlapPercentage >= MIN_OVERLAP_PERCENTAGE
+			) {
 				// Create a canonical pair key to avoid duplicate reports
 				const pairKey = [schema1.name, schema2.name].sort().join(":");
 				if (reportedPairs.has(pairKey)) continue;
@@ -304,7 +316,10 @@ export const detect = (
 /**
  * Generates an appropriate suggestion based on schema types
  */
-const getSuggestion = (schema1: SchemaDefinition, schema2: SchemaDefinition): string => {
+const getSuggestion = (
+	schema1: SchemaDefinition,
+	schema2: SchemaDefinition,
+): string => {
 	if (schema1.type === "Struct" && schema2.type === "Struct") {
 		return `Extract shared fields to a base struct and use spread: Schema.Struct({ ...${schema1.name}.fields, ...additionalFields })`;
 	}

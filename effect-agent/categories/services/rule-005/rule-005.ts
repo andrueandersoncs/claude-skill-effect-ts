@@ -4,7 +4,16 @@
 // @category: services
 // @original-name: layer-implementation
 
-import { Array, Context, Effect, HashMap, Layer, Option, pipe, Ref } from "effect";
+import {
+	Array,
+	Context,
+	Effect,
+	HashMap,
+	Layer,
+	Option,
+	pipe,
+	Ref,
+} from "effect";
 import {
 	Cache,
 	Database,

@@ -4,7 +4,15 @@
  * Rule: Never use new Promise(); use Effect.async for callback-based APIs
  */
 
-import { Array as EffectArray, Function, Match, Option, Schema, Struct, flow, pipe } from "effect";
+import {
+	Array as EffectArray,
+	Function,
+	flow,
+	Match,
+	Option,
+	Schema,
+	Struct,
+} from "effect";
 import * as ts from "typescript";
 import type { Violation } from "../../../detectors/types.ts";
 
@@ -28,7 +36,7 @@ const IsPromiseExpression = Schema.Struct({
 });
 
 // Composable pipeline for schema validation
-const validatePromiseExpression = (expr: ts.Identifier) =>
+const _validatePromiseExpression = (expr: ts.Identifier) =>
 	Match.value({
 		isNewExpr: true,
 		isIdentifierExpr: true,
@@ -98,7 +106,7 @@ const ValidViolationWithoutSuggestion = Schema.Struct({
 });
 
 // Use Schema.transform to handle optional field omission per rule-010
-const RemoveSuggestionSchema = Schema.transform(
+const _RemoveSuggestionSchema = Schema.transform(
 	ViolationSchema,
 	ValidViolationWithoutSuggestion,
 	{

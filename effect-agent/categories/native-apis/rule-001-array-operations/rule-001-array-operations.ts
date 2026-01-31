@@ -5,7 +5,12 @@
 // @original-name: array-operations-consolidated
 
 import { Array, Function, Match, Option, pipe } from "effect";
-import { defaultItem, isValidEmail, type Item, type User } from "../../_fixtures.js";
+import {
+	defaultItem,
+	type Item,
+	isValidEmail,
+	type User,
+} from "../../_fixtures.js";
 
 declare const users: ReadonlyArray<User>;
 declare const items: ReadonlyArray<Item>;
