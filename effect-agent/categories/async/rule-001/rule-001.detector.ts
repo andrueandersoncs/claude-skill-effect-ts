@@ -119,9 +119,50 @@ const validateIsPromiseExpression = (obj: {
 		Match.orElse(() => Option.none()),
 	);
 
-// Helper to create validated violations using Schema.transform
-const createViolation = (data: Omit<Violation, never>): Violation =>
-	Schema.decodeSync(ViolationTransformer)(data) as Violation;
+// Validate violations using Schema.transform for bidirectional conversion
+
+// Schema transform: convert raw data to validated Violation
+// Transforms raw input into a properly validated Violation object
+const ViolationTransform = Schema.transform(
+	Schema.Any, // Accept any input, we'll validate it
+	Schema.Struct({
+		ruleId: Schema.String.pipe(Schema.brand("RuleId")),
+		category: Schema.String,
+		message: Schema.String,
+		filePath: Schema.String,
+		line: Schema.Number,
+		column: Schema.Number,
+		snippet: Schema.String,
+		certainty: Schema.Union(
+			Schema.Literal("definite"),
+			Schema.Literal("potential"),
+		),
+		suggestion: Schema.optional(Schema.String),
+	}), // Output: validated structure
+	{
+		decode: (input: any) => {
+			// First pass: validate basic structure
+			const decoded = Schema.decodeSync(ViolationDataSchema)(input);
+			// Second pass: validate specific constraint (suggestion present/absent)
+			if (decoded.suggestion !== undefined && decoded.suggestion !== null) {
+				// Ensure suggestion is actually present if field exists
+				return decoded;
+			} else {
+				// Ensure suggestion is omitted if not present
+				return Struct.omit(decoded, "suggestion") as any;
+			}
+		},
+		encode: (output) => output,
+		strict: true,
+	},
+);
+
+// Helper to create validated violations using Schema
+const createViolation = (data: Omit<Violation, never>): Violation => {
+	const decoded = Schema.decodeSync(ViolationTransform)(data);
+	// Cast to Violation - schema validation ensures type safety at runtime
+	return decoded as Violation;
+};
 
 export const detect = (
 	filePath: string,
