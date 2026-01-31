@@ -40,61 +40,55 @@ const meta = new MetaSchema({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const assertAsNode = (u: any): ts.Node => u;
 
+// Helper to validate structural requirements for TypeScript AST nodes
+// Returns Option to enable Option.match for null checking
+const validateNodeStructure = (u: unknown): Option.Option<unknown> =>
+	Option.fromNullable(u).pipe(
+		Option.filter((val) => typeof val === "object"),
+		Option.filter((val) => val !== null),
+		Option.filter((val) => "kind" in val),
+	);
+
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	// Structural validation: ensure we have a Node-like object
-	// Use Option.match for nullable handling
-	const isNodeLike = Option.match(
-		Option.fromNullable(u as Record<string, unknown> | null),
-		{
-			onSome: (obj) =>
-				typeof obj === "object" && "kind" in obj,
+	return validateNodeStructure(u).pipe(
+		Option.match({
+			onSome: (val) => {
+				// Use TypeScript's built-in type predicate after structural validation
+				// eslint-disable-next-line @effect-ts/rule-002
+				return ts.isFunctionDeclaration(assertAsNode(val));
+			},
 			onNone: () => false,
-		},
+		}),
 	);
-	if (!isNodeLike) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isFunctionDeclaration(assertAsNode(u));
 };
 
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 	// Structural validation: ensure we have a Node-like object
-	// Use Option.match for nullable handling
-	const isNodeLike = Option.match(
-		Option.fromNullable(u as Record<string, unknown> | null),
-		{
-			onSome: (obj) =>
-				typeof obj === "object" && "kind" in obj,
+	return validateNodeStructure(u).pipe(
+		Option.match({
+			onSome: (val) => {
+				// Use TypeScript's built-in type predicate after structural validation
+				// eslint-disable-next-line @effect-ts/rule-002
+				return ts.isFunctionExpression(assertAsNode(val));
+			},
 			onNone: () => false,
-		},
+		}),
 	);
-	if (!isNodeLike) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isFunctionExpression(assertAsNode(u));
 };
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 	// Structural validation: ensure we have a Node-like object
-	// Use Option.match for nullable handling
-	const isNodeLike = Option.match(
-		Option.fromNullable(u as Record<string, unknown> | null),
-		{
-			onSome: (obj) =>
-				typeof obj === "object" && "kind" in obj,
+	return validateNodeStructure(u).pipe(
+		Option.match({
+			onSome: (val) => {
+				// Use TypeScript's built-in type predicate after structural validation
+				// eslint-disable-next-line @effect-ts/rule-002
+				return ts.isArrowFunction(assertAsNode(val));
+			},
 			onNone: () => false,
-		},
+		}),
 	);
-	if (!isNodeLike) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isArrowFunction(assertAsNode(u));
 };
 
 // Type narrowing helper for FunctionNode types using enhanced structural validation
