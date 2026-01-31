@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Effect,
 	Function,
 	flow,
 	Match,
@@ -110,23 +111,26 @@ const validateIsPromiseExpression = (obj: {
 // Validate violations using Schema.transform for bidirectional conversion
 
 // Helper to create validated violations using Schema
-const createViolation = (data: Omit<Violation, never>): Violation => {
-	const decoded = Schema.decodeSync(ViolationSchema)(data);
-	// Validate and return the violation based on whether suggestion is present
-	return Option.fromNullable(decoded.suggestion).pipe(
-		Option.match({
-			onSome: (suggestion) =>
-				Schema.decodeSync(ValidViolationWithSuggestion)({
-					...decoded,
-					suggestion,
-				}),
-			onNone: () => {
-				const rest = Struct.omit(decoded, "suggestion");
-				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-			},
-		}),
-	);
-};
+const createViolation = Effect.fn("createViolation")(
+	(data: Omit<Violation, never>) => {
+		const decoded = Schema.decodeSync(ViolationSchema)(data);
+		// Validate and return the violation based on whether suggestion is present
+		const result = Option.fromNullable(decoded.suggestion).pipe(
+			Option.match({
+				onSome: (suggestion) =>
+					Schema.decodeSync(ValidViolationWithSuggestion)({
+						...decoded,
+						suggestion,
+					}),
+				onNone: () => {
+					const rest = Struct.omit(decoded, "suggestion");
+					return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+				},
+			}),
+		);
+		return Effect.succeed(result);
+	},
+);
 
 export const detect = (
 	filePath: string,
@@ -173,17 +177,19 @@ export const detect = (
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
 						return Option.some(
-							createViolation({
-								ruleId: meta.id,
-								category: meta.category,
-								message: "new Promise() should be replaced with Effect.async()",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								certainty: "definite",
-								suggestion: "Use Effect.async() for callback-based APIs",
-							}),
+							Effect.runSync(
+								createViolation({
+									ruleId: meta.id,
+									category: meta.category,
+									message: "new Promise() should be replaced with Effect.async()",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+									certainty: "definite",
+									suggestion: "Use Effect.async() for callback-based APIs",
+								}),
+							),
 						);
 					}),
 				);
@@ -226,20 +232,22 @@ export const detect = (
 								const { line, character } =
 									sourceFile.getLineAndCharacterOfPosition(node.getStart());
 								return Option.some(
-									createViolation({
-										ruleId: meta.id,
-										category: meta.category,
-										message:
-											"Callback-style APIs should be wrapped with Effect.async()",
-										filePath,
-										line: line + 1,
-										column: character + 1,
-										snippet: node
-											.getText(sourceFile)
-											.slice(0, SNIPPET_MAX_LENGTH),
-										certainty: "potential",
-										suggestion: "Wrap callback-based APIs with Effect.async()",
-									}),
+									Effect.runSync(
+										createViolation({
+											ruleId: meta.id,
+											category: meta.category,
+											message:
+												"Callback-style APIs should be wrapped with Effect.async()",
+											filePath,
+											line: line + 1,
+											column: character + 1,
+											snippet: node
+												.getText(sourceFile)
+												.slice(0, SNIPPET_MAX_LENGTH),
+											certainty: "potential",
+											suggestion: "Wrap callback-based APIs with Effect.async()",
+										}),
+									),
 								);
 							}),
 							Match.orElse(() => Option.none()),
