@@ -95,17 +95,22 @@ const validateIsPromiseExpression = (obj: {
 	isNewExpr: boolean;
 	isIdentifierExpr: boolean;
 	isPromiseText: boolean;
-}> =>
-	Match.value(obj).pipe(
-		Match.when(Schema.is(IsPromiseExpression), () =>
-			Option.some({
-				isNewExpr: true,
-				isIdentifierExpr: true,
-				isPromiseText: true,
-			}),
-		),
-		Match.orElse(() => Option.none()),
+}> => {
+	const createValidResult = (): {
+		isNewExpr: boolean;
+		isIdentifierExpr: boolean;
+		isPromiseText: boolean;
+	} => ({
+		isNewExpr: true,
+		isIdentifierExpr: true,
+		isPromiseText: true,
+	});
+
+	return Option.fromNullable(obj).pipe(
+		Option.filter(Schema.is(IsPromiseExpression)),
+		Option.map(createValidResult),
 	);
+};
 
 // Validate violations using Schema.transform for bidirectional conversion
 
