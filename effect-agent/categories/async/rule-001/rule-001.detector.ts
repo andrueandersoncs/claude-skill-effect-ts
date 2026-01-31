@@ -43,33 +43,42 @@ const meta = new MetaSchema({
 const assertAsNode = (u: any): ts.Node => u;
 
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isFunctionDeclaration(assertAsNode(u));
+	// Structural validation and TypeScript type check using Match pattern
+	// Routes through positive cases to ensure proper narrowing
+	return Match.value(u).pipe(
+		Match.when(
+			(val): val is object & { kind: unknown } =>
+				typeof val === "object" && val !== null && "kind" in val,
+			(validNode) => ts.isFunctionDeclaration(assertAsNode(validNode)),
+		),
+		Match.orElse(() => false),
+	);
 };
 
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isFunctionExpression(assertAsNode(u));
+	// Structural validation and TypeScript type check using Match pattern
+	// Routes through positive cases to ensure proper narrowing
+	return Match.value(u).pipe(
+		Match.when(
+			(val): val is object & { kind: unknown } =>
+				typeof val === "object" && val !== null && "kind" in val,
+			(validNode) => ts.isFunctionExpression(assertAsNode(validNode)),
+		),
+		Match.orElse(() => false),
+	);
 };
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isArrowFunction(assertAsNode(u));
+	// Structural validation and TypeScript type check using Match pattern
+	// Routes through positive cases to ensure proper narrowing
+	return Match.value(u).pipe(
+		Match.when(
+			(val): val is object & { kind: unknown } =>
+				typeof val === "object" && val !== null && "kind" in val,
+			(validNode) => ts.isArrowFunction(assertAsNode(validNode)),
+		),
+		Match.orElse(() => false),
+	);
 };
 
 const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
