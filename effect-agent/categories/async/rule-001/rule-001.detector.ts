@@ -177,32 +177,12 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithoutSuggestion,
 );
 
-// Type definition for violation data
-type ViolationData = {
-	ruleId: string & { readonly RuleId: symbol };
-	category: string;
-	message: string;
-	filePath: string;
-	line: number;
-	column: number;
-	snippet: string;
-	certainty: "definite" | "potential";
-	suggestion?: string | undefined;
+// Build violation from unvalidated data - validates and applies branding via Schema.Class
+// ViolationSchema handles validation and branding, then ValidViolationUnion ensures proper format
+const buildViolation = (data: Schema.Schema.Encoded<typeof ViolationSchema>): Violation => {
+	const validated = Schema.decodeSync(ViolationSchema)(data);
+	return Schema.decodeSync(ValidViolationUnion)(validated);
 };
-
-// Build violation from validated data - accepts well-formed violation data
-const buildViolation = (data: {
-	ruleId: string;
-	category: string;
-	message: string;
-	filePath: string;
-	line: number;
-	column: number;
-	snippet: string;
-	certainty: "definite" | "potential";
-	suggestion?: string;
-}): Violation =>
-	Schema.decodeSync(ValidViolationUnion)(data);
 
 export const detect = (
 	filePath: string,
