@@ -73,50 +73,20 @@ class BaseViolationFields extends Schema.Class<BaseViolationFields>(
 }) {}
 
 // Schema for violation construction with runtime validation
-const ViolationSchema = Schema.Struct({
-	ruleId: Schema.String.pipe(Schema.brand("RuleId")),
-	category: Schema.String,
-	message: Schema.String,
-	filePath: Schema.String,
-	line: Schema.Number,
-	column: Schema.Number,
-	snippet: Schema.String,
-	certainty: Schema.Union(
-		Schema.Literal("definite"),
-		Schema.Literal("potential"),
-	),
+class ViolationSchema extends Schema.Class<ViolationSchema>("ViolationSchema")({
+	...BaseViolationFields.fields,
 	suggestion: Schema.optional(Schema.String),
-});
+}) {}
 
 // Schema for valid violation objects that matches Violation interface
-const ValidViolationWithSuggestion = Schema.Struct({
-	ruleId: Schema.String.pipe(Schema.brand("RuleId")),
-	category: Schema.String,
-	message: Schema.String,
-	filePath: Schema.String,
-	line: Schema.Number,
-	column: Schema.Number,
-	snippet: Schema.String,
-	certainty: Schema.Union(
-		Schema.Literal("definite"),
-		Schema.Literal("potential"),
-	),
+class ValidViolationWithSuggestion extends Schema.Class<ValidViolationWithSuggestion>("ValidViolationWithSuggestion")({
+	...BaseViolationFields.fields,
 	suggestion: Schema.String,
-});
+}) {}
 
-const ValidViolationWithoutSuggestion = Schema.Struct({
-	ruleId: Schema.String.pipe(Schema.brand("RuleId")),
-	category: Schema.String,
-	message: Schema.String,
-	filePath: Schema.String,
-	line: Schema.Number,
-	column: Schema.Number,
-	snippet: Schema.String,
-	certainty: Schema.Union(
-		Schema.Literal("definite"),
-		Schema.Literal("potential"),
-	),
-});
+class ValidViolationWithoutSuggestion extends Schema.Class<ValidViolationWithoutSuggestion>("ValidViolationWithoutSuggestion")({
+	...BaseViolationFields.fields,
+}) {}
 
 // Helper to validate promise objects using Schema
 const validateIsPromiseExpression = (obj: {
