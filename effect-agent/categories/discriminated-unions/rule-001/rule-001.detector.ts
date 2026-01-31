@@ -11,7 +11,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-001",
@@ -48,7 +51,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "error",
 					certainty: "definite",
 					suggestion:
 						"Replace with Match.type<UnionType>().pipe(Match.tag('Tag1', ...), ...)",
@@ -74,7 +76,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "error",
 					certainty: "definite",
 					suggestion:
 						"Replace with Match.tag() for exhaustive pattern matching",
@@ -134,7 +135,6 @@ export const detect = (
 					snippet:
 						node.parent?.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH) ||
 						node.getText(sourceFile),
-					severity: "error",
 					certainty: "definite",
 					suggestion: "Use Match.tag() for exhaustive pattern matching",
 				});
@@ -170,7 +170,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "warning",
 					certainty: "potential",
 					suggestion:
 						"Define each variant as Schema.TaggedClass and combine with Schema.Union",
@@ -202,7 +201,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "warning",
 					certainty: "potential",
 					suggestion:
 						"Pass the full union type to functions instead of just the _tag string",

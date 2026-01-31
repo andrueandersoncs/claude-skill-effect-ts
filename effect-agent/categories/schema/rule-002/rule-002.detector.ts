@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-002",
@@ -41,7 +44,6 @@ export const detect = (
 								line: line + 1,
 								column: character + 1,
 								snippet: `class ${node.name?.text || "anonymous"} extends ${typeText}`,
-								severity: "warning",
 								certainty: "definite",
 								suggestion:
 									"Use class MyError extends Schema.TaggedError<MyError>()('MyError', { ... }) for typed errors",
@@ -67,7 +69,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "info",
 					certainty: "potential",
 					suggestion:
 						"Define error types with Schema.TaggedError for typed error handling with Effect",

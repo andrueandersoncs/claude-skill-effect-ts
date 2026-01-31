@@ -6,7 +6,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-001",
@@ -59,7 +62,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-					severity: "info",
 					certainty: "potential",
 					suggestion:
 						"Remove redundant JSDoc; branded types and interfaces are self-documenting",
@@ -148,7 +150,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: match[0].trim().slice(0, SNIPPET_MAX_LENGTH),
-						severity: "info",
 						certainty: "potential",
 						suggestion:
 							"Document what the parameter is used for, constraints, or examples",
@@ -178,7 +179,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: returnsMatch[0].trim().slice(0, SNIPPET_MAX_LENGTH),
-						severity: "info",
 						certainty: "potential",
 						suggestion:
 							"Document what conditions affect the return value or its structure",
@@ -215,7 +215,6 @@ export const detect = (
 							line: line + 1,
 							column: character + 1,
 							snippet: mainDesc.slice(0, SNIPPET_MAX_LENGTH),
-							severity: "info",
 							certainty: "potential",
 							suggestion:
 								"Document purpose, edge cases, or business context instead",
@@ -253,7 +252,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-						severity: "info",
 						certainty: "potential",
 						suggestion:
 							"Effect pipelines express intent clearly; remove redundant comments",
@@ -275,7 +273,6 @@ export const detect = (
 							line: line + 1,
 							column: character + 1,
 							snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-							severity: "info",
 							certainty: "potential",
 							suggestion:
 								"Remove comment; use clear naming so the code explains itself",

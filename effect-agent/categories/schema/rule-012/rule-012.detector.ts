@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-012",
@@ -86,8 +89,9 @@ export const detect = (
 						filePath,
 						line: line + 1,
 						column: character + 1,
-						snippet: node.parent?.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH) || "",
-						severity: "info",
+						snippet:
+							node.parent?.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH) ||
+							"",
 						certainty: "potential",
 						suggestion:
 							"Schema.Unknown is appropriate for error causes and truly dynamic data; otherwise define a proper schema",

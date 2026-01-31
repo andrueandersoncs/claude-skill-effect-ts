@@ -15,7 +15,10 @@
  */
 
 import type * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-009",
@@ -98,7 +101,6 @@ export const detect = (
 				line: line + 1,
 				column: character + 1,
 				snippet: lineText.slice(0, SNIPPET_MAX_LENGTH),
-				severity: "error",
 				certainty: "definite",
 				suggestion:
 					"Fix the underlying type error: use Schema.decodeUnknown for unknown data, narrow types with guards, or correct the type annotations",
@@ -123,7 +125,6 @@ export const detect = (
 			line: line + 1,
 			column: character + 1,
 			snippet: "@ts-nocheck",
-			severity: "error",
 			certainty: "definite",
 			suggestion: "Remove @ts-nocheck and fix all type errors in this file",
 		});

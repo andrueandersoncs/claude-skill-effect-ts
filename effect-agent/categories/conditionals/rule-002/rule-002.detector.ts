@@ -14,7 +14,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-002",
@@ -153,7 +156,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: conditionText.slice(0, SNIPPET_MAX_LENGTH),
-						severity: "warning",
 						certainty: "potential",
 						suggestion:
 							"Define Schema.Literal('a', 'b', ...) and use Match.when(Schema.is(union), ...)",
@@ -180,7 +182,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: conditionText.slice(0, SNIPPET_MAX_LENGTH),
-					severity: "info",
 					certainty: "potential",
 					suggestion:
 						"Define Schema.Struct({ prop1: Schema.filter(...), prop2: ... }) and use Match.when(Schema.is(struct), ...)",
@@ -205,7 +206,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: condition.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "info",
 						certainty: "potential",
 						suggestion:
 							"Define positive Schema types for each case and use Match.when with Schema.is",
@@ -234,7 +234,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: condText.slice(0, SNIPPET_MAX_LENGTH),
-					severity: "info",
 					certainty: "potential",
 					suggestion:
 						"Define Schema.Number.pipe(Schema.filter(n => ...)) for each range and use Match.when(Schema.is(range), ...)",
@@ -281,7 +280,6 @@ export const detect = (
 									line: line + 1,
 									column: character + 1,
 									snippet: `let ${varName} = ... followed by if/else assignment`,
-									severity: "warning",
 									certainty: "potential",
 									suggestion:
 										"Use Match.value(input).pipe(Match.when(..., () => value1), Match.when(..., () => value2), Match.exhaustive)",
@@ -322,7 +320,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "info",
 						certainty: "potential",
 						suggestion:
 							"Consider Match.value() or Option.getOrElse() for clarity",
@@ -372,7 +369,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: orChainText.slice(0, SNIPPET_MAX_LENGTH),
-						severity: "warning",
 						certainty: "potential",
 						suggestion:
 							"Define Schema.Union(Schema.declare(...), ...) for each type guard and use Match.when(Schema.is(union), ...) for pattern matching",

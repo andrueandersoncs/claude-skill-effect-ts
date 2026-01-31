@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-005",
@@ -54,7 +57,6 @@ export const detect = (
 				line: line + 1,
 				column: character + 1,
 				snippet: startNode.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				severity: "info",
 				certainty: "potential",
 				suggestion:
 					"Use Effect.fn('functionName')((...args) => result) for traced pure transformations",

@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-008",
@@ -33,7 +36,6 @@ export const detect = (
 				line: line + 1,
 				column: character + 1,
 				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				severity: "warning",
 				certainty: "potential",
 				suggestion: `Convert to: const ${node.name.text} = (...) => { ... }`,
 			});
@@ -52,7 +54,6 @@ export const detect = (
 				line: line + 1,
 				column: character + 1,
 				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				severity: "warning",
 				certainty: "potential",
 				suggestion: "Convert to arrow function: (...) => { ... }",
 			});

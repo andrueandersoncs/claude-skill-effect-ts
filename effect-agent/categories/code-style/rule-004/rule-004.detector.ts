@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-004",
@@ -52,8 +55,9 @@ export const detect = (
 									filePath,
 									line: line + 1,
 									column: character + 1,
-									snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-									severity: "info",
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
 									certainty: "potential",
 									suggestion:
 										"Use Effect.fn('name')((...args) => singleEffect) for single-step operations",

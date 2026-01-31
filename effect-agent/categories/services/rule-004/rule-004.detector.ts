@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-004",
@@ -45,7 +48,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "info",
 					certainty: "potential",
 					suggestion:
 						"Use Layer.mergeAll(Layer1, Layer2, ...) then single .provide(composedLayer)",
@@ -78,7 +80,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "info",
 					certainty: "potential",
 					suggestion:
 						"Create a Layer with Layer.succeed(Service, impl) and compose with other layers",

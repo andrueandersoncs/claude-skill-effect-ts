@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-008",
@@ -46,7 +49,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-					severity: "warning",
 					certainty: "definite",
 					suggestion:
 						"Create an issue/ticket and remove the comment, or fix the issue now",

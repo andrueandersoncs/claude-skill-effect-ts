@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-003",
@@ -59,7 +62,6 @@ export const detect = (
 							line: line + 1,
 							column: character + 1,
 							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							severity: "warning",
 							certainty: "potential",
 							suggestion:
 								"Keep Effect.run* at entry points (main, handlers, routes); compose Effects instead of running them mid-flow",

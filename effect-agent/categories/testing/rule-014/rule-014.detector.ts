@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-014",
@@ -55,7 +58,6 @@ export const detect = (
 							line: line + 1,
 							column: character + 1,
 							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							severity: "warning",
 							certainty: "potential",
 							suggestion:
 								"Define constraints in Schema: Schema.Number.pipe(Schema.positive(), Schema.lessThan(100)) instead of fc.integer().filter(...)",

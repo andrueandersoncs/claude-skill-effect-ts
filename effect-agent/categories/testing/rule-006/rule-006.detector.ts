@@ -13,7 +13,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-006",
@@ -59,7 +62,6 @@ export const detect = (
 			line: 1,
 			column: 1,
 			snippet: "layer() without property-based tests",
-			severity: "info",
 			certainty: "potential",
 			suggestion:
 				"Combine layer() with it.effect.prop() for comprehensive integration testing with generated data",
@@ -88,7 +90,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "warning",
 					certainty: "definite",
 					suggestion:
 						"Use Arbitrary.make(Schema) to generate test responses: Effect.succeed(pipe(fc.sample(arb, 1), Array.head, Option.getOrThrow))",
@@ -127,7 +128,6 @@ export const detect = (
 							line: line + 1,
 							column: character + 1,
 							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							severity: "warning",
 							certainty: "definite",
 							suggestion:
 								"Generate proper test data with Arbitrary.make(Schema) instead of stubbing",
@@ -164,7 +164,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "warning",
 						certainty: "definite",
 						suggestion:
 							"Use it.prop({ value: Schema.Number }) or it.effect.prop({ value: Schema.String }) with Schema-defined types",
@@ -184,7 +183,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "warning",
 						certainty: "definite",
 						suggestion:
 							"Use it.effect.prop({ schema: MySchema }, ({ schema }) => Effect.gen(...)) from @effect/vitest",
@@ -219,7 +217,6 @@ export const detect = (
 								line: line + 1,
 								column: character + 1,
 								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								severity: "warning",
 								certainty: "potential",
 								suggestion:
 									"Use Layer.effect with Arbitrary.make(Schema): Effect.succeed(pipe(fc.sample(arb, 1), Array.head, Option.getOrThrow))",
@@ -258,8 +255,9 @@ export const detect = (
 									filePath,
 									line: line + 1,
 									column: character + 1,
-									snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-									severity: "info",
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
 									certainty: "potential",
 									suggestion:
 										"Use it.effect.prop({ data: Schema }, ({ data }) => Effect.gen(...)) for generated test data",
@@ -296,7 +294,6 @@ export const detect = (
 								line: line + 1,
 								column: character + 1,
 								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								severity: "info",
 								certainty: "potential",
 								suggestion:
 									"Use it.effect.prop({ data: Schema }, ({ data }) => Effect.gen(...)) for generated test data",
@@ -336,7 +333,6 @@ export const detect = (
 							line: line + 1,
 							column: character + 1,
 							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							severity: "info",
 							certainty: "potential",
 							suggestion:
 								"Use Arbitrary.make(YourSchema) to generate test data from schemas",

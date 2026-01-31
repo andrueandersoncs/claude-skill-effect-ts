@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-005",
@@ -69,7 +72,6 @@ export const detect = (
 				line: 1,
 				column: 1,
 				snippet: "Missing addEqualityTesters() for Effect type equality",
-				severity: "warning",
 				certainty: "potential",
 				suggestion:
 					"Add: import { addEqualityTesters } from '@effect/vitest'; addEqualityTesters();",

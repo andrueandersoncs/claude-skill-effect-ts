@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-003",
@@ -38,7 +41,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile),
-					severity: "warning",
 					certainty: "potential",
 					suggestion: "Use Schema.is(MyTaggedClass) for type-safe narrowing",
 				});
@@ -64,7 +66,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "warning",
 					certainty: "potential",
 					suggestion: "Use Schema.is(MyTaggedClass) for type-safe validation",
 				});
@@ -95,7 +96,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "warning",
 					certainty: "potential",
 					suggestion:
 						"Use Schema.is(MyTaggedClass)(input) for type-safe validation of unknown data",

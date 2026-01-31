@@ -5,8 +5,6 @@
 /** Maximum length of code snippets shown in violation output */
 export const SNIPPET_MAX_LENGTH = 200;
 
-export type ViolationSeverity = "error" | "warning" | "info";
-
 export type ViolationCertainty = "definite" | "potential";
 
 export interface Violation {
@@ -24,8 +22,6 @@ export interface Violation {
 	column: number;
 	/** The violating code snippet */
 	snippet: string;
-	/** How severe is this violation */
-	severity: ViolationSeverity;
 	/** Is this definitely a violation or potentially one */
 	certainty: ViolationCertainty;
 	/** Suggested fix or alternative */
@@ -57,8 +53,6 @@ export interface DetectorConfig {
 	exclude: string[];
 	/** Categories to check (empty = all) */
 	categories: string[];
-	/** Minimum severity to report */
-	minSeverity: ViolationSeverity;
 	/** Whether to include potential violations */
 	includePotential: boolean;
 }
@@ -67,6 +61,5 @@ export const defaultConfig: DetectorConfig = {
 	include: ["**/*.ts", "**/*.tsx"],
 	exclude: ["**/node_modules/**", "**/*.d.ts", "**/dist/**"],
 	categories: [],
-	minSeverity: "warning",
 	includePotential: true,
 };

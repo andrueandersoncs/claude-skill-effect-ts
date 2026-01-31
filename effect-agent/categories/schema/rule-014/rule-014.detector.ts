@@ -8,7 +8,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-014",
@@ -302,7 +305,6 @@ export const detect = (
 					line: schema2.line,
 					column: schema2.column,
 					snippet: `${schema2.type}: ${schema2.name} shares ${overlapCount}/${schema2.fields.size} fields with ${schema1.name}`,
-					severity: "warning",
 					certainty: "potential",
 					suggestion,
 				});

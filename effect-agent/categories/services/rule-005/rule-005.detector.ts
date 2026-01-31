@@ -10,7 +10,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-005",
@@ -60,7 +63,6 @@ export const detect = (
 								line: line + 1,
 								column: character + 1,
 								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								severity: "info",
 								certainty: "potential",
 								suggestion:
 									"Use Layer.effect(ServiceTag, Effect.gen(function* () { ... })) for services with dependencies",
@@ -115,7 +117,6 @@ export const detect = (
 				line: 1,
 				column: 1,
 				snippet: `${service}Live exists but ${service}Test is missing`,
-				severity: "warning",
 				certainty: "potential",
 				suggestion: `Create ${service}Test layer for testing with mocked/in-memory implementation`,
 			});
@@ -128,7 +129,6 @@ export const detect = (
 				line: 1,
 				column: 1,
 				snippet: `${service}Test exists but ${service}Live is missing`,
-				severity: "warning",
 				certainty: "potential",
 				suggestion: `Create ${service}Live layer with real implementation`,
 			});
@@ -176,8 +176,9 @@ export const detect = (
 									filePath,
 									line: line + 1,
 									column: character + 1,
-									snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-									severity: "info",
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
 									certainty: "potential",
 									suggestion:
 										"Use Layer.effect(Tag, Effect.gen(function* () { const state = yield* Ref.make(...); return { ... } })) for stateful test mocks",

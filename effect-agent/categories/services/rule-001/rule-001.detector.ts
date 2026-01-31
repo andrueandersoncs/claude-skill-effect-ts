@@ -11,7 +11,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-001",
@@ -69,7 +72,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "error",
 					certainty: "definite",
 					suggestion:
 						"Create a Context.Tag HttpClient service with Live/Test layers",
@@ -89,7 +91,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "error",
 					certainty: "definite",
 					suggestion:
 						"Create a Context.Tag service wrapping axios with Live/Test layers",
@@ -115,7 +116,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile),
-						severity: "info",
 						certainty: "potential",
 						suggestion:
 							"Use @effect/platform HttpClient or create a Context.Tag service",
@@ -142,7 +142,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile),
-						severity: "info",
 						certainty: "potential",
 						suggestion:
 							"Use @effect/platform FileSystem or create a Context.Tag service",
@@ -178,7 +177,6 @@ export const detect = (
 							line: line + 1,
 							column: character + 1,
 							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							severity: "error",
 							certainty: "definite",
 							suggestion:
 								"Use @effect/platform FileSystem or create a Context.Tag service",
@@ -217,7 +215,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: fullCallText.slice(0, SNIPPET_MAX_LENGTH),
-						severity: "warning",
 						certainty: "potential",
 						suggestion:
 							"Create a Context.Tag Repository service with Live/Test layers",
@@ -252,7 +249,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile),
-					severity: "warning",
 					certainty: "potential",
 					suggestion: `Use Config.string('${node.name.text}') with ConfigProvider`,
 				});
@@ -282,7 +278,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile),
-					severity: "warning",
 					certainty: "potential",
 					suggestion: `Use Config.string(${keyText}) with ConfigProvider`,
 				});

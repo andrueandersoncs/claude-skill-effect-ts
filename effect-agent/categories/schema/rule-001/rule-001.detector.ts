@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-001",
@@ -41,7 +44,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "warning",
 					certainty: "potential",
 					suggestion: "Use Schema.String.pipe(Schema.brand('BrandName'))",
 				});
@@ -75,8 +77,9 @@ export const detect = (
 										filePath,
 										line: line + 1,
 										column: character + 1,
-										snippet: prop.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-										severity: "warning",
+										snippet: prop
+											.getText(sourceFile)
+											.slice(0, SNIPPET_MAX_LENGTH),
 										certainty: "potential",
 										suggestion:
 											"Use Schema.String.pipe(Schema.brand('UserId')) for type-safe IDs",

@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-007",
@@ -39,7 +42,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "warning",
 					certainty: "potential",
 					suggestion:
 						"Use effect.pipe(Effect.mapError(e => new DomainError(e))) instead of catch-and-rethrow",
@@ -72,7 +74,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "warning",
 						certainty: "potential",
 						suggestion:
 							"Use Effect.tryPromise with Effect.mapError instead of .catch() that rethrows",
@@ -108,7 +109,6 @@ export const detect = (
 							line: line + 1,
 							column: character + 1,
 							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							severity: "info",
 							certainty: "potential",
 							suggestion:
 								"Use Effect.mapError(e => new TransformedError(e)) when just transforming error types",

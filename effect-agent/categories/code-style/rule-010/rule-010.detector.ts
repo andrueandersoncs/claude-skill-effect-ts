@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-010",
@@ -34,7 +37,6 @@ export const detect = (
 				line: line + 1,
 				column: character + 1,
 				snippet: node.getText(sourceFile),
-				severity: "error",
 				certainty: "definite",
 				suggestion:
 					"Use Option.fromNullable() with Option.match() or Effect error handling",

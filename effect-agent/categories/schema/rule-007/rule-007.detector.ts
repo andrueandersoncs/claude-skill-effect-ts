@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-007",
@@ -33,7 +36,6 @@ export const detect = (
 				line: line + 1,
 				column: character + 1,
 				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				severity: "info",
 				certainty: "potential",
 				suggestion: "Use Schema.is(MySchema) for type-safe runtime checks",
 			});
@@ -56,7 +58,6 @@ export const detect = (
 				line: line + 1,
 				column: character + 1,
 				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				severity: "info",
 				certainty: "potential",
 				suggestion: "If checking Schema.Class, use Schema.is(MyClass) instead",
 			});
@@ -91,7 +92,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "warning",
 					certainty: "potential",
 					suggestion:
 						"Use Schema.String.pipe(Schema.filter((s) => s.includes('@') || 'Invalid email')) for declarative validation",
@@ -126,7 +126,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "warning",
 						certainty: "potential",
 						suggestion:
 							"Use Schema.String.pipe(Schema.filter(...)) for declarative validation",

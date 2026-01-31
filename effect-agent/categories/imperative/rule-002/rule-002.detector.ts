@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-002",
@@ -36,7 +39,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "warning",
 					certainty: "potential",
 					suggestion:
 						"Use const with immutable operations, or Effect Ref for state",
@@ -62,7 +64,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile),
-					severity: "error",
 					certainty: "definite",
 					suggestion: "Use immutable operations or Ref.update()",
 				});
@@ -95,7 +96,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile),
-					severity: "error",
 					certainty: "definite",
 					suggestion: "Use immutable operations or Ref.update()",
 				});
@@ -118,7 +118,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "warning",
 						certainty: "potential",
 						suggestion:
 							"Use Record.set or spread syntax to create new object: { ...obj, [key]: value }",

@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-010",
@@ -69,7 +72,6 @@ export const detect = (
 								line: line + 1,
 								column: character + 1,
 								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								severity: "warning",
 								certainty: "potential",
 								suggestion:
 									"Use it.scoped() for tests with acquireRelease resources - it handles Scope automatically",

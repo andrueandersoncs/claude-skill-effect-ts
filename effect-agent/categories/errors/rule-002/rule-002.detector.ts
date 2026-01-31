@@ -12,7 +12,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-002",
@@ -47,7 +50,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: parent.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "warning",
 						certainty: "potential",
 						suggestion: "Use Effect.catchTag() for type-safe error handling",
 					});
@@ -72,7 +74,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "error",
 					certainty: "definite",
 					suggestion:
 						"Use Effect.catchTags() for handling multiple error types",
@@ -105,7 +106,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "warning",
 					certainty: "definite",
 					suggestion:
 						"Use class MyError extends Schema.TaggedError<MyError>()('MyError', { ... }) for encoding/decoding support",
@@ -129,7 +129,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "error",
 					certainty: "definite",
 					suggestion: "Use Effect.fail() with a typed error",
 				});
@@ -152,7 +151,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "info",
 					certainty: "potential",
 					suggestion: "Use Effect.log or structured error types instead",
 				});
@@ -179,7 +177,6 @@ export const detect = (
 								line: line + 1,
 								column: character + 1,
 								snippet: `class ${node.name?.text || "..."} extends Data.TaggedError`,
-								severity: "warning",
 								certainty: "definite",
 								suggestion:
 									"Use class MyError extends Schema.TaggedError<MyError>()('MyError', { ... }) for Schema integration",
@@ -202,7 +199,6 @@ export const detect = (
 								line: line + 1,
 								column: character + 1,
 								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								severity: "error",
 								certainty: "definite",
 								suggestion:
 									"Use Schema.TaggedError() or Data.TaggedError() for typed errors",
@@ -242,7 +238,6 @@ export const detect = (
 				line: line + 1,
 				column: character + 1,
 				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				severity: "error",
 				certainty: "definite",
 				suggestion,
 			});
@@ -281,7 +276,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "warning",
 					certainty: "potential",
 					suggestion: "Define typed errors using Schema.TaggedError class",
 				});

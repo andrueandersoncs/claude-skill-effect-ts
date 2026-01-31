@@ -9,7 +9,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-002",
@@ -89,8 +92,9 @@ export const detect = (
 							filePath,
 							line: line + 1,
 							column: character + 1,
-							snippet: innerNode.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							severity: "error",
+							snippet: innerNode
+								.getText(sourceFile)
+								.slice(0, SNIPPET_MAX_LENGTH),
 							certainty: "definite",
 							suggestion:
 								"Change 'yield effect' to 'yield* effect' to unwrap the Effect and get its value",
@@ -109,8 +113,9 @@ export const detect = (
 							filePath,
 							line: line + 1,
 							column: character + 1,
-							snippet: innerNode.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							severity: "error",
+							snippet: innerNode
+								.getText(sourceFile)
+								.slice(0, SNIPPET_MAX_LENGTH),
 							certainty: "definite",
 							suggestion:
 								"Replace 'await promise' with 'yield* Effect.promise(() => promise)' or convert the async operation to an Effect",

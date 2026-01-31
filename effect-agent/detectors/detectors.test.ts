@@ -116,7 +116,6 @@ describe("Detector Tests", () => {
 					expect(violation.message).toBeDefined();
 					expect(violation.line).toBeGreaterThan(0);
 					expect(violation.column).toBeGreaterThan(0);
-					expect(violation.severity).toMatch(/^(error|warning|info)$/);
 					expect(violation.certainty).toMatch(/^(definite|potential)$/);
 				}
 

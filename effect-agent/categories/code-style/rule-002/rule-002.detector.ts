@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-002",
@@ -33,7 +36,6 @@ export const detect = (
 				line: line + 1,
 				column: character + 1,
 				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				severity: "warning",
 				certainty: "definite",
 				suggestion:
 					"Use Schema.decodeUnknown(MySchema)(value) for runtime validation instead of <Type>casting",
@@ -57,7 +59,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "error",
 					certainty: "definite",
 					suggestion:
 						"Define a Schema for the data shape and use Schema.decodeUnknown for validation",
@@ -78,7 +79,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "error",
 					certainty: "definite",
 					suggestion: "Use Schema.decodeUnknown() for type-safe validation",
 				});
@@ -100,7 +100,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "error",
 						certainty: "definite",
 						suggestion:
 							"Use Schema.decodeUnknown(TargetSchema)(value) for proper type validation",
@@ -140,7 +139,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "warning",
 						certainty: "potential",
 						suggestion:
 							"Use Schema.decodeUnknown(ResponseSchema)(data) for runtime validation of API responses",
@@ -184,7 +182,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "info",
 					certainty: "potential",
 					suggestion:
 						"Pipe .json() result through Schema.decodeUnknown(ResponseSchema) for type-safe validation",

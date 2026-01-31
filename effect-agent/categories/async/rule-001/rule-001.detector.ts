@@ -14,7 +14,10 @@ import {
 	Struct,
 } from "effect";
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.ts";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.ts";
 
 const MetaSchema = Schema.Struct({
 	id: Schema.Literal("rule-001"),
@@ -61,11 +64,6 @@ const BaseViolationFields = Schema.Struct({
 	line: Schema.Number,
 	column: Schema.Number,
 	snippet: Schema.String,
-	severity: Schema.Union(
-		Schema.Literal("error"),
-		Schema.Literal("warning"),
-		Schema.Literal("info"),
-	),
 	certainty: Schema.Union(
 		Schema.Literal("definite"),
 		Schema.Literal("potential"),
@@ -183,7 +181,6 @@ export const detect = (
 								line: line + 1,
 								column: character + 1,
 								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								severity: "error",
 								certainty: "definite",
 								suggestion: "Use Effect.async() for callback-based APIs",
 							}),
@@ -237,8 +234,9 @@ export const detect = (
 										filePath,
 										line: line + 1,
 										column: character + 1,
-										snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-										severity: "info",
+										snippet: node
+											.getText(sourceFile)
+											.slice(0, SNIPPET_MAX_LENGTH),
 										certainty: "potential",
 										suggestion: "Wrap callback-based APIs with Effect.async()",
 									}),

@@ -12,7 +12,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-001-array-operations",
@@ -138,7 +141,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "info",
 						certainty: "definite",
 						suggestion:
 							"Use Array.filterMap(array, (item) => predicate(item) ? Option.some(transform(item)) : Option.none())",
@@ -169,7 +171,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "info",
 					certainty: "potential",
 					suggestion: replacement.suggestion,
 				});
@@ -216,7 +217,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "info",
 						certainty: "potential",
 						suggestion:
 							"Use Array.groupBy(array, item => item.key) for cleaner grouping",
@@ -245,7 +245,6 @@ export const detect = (
 				line: line + 1,
 				column: character + 1,
 				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				severity: "info",
 				certainty: "potential",
 				suggestion: "Consider HashMap from effect for map operations",
 			});
@@ -272,7 +271,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile),
-					severity: "warning",
 					certainty: "potential",
 					suggestion: "Use Array.head() which returns Option<T>",
 				});
@@ -288,7 +286,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile),
-					severity: "warning",
 					certainty: "potential",
 					suggestion: "Use Array.last() which returns Option<T>",
 				});
@@ -315,7 +312,6 @@ export const detect = (
 				line: line + 1,
 				column: character + 1,
 				snippet: node.getText(sourceFile),
-				severity: "warning",
 				certainty: "potential",
 				suggestion:
 					"Use Array.isEmptyArray() or Array.isNonEmptyArray() predicates",
@@ -343,7 +339,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.parent.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "error",
 					certainty: "definite",
 					suggestion: "Use Array.dedupe() from effect",
 				});
@@ -369,7 +364,6 @@ export const detect = (
 				line: line + 1,
 				column: character + 1,
 				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				severity: "info",
 				certainty: "potential",
 				suggestion: "Consider HashSet from effect for set operations",
 			});
@@ -397,7 +391,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "error",
 					certainty: "potential",
 					suggestion: replacement.suggestion,
 				});
@@ -452,7 +445,6 @@ export const detect = (
 								line: line + 1,
 								column: character + 1,
 								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								severity: "warning",
 								certainty: "potential",
 								suggestion: `Use Array.partition(${arrayName}, predicate) to split into [matching, nonMatching] in one pass`,
 							});

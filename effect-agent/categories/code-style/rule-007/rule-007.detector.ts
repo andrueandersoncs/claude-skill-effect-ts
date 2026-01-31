@@ -12,7 +12,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-007",
@@ -109,7 +112,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-						severity: "error",
 						certainty: "definite",
 						suggestion:
 							"Replace switch with Match.type().pipe(..., Match.exhaustive) for compile-time exhaustiveness",
@@ -152,7 +154,6 @@ export const detect = (
 							line: line + 1,
 							column: character + 1,
 							snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-							severity: "warning",
 							certainty: "potential",
 							suggestion:
 								"Consider using Match.type().pipe(..., Match.exhaustive) for type-safe exhaustive matching",

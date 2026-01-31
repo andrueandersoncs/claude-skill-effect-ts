@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-003",
@@ -60,7 +63,6 @@ export const detect = (
 							line: line + 1,
 							column: character + 1,
 							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							severity: "warning",
 							certainty: "potential",
 							suggestion:
 								"Use Exit.isSuccess/isFailure or it.effect with proper assertions",
@@ -99,7 +101,6 @@ export const detect = (
 							line: line + 1,
 							column: character + 1,
 							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							severity: "error",
 							certainty: "definite",
 							suggestion:
 								"Use Effect.exit to get the Exit value and assert on it with Exit.isFailure/Exit.match",

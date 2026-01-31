@@ -8,7 +8,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-005",
@@ -82,7 +85,6 @@ export const detect = (
 				line: line + 1,
 				column: character + 1,
 				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				severity: "warning",
 				certainty: "potential",
 				suggestion: `Convert to: class ${node.name.text} extends Schema.Class<${node.name.text}>()({...})`,
 			});
@@ -101,7 +103,6 @@ export const detect = (
 				line: line + 1,
 				column: character + 1,
 				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				severity: "warning",
 				certainty: "potential",
 				suggestion:
 					"Convert to Schema.Struct() or Schema.Class() for runtime validation",
@@ -135,7 +136,6 @@ export const detect = (
 							line: line + 1,
 							column: character + 1,
 							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							severity: "warning",
 							certainty: "potential",
 							suggestion:
 								"Use class Entity extends Schema.Class<Entity>('Entity')({ ... }) { methods() { ... } }",
@@ -163,7 +163,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "warning",
 						certainty: "potential",
 						suggestion:
 							"Use class Entity extends Schema.Class<Entity>('Entity')({ ... }) { method() { ... } }",
@@ -194,7 +193,6 @@ export const detect = (
 								line: line + 1,
 								column: character + 1,
 								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								severity: "warning",
 								certainty: "potential",
 								suggestion:
 									"Use class Entity extends Schema.Class<Entity>('Entity')({ ... }) { method() { ... } }",
@@ -223,7 +221,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "warning",
 					certainty: "potential",
 					suggestion: `Use new ${typeText}({ ... }) or ${typeText}.make({ ... }) instead of casting`,
 				});
@@ -246,7 +243,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "warning",
 						certainty: "potential",
 						suggestion: `Use new ${typeText}({ ... }) for validation and branded type creation`,
 					});
@@ -262,7 +258,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "info",
 						certainty: "potential",
 						suggestion: `Define a Schema.Class or Schema.Struct for ${typeText} to get runtime validation`,
 					});
@@ -286,7 +281,6 @@ export const detect = (
 						line: line + 1,
 						column: character + 1,
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						severity: "info",
 						certainty: "potential",
 						suggestion: `Define a Schema.Class for ${typeText} and use new ${typeText}({ ... })`,
 					});

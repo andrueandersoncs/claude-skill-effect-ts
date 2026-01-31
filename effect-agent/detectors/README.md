@@ -9,13 +9,13 @@ These detectors use the TypeScript Compiler API to analyze AST patterns and iden
 ## Usage
 
 ```bash
-# Run detection on current directory (warnings and errors)
+# Run detection on current directory (all violations)
 bun run detect
 
-# Run all checks including info-level (most verbose)
+# Run all checks (same as detect)
 bun run detect:all
 
-# Run only definite errors (strictest)
+# Run only definite violations (exclude potential)
 bun run detect:errors
 
 # Output as JSON
@@ -52,12 +52,6 @@ bun run detect --help
 - **Definite**: 100% certain violations that must be fixed (e.g., `for` loops, `try/catch`)
 - **Potential**: Likely violations that require human review (e.g., interfaces that might be okay)
 
-## Severity Levels
-
-- **Error**: Must fix - clearly violates Effect-TS patterns
-- **Warning**: Should fix - likely a problem but context matters
-- **Info**: Consider fixing - suggestions for improvement
-
 ## Output Formats
 
 ### Text (default)
@@ -83,7 +77,6 @@ bun run detect --help
       "line": 10,
       "column": 5,
       "snippet": "for (let i = 0; ...",
-      "severity": "error",
       "certainty": "definite",
       "suggestion": "Replace with Effect.forEach() or Array.map/filter/reduce"
     }
@@ -100,7 +93,6 @@ import { detectDirectory, detectFile, formatViolations } from "./detectors";
 // Detect on directory
 const result = detectDirectory("./src", {
   categories: ["imperative", "conditionals"],
-  minSeverity: "warning",
   includePotential: true,
 });
 

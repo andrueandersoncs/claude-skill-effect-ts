@@ -18,7 +18,6 @@ import type {
 	DetectorConfig,
 	DetectorResult,
 	Violation,
-	ViolationSeverity,
 } from "./types.js";
 
 // Get the directory where this module is located
@@ -171,15 +170,6 @@ const findFiles = (
 };
 
 /**
- * Severity comparison for filtering
- */
-const severityLevel: Record<ViolationSeverity, number> = {
-	info: 0,
-	warning: 1,
-	error: 2,
-};
-
-/**
  * Run detection on a single file
  */
 export const detectFile = (
@@ -219,7 +209,6 @@ export const detectDirectory = (
 			"**/dist/**",
 		],
 		categories: config.categories ?? [],
-		minSeverity: config.minSeverity ?? "warning",
 		includePotential: config.includePotential ?? true,
 	};
 
@@ -252,11 +241,8 @@ export const detectDirectory = (
 			result.errors.push({ filePath: file, error });
 		}
 
-		// Filter violations by severity and certainty
+		// Filter violations by certainty
 		const filtered = violations.filter((v) => {
-			if (severityLevel[v.severity] < severityLevel[finalConfig.minSeverity]) {
-				return false;
-			}
 			if (!finalConfig.includePotential && v.certainty === "potential") {
 				return false;
 			}
@@ -316,7 +302,6 @@ export const formatViolations = (violations: Violation[]): string => {
 			lines.push("  Violation:");
 			lines.push(`    Line: ${v.line}:${v.column}`);
 			lines.push(`    Rule: ${v.category}/${v.ruleId}`);
-			lines.push(`    Severity: ${v.severity}`);
 			lines.push(`    Certainty: ${v.certainty}`);
 			lines.push(`    Message: ${v.message}`);
 			if (v.suggestion) {
@@ -339,12 +324,10 @@ export const formatViolations = (violations: Violation[]): string => {
  */
 export const formatSummary = (result: DetectorResult): string => {
 	const byCategory = new Map<string, number>();
-	const bySeverity = new Map<ViolationSeverity, number>();
 	const byCertainty = new Map<string, number>();
 
 	for (const v of result.violations) {
 		byCategory.set(v.category, (byCategory.get(v.category) ?? 0) + 1);
-		bySeverity.set(v.severity, (bySeverity.get(v.severity) ?? 0) + 1);
 		byCertainty.set(v.certainty, (byCertainty.get(v.certainty) ?? 0) + 1);
 	}
 
@@ -354,11 +337,6 @@ export const formatSummary = (result: DetectorResult): string => {
 		"═══════════════════════════════════════════════════════════════",
 		`Files analyzed: ${result.filesAnalyzed}`,
 		`Total violations: ${result.violations.length}`,
-		"",
-		"By severity:",
-		`  Errors: ${bySeverity.get("error") ?? 0}`,
-		`  Warnings: ${bySeverity.get("warning") ?? 0}`,
-		`  Info: ${bySeverity.get("info") ?? 0}`,
 		"",
 		"By certainty:",
 		`  Definite: ${byCertainty.get("definite") ?? 0}`,
@@ -468,7 +446,6 @@ export const main = async () => {
 	// Parse arguments
 	let directory = process.cwd();
 	let categories: string[] = [];
-	let minSeverity: ViolationSeverity = "warning";
 	let includePotential = true;
 	let outputFormat: "text" | "json" = "text";
 
@@ -487,7 +464,6 @@ Commands:
 
 Options:
   --categories, -c <list>   Comma-separated categories to check
-  --severity, -s <level>    Minimum severity: info, warning, error (default: warning)
   --no-potential            Exclude potential violations (only show definite)
   --json                    Output as JSON
   --help, -h                Show this help
@@ -498,7 +474,7 @@ Available categories:
 Examples:
   bun run detectors/runner.ts ./src
   bun run detectors/runner.ts -c imperative,conditionals ./src
-  bun run detectors/runner.ts -s error --no-potential ./src
+  bun run detectors/runner.ts --no-potential ./src
   bun run detectors/runner.ts examples code-style/rule-002
 `);
 			process.exit(0);
@@ -506,8 +482,6 @@ Examples:
 
 		if (arg === "--categories" || arg === "-c") {
 			categories = args[++i]?.split(",") ?? [];
-		} else if (arg === "--severity" || arg === "-s") {
-			minSeverity = (args[++i] as ViolationSeverity) ?? "warning";
 		} else if (arg === "--no-potential") {
 			includePotential = false;
 		} else if (arg === "--json") {
@@ -520,7 +494,6 @@ Examples:
 	// Run detection
 	const result = detectDirectory(directory, {
 		categories,
-		minSeverity,
 		includePotential,
 	});
 
@@ -537,10 +510,7 @@ Examples:
 	}
 
 	// Exit with error code if violations found
-	const errorCount = result.violations.filter(
-		(v) => v.severity === "error",
-	).length;
-	process.exit(errorCount > 0 ? 1 : 0);
+	process.exit(result.violations.length > 0 ? 1 : 0);
 };
 
 // Run if executed directly

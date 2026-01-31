@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-009",
@@ -44,7 +47,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					severity: "warning",
 					certainty: "potential",
 					suggestion:
 						"Use effect.pipe(Effect.retry(Schedule.exponential('100 millis').pipe(Schedule.jittered, Schedule.compose(Schedule.recurs(5)))))",
@@ -72,7 +74,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: `function ${node.name.text}(...)`,
-					severity: "warning",
 					certainty: "potential",
 					suggestion:
 						"Use Effect.retry(Schedule.recurs(n)) for simple retries or Schedule.exponential for backoff",
@@ -100,7 +101,6 @@ export const detect = (
 					line: line + 1,
 					column: character + 1,
 					snippet: node.getText(sourceFile),
-					severity: "info",
 					certainty: "potential",
 					suggestion:
 						"Effect.retry handles retry counting automatically with Schedule combinators",

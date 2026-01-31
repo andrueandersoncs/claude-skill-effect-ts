@@ -5,7 +5,10 @@
  */
 
 import * as ts from "typescript";
-import { SNIPPET_MAX_LENGTH, type Violation } from "../../../detectors/types.js";
+import {
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-004",
@@ -66,7 +69,6 @@ export const detect = (
 				line: 1,
 				column: 1,
 				snippet: "import { ... } from 'vitest'",
-				severity: "error",
 				certainty: "potential",
 				suggestion:
 					"Replace 'vitest' import with '@effect/vitest' for Effect test utilities",
