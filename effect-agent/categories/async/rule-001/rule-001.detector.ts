@@ -40,34 +40,37 @@ const meta = new MetaSchema({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const assertAsNode = (u: any): ts.Node => u;
 
+// Schema for Node-like structural validation - requires object with kind property
+class NodeLike extends Schema.Class<NodeLike>("NodeLike")({
+	kind: Schema.Any,
+}) {}
+
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isFunctionDeclaration(assertAsNode(u));
+	// Use Schema for structural validation instead of imperative conditionals
+	return Match.value(u).pipe(
+		Match.when(Schema.is(NodeLike), (node) =>
+			ts.isFunctionDeclaration(assertAsNode(node)),
+		),
+		Match.orElse(Function.constant(false)),
+	);
 };
 
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isFunctionExpression(assertAsNode(u));
+	// Use Schema for structural validation instead of imperative conditionals
+	return Match.value(u).pipe(
+		Match.when(Schema.is(NodeLike), (node) =>
+			ts.isFunctionExpression(assertAsNode(node)),
+		),
+		Match.orElse(Function.constant(false)),
+	);
 };
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isArrowFunction(assertAsNode(u));
+	// Use Schema for structural validation instead of imperative conditionals
+	return Match.value(u).pipe(
+		Match.when(Schema.is(NodeLike), (node) => ts.isArrowFunction(assertAsNode(node))),
+		Match.orElse(Function.constant(false)),
+	);
 };
 
 // Type narrowing helper for FunctionNode types using enhanced structural validation
