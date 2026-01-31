@@ -1,20 +1,11 @@
-// Test file with known violations
-import { Option } from "effect";
+// Test file with rule-004 violation
+import { Effect } from "effect";
 
-const x = null;
-Option.fromNullable(x).pipe(
-  Option.match({
-    onNone: () => {
-      console.log("null check - should use Match");
-    },
-    onSome: (value) => {
-      // Handle non-null case
-    }
-  })
-);
+// This is the violation described in the task
+// Effect.gen with single yield should be simplified
 
-for (let i = 0; i < 10; i++) {
-  console.log(i); // loop - should use Array methods
-}
-
-const result = x ? "yes" : "no"; // ternary - should use Match
+const test1 = "ok";
+const test2 = "ok";
+const test3 = "ok";
+const test4 = "ok";
+const numbers = Effect.forEach(Array.from({ length: 10 }, (_, i) => i), (i) => Effect.log(i));
