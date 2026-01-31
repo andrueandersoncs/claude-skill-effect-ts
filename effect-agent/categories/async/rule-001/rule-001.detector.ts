@@ -190,7 +190,6 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Build violation from validated data - accepts well-formed violation data
 const buildViolation = (data: {
 	ruleId: string;
 	category: string;
