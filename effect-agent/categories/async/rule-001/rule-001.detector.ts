@@ -38,6 +38,7 @@ const meta = new MetaSchema({
 // the basic object structure, we delegate to TypeScript's built-in type predicates.
 // Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
 // This is a special case where pure type guards are necessary for TypeScript AST filtering.
+<<<<<<< HEAD
 // Using Schema.Unknown to safely handle unknown values without type assertions
 const assertAsNode = (u: Schema.Unknown): ts.Node => u as ts.Node;
 
@@ -52,6 +53,9 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	return ts.isFunctionDeclaration(assertAsNode(u));
 };
 
+// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
+// This is a special case where pure type guards are necessary for TypeScript AST filtering.
+// eslint-disable-next-line @effect-ts/rule-005
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 	// Structural validation: ensure we have a Node-like object
 	if (typeof u !== "object" || u === null || !("kind" in u)) {
@@ -62,6 +66,10 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 	return ts.isFunctionExpression(assertAsNode(u));
 };
 
+// Type predicate for TypeScript AST filtering - cannot use Effect.fn() because
+// type predicates must return boolean, not Effect. This is a structural validation
+// helper for the TypeScript compiler API and is properly scoped as a utility.
+// eslint-disable-next-line @effect-ts/rule-005
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 	// Structural validation: ensure we have a Node-like object
 	if (typeof u !== "object" || u === null || !("kind" in u)) {
@@ -73,6 +81,9 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 };
 
 // Type narrowing helper for FunctionNode types using enhanced structural validation
+// NOTE: Type guard must return boolean (not Effect) for TypeScript type narrowing.
+// This is a special case where pure type guards are necessary for AST filtering.
+// eslint-disable-next-line @effect-ts/rule-005
 const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
 	return (
 		isFunctionDeclaration(node) ||
