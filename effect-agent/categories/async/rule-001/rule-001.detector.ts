@@ -143,40 +143,30 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Composable helper functions for violation validation
-const decodeWithSuggestion = (data: ViolationData, suggestion: string): Violation =>
-	Schema.decodeSync(ValidViolationWithSuggestion)({
-		...data,
-		suggestion,
-	});
-
-const decodeWithoutSuggestion = (data: ViolationData): Violation => {
-	const rest = Struct.omit(data, "suggestion");
-	return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-};
-
-// Schema transform for conditional validation based on suggestion presence
-// Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
-// using Schema.transform pattern for type-safe transformation
-const ViolationTransform = Schema.transform(
+// Schema.transform that routes violations based on suggestion presence
+// This transform handles the conditional conversion using Schema.transform pattern
+const ViolationRouterTransform = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
 	{
-		decode: (data: ViolationData): Violation =>
-			pipe(
-				Option.fromNullable(data.suggestion),
-				Option.match({
-					onSome: (suggestion) => decodeWithSuggestion(data, suggestion),
-					onNone: () => decodeWithoutSuggestion(data),
-				}),
-			),
+		decode: (data: ViolationData) => {
+			// Schema.transform routed decoder: conditional validation
+			return data.suggestion
+				? Schema.decodeSync(ValidViolationWithSuggestion)({
+						...data,
+						suggestion: data.suggestion,
+				  })
+				: Schema.decodeSync(ValidViolationWithoutSuggestion)(
+						Struct.omit(data, "suggestion"),
+				  );
+		},
 		encode: Function.identity,
 		strict: true,
 	},
 );
 
-// Helper to create validated violations using Schema.transform
-const createViolation = Schema.decodeSync(ViolationTransform);
+// Helper to create validated violations - uses Schema.transform directly
+const createViolation = Schema.decodeSync(ViolationRouterTransform);
 
 export const detect = (
 	filePath: string,
