@@ -36,16 +36,33 @@ const meta = new MetaSchema({
 // not Effect. This is a special case where pure type guards are necessary
 // for TypeScript AST filtering.
 
+// eslint-disable-next-line @effect-ts/rule-005
+const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
+	typeof u === "object" && u !== null && ts.isFunctionDeclaration(u);
+
+// eslint-disable-next-line @effect-ts/rule-005
+const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
+	typeof u === "object" && u !== null && ts.isFunctionExpression(u);
+
+// eslint-disable-next-line @effect-ts/rule-005
+const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
+	typeof u === "object" && u !== null && ts.isArrowFunction(u);
+
+// Type narrowing helper for FunctionNode types without type assertions
+// Using native TypeScript type guards with a discriminated union approach
+const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
+	return (
+		isFunctionDeclaration(node) ||
+		isFunctionExpression(node) ||
+		isArrowFunction(node)
+	);
+};
+
+// Schema for function node types using discriminated union of type guards
 const FunctionNode = Schema.Union(
-	Schema.declare((u): u is ts.FunctionDeclaration =>
-		ts.isFunctionDeclaration(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.FunctionExpression =>
-		ts.isFunctionExpression(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.ArrowFunction =>
-		ts.isArrowFunction(u as ts.Node),
-	),
+	Schema.declare(isFunctionDeclaration),
+	Schema.declare(isFunctionExpression),
+	Schema.declare(isArrowFunction),
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
@@ -197,7 +214,7 @@ export const detect = (
 
 		// Detect callback patterns (functions with callback parameter names)
 		const functionCheckResult = Match.value(node).pipe(
-			Match.when(Schema.is(FunctionNode), (typedNode) => {
+			Match.when((n): n is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => isFunctionNode(n), (typedNode) => {
 				return Option.fromNullable(typedNode.parameters.at(-1)).pipe(
 					Option.flatMap((lastParam) => {
 						const paramName = lastParam.name.getText(sourceFile).toLowerCase();
