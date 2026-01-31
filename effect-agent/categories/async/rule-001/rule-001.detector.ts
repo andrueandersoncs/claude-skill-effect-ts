@@ -40,36 +40,36 @@ const meta = new MetaSchema({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const assertAsNode = (u: any): ts.Node => u;
 
-// Schema for Node-like structural validation - requires object with kind property
-class NodeLike extends Schema.Class<NodeLike>("NodeLike")({
-	kind: Schema.Any,
-}) {}
+// Schema for structural validation: ensure we have a Node-like object with a "kind" property
+const NodeLike = Schema.Struct({
+	kind: Schema.Unknown,
+});
+
+// Helper function to validate structural properties with Schema
+const isValidNode = (u: unknown): boolean =>
+	Match.value(u).pipe(
+		Match.when(Schema.is(NodeLike), () => true),
+		Match.orElse(() => false),
+	);
 
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// Use Schema for structural validation instead of imperative conditionals
-	return Match.value(u).pipe(
-		Match.when(Schema.is(NodeLike), (node) =>
-			ts.isFunctionDeclaration(assertAsNode(node)),
-		),
-		Match.orElse(Function.constant(false)),
+	// Use Schema-based validation for structural checks with Match.when
+	return (
+		isValidNode(u) && ts.isFunctionDeclaration(assertAsNode(u))
 	);
 };
 
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	// Use Schema for structural validation instead of imperative conditionals
-	return Match.value(u).pipe(
-		Match.when(Schema.is(NodeLike), (node) =>
-			ts.isFunctionExpression(assertAsNode(node)),
-		),
-		Match.orElse(Function.constant(false)),
+	// Use Schema-based validation for structural checks with Match.when
+	return (
+		isValidNode(u) && ts.isFunctionExpression(assertAsNode(u))
 	);
 };
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	// Use Schema for structural validation instead of imperative conditionals
-	return Match.value(u).pipe(
-		Match.when(Schema.is(NodeLike), (node) => ts.isArrowFunction(assertAsNode(node))),
-		Match.orElse(Function.constant(false)),
+	// Use Schema-based validation for structural checks with Match.when
+	return (
+		isValidNode(u) && ts.isArrowFunction(assertAsNode(u))
 	);
 };
 
