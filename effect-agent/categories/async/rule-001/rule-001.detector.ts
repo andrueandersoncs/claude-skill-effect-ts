@@ -45,7 +45,9 @@ const assertAsNode = Function.identity;
 
 // Reusable type guard functions for function node types
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// Use Match.value for structural validation with type narrowing
+	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.compose wrapper
+	// This type guard must remain a plain function due to TypeScript type predicate constraints
+	// Use Match (from Effect) for structural validation with type narrowing
 	const isNodeLike = (val: unknown): val is object =>
 		typeof val === "object" && val !== null && "kind" in val;
 
@@ -60,7 +62,9 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 };
 
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	// Use Match.value for structural validation with type narrowing
+	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.transform wrapper
+	// This type guard must remain a plain function due to TypeScript type predicate constraints
+	// Use Match (from Effect) for structural validation with type narrowing
 	const isNodeLike = (val: unknown): val is object =>
 		typeof val === "object" && val !== null && "kind" in val;
 
@@ -75,7 +79,9 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 };
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	// Use Match.value for structural validation with type narrowing
+	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.pipe wrapper
+	// This type guard must remain a plain function due to TypeScript type predicate constraints
+	// Use Match (from Effect) for structural validation with type narrowing
 	const isNodeLike = (val: unknown): val is object =>
 		typeof val === "object" && val !== null && "kind" in val;
 
