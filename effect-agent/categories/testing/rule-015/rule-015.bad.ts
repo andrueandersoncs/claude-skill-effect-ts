@@ -7,13 +7,22 @@
 import { it } from "@effect/vitest";
 import { Effect, Fiber, TestClock } from "effect";
 
-// BAD: Manually providing TestClock.layer (it.effect includes it automatically)
+// BAD: Manually providing TestClock.layer when using it.effect
+// it.effect already includes TestClock.layer automatically
 it.effect("should timeout after delay", () =>
 	Effect.gen(function* () {
 		const fiber = yield* Effect.fork(Effect.sleep("1 hour"));
-		// BAD: Manually adjusting TestClock
-		// This works but is verbose - it.effect already provides TestClock
 		yield* TestClock.adjust("1 hour");
 		yield* Fiber.join(fiber);
-	}),
+	}).pipe(Effect.provide(TestClock.layer)),
+);
+
+// BAD: Another pattern - providing TestClock.layer separately
+it.effect("another test with manual TestClock", () =>
+	Effect.provide(
+		Effect.gen(function* () {
+			yield* Effect.sleep("5 minutes");
+		}),
+		TestClock.layer,
+	),
 );
