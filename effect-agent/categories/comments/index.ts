@@ -6,9 +6,6 @@
 
 export * from "./rule-001/rule-001.js";
 export * from "./rule-002/rule-002.js";
-export * from "./rule-003/rule-003.js";
-export * from "./rule-004/rule-004.js";
-export * from "./rule-005/rule-005.js";
 export * from "./rule-006/rule-006.js";
 export * from "./rule-007/rule-007.js";
 export * from "./rule-008/rule-008.js";
@@ -20,32 +17,14 @@ export const rules = [
 	{
 		id: "rule-001",
 		category: "comments",
-		name: "branded-type-definition",
-		rule: "Never add JSDoc comments that merely restate the type definition; the types are self-documenting",
+		name: "self-documenting-code",
+		rule: "Never add comments that merely restate what the code already expresses; Effect-TS code is self-documenting through types, pipelines, and clear naming",
 	},
 	{
 		id: "rule-002",
 		category: "comments",
 		name: "code-organization",
 		rule: "Never add section marker comments; use file organization and clear naming instead",
-	},
-	{
-		id: "rule-003",
-		category: "comments",
-		name: "effect-pipeline",
-		rule: "Never add inline comments for obvious Effect patterns; Effect code is self-documenting",
-	},
-	{
-		id: "rule-004",
-		category: "comments",
-		name: "function-documentation",
-		rule: "Never add JSDoc @param/@returns that just repeat the type signature",
-	},
-	{
-		id: "rule-005",
-		category: "comments",
-		name: "function-implementation",
-		rule: "Never add comments describing WHAT code does; the code itself shows that",
 	},
 	{
 		id: "rule-006",
