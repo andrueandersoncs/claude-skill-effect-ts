@@ -176,6 +176,9 @@ Rule: [ruleId]
 Message: [message]
 Snippet: [snippet]
 
+To see good/bad examples for this rule:
+  cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:examples [category]/[ruleId]
+
 Rule documentation: ${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/[category]/rule-NNN/rule-NNN.md
 
 Apply the idiomatic Effect-TS fix in your worktree. Commit to your task branch.
@@ -399,6 +402,21 @@ Category READMEs at:
 ```
 ${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/<category>/README.md
 ```
+
+### Looking Up Examples
+
+To see good/bad examples for any rule, agents should use:
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:examples <category/rule-id>
+```
+
+Example:
+```bash
+bun run detect:examples code-style/rule-002
+bun run detect:examples schema/rule-010
+```
+
+This shows the full bad example (anti-pattern) and good example (idiomatic Effect-TS) for the rule.
 
 ## Quick Mode
 

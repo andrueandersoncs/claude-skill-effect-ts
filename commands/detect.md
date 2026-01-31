@@ -18,6 +18,22 @@ Run AST-based detectors to find Effect-TS violations. Outputs results directly w
 /detect <path> --errors     # Only definite errors (no warnings, no potential)
 ```
 
+## Looking Up Examples
+
+To see good/bad examples for any rule, use the examples command:
+
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:examples <category/rule-id>
+```
+
+Example:
+```bash
+bun run detect:examples code-style/rule-002
+bun run detect:examples schema/rule-010
+```
+
+This shows the full bad example (anti-pattern) and good example (idiomatic Effect-TS) for the specified rule.
+
 ## Implementation
 
 Parse arguments from the user's input:

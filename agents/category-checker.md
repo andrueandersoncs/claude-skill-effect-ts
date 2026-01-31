@@ -86,7 +86,14 @@ For the idiomatic fix pattern, read the rule's documentation:
 ${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/<category>/rule-NNN/rule-NNN.md
 ```
 
-The rule doc contains:
+To see good/bad code examples for any rule:
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:examples <category>/rule-NNN
+```
+
+Example: `bun run detect:examples code-style/rule-002`
+
+The rule doc and examples show:
 - Why this pattern is problematic
 - The correct Effect-TS pattern with examples
 - Common edge cases
