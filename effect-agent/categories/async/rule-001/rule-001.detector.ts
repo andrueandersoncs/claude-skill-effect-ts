@@ -6,12 +6,10 @@
 
 import {
 	Array as EffectArray,
-	Effect,
 	Function,
 	Match,
 	Option,
 	Schema,
-	Struct,
 	pipe,
 } from "effect";
 import * as ts from "typescript";
@@ -179,58 +177,19 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Helper function to construct violation with suggestion (not a conversion function)
-const createWithSuggestion = (data: ViolationData, suggestion: string): ValidViolationWithSuggestion =>
-	new ValidViolationWithSuggestion({
-		ruleId: data.ruleId,
-		category: data.category,
-		message: data.message,
-		filePath: data.filePath,
-		line: data.line,
-		column: data.column,
-		snippet: data.snippet,
-		certainty: data.certainty,
-		suggestion,
-	});
-
-// Helper function to construct violation without suggestion (not a conversion function)
-const createWithoutSuggestion = (data: ViolationData): ValidViolationWithoutSuggestion =>
-	new ValidViolationWithoutSuggestion({
-		ruleId: data.ruleId,
-		category: data.category,
-		message: data.message,
-		filePath: data.filePath,
-		line: data.line,
-		column: data.column,
-		snippet: data.snippet,
-		certainty: data.certainty,
-	});
-
-// Transform bidirectionally from ViolationSchema to ValidViolationUnion
-// This uses Schema.transform to ensure bidirectional type-safe conversion
-const transformFromInput = (data: ViolationSchema): Violation =>
-	pipe(
-		Option.fromNullable(data.suggestion),
-		Option.match({
-			onSome: (suggestion) => createWithSuggestion(data, suggestion),
-			onNone: () => createWithoutSuggestion(data),
-		}),
-	);
-
-const transformToOutput = (v: Violation): ViolationSchema => v as unknown as ViolationSchema;
-
-const ViolationTransform = Schema.transform(
-	ViolationSchema,
-	ValidViolationUnion,
-	{
-		decode: transformFromInput,
-		encode: transformToOutput,
-		strict: true,
-	},
-);
-
-// Helper to create validated violations using Schema.transform
-const createViolation = Schema.decodeSync(ViolationTransform);
+// Build violation from validated data - accepts well-formed violation data
+const buildViolation = (data: {
+	ruleId: string;
+	category: string;
+	message: string;
+	filePath: string;
+	line: number;
+	column: number;
+	snippet: string;
+	certainty: "definite" | "potential";
+	suggestion?: string;
+}): Violation =>
+	Schema.decodeSync(ValidViolationUnion)(data);
 
 export const detect = (
 	filePath: string,
@@ -249,7 +208,7 @@ export const detect = (
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
 						return Option.some(
-							createViolation({
+							buildViolation({
 								ruleId: meta.id,
 								category: meta.category,
 								message: "new Promise() should be replaced with Effect.async()",
@@ -304,7 +263,7 @@ export const detect = (
 								const { line, character } =
 									sourceFile.getLineAndCharacterOfPosition(node.getStart());
 								return Option.some(
-									createViolation({
+									buildViolation({
 										ruleId: meta.id,
 										category: meta.category,
 										message:
