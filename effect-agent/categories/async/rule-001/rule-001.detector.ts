@@ -32,11 +32,11 @@ const meta = new MetaSchema({
 });
 
 // Schema for detecting new Promise() patterns
-const IsPromiseExpression = Schema.Struct({
+class IsPromiseExpression extends Schema.Class<IsPromiseExpression>("IsPromiseExpression")({
 	isNewExpr: Schema.Literal(true),
 	isIdentifierExpr: Schema.Literal(true),
 	isPromiseText: Schema.Literal(true),
-});
+}) {}
 
 // Schema for function node types
 // Using type predicates with proper narrowing for TypeScript AST nodes
@@ -56,7 +56,9 @@ const FunctionNode = Schema.Union(
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
-const BaseViolationFields = Schema.Struct({
+class BaseViolationFields extends Schema.Class<BaseViolationFields>(
+	"BaseViolationFields",
+)({
 	ruleId: Schema.String.pipe(Schema.brand("RuleId")),
 	category: Schema.String,
 	message: Schema.String,
@@ -68,7 +70,7 @@ const BaseViolationFields = Schema.Struct({
 		Schema.Literal("definite"),
 		Schema.Literal("potential"),
 	),
-});
+}) {}
 
 // Schema for violation with optional suggestion field
 const ViolationDataSchema = Schema.Struct({
@@ -85,6 +87,22 @@ const ViolationDataSchema = Schema.Struct({
 	),
 	suggestion: Schema.optional(Schema.String),
 });
+
+// Schema for violation construction with runtime validation
+class ViolationSchema extends Schema.Class<ViolationSchema>("ViolationSchema")({
+	...BaseViolationFields.fields,
+	suggestion: Schema.optional(Schema.String),
+}) {}
+
+// Schema for valid violation objects that matches Violation interface
+class ValidViolationWithSuggestion extends Schema.Class<ValidViolationWithSuggestion>("ValidViolationWithSuggestion")({
+	...BaseViolationFields.fields,
+	suggestion: Schema.String,
+}) {}
+
+class ValidViolationWithoutSuggestion extends Schema.Class<ValidViolationWithoutSuggestion>("ValidViolationWithoutSuggestion")({
+	...BaseViolationFields.fields,
+}) {}
 
 // Schema.transform for converting raw violation input to validated Violation
 // Using transformation to validate and process the input data
