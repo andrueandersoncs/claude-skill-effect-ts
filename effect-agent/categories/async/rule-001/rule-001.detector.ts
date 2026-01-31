@@ -41,56 +41,35 @@ class IsPromiseExpression extends Schema.Class<IsPromiseExpression>("IsPromiseEx
 
 // Schema for function node types
 // Using type predicates with proper narrowing for TypeScript AST nodes
-// Validate TypeScript AST nodes using Schema validation for runtime type safety
-const AstNodeSchema = Schema.Struct({
-	kind: Schema.Number,
-});
+// Note: Type predicates cannot use Effect.fn() as they must return boolean,
+// not Effect. This is a special case where pure type guards are necessary
+// for TypeScript AST filtering.
+// eslint-disable-next-line @effect-ts/rule-005
+const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
+	ts.isFunctionDeclaration(u as ts.Node);
 
-// Pure transformation functions with explicit naming for traceability
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// First validate structure using Schema.is
-	if (!Schema.is(AstNodeSchema)(u)) return false;
-	// Then delegate to ts.isFunctionDeclaration for final validation
-	return ts.isFunctionDeclaration(u as ts.Node);
-};
+// eslint-disable-next-line @effect-ts/rule-005
+const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
+	ts.isFunctionExpression(u as ts.Node);
 
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	if (!Schema.is(AstNodeSchema)(u)) return false;
-	return ts.isFunctionExpression(u as ts.Node);
-};
-
-const isArrowFunction = Effect.fn("isArrowFunction")(
-	(u: unknown): u is ts.ArrowFunction => {
-		if (!Schema.is(AstNodeSchema)(u)) return false;
-		return ts.isArrowFunction(u as ts.Node);
-	},
-);
+// eslint-disable-next-line @effect-ts/rule-005
+const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
+	ts.isArrowFunction(u as ts.Node);
 
 const FunctionNode = Schema.Union(
-	Schema.declare(
-		(u): u is ts.FunctionDeclaration => {
-			if (typeof u !== "object" || u === null) return false;
-			return ts.isFunctionDeclaration(u as ts.Node);
-		},
+	Schema.declare((u): u is ts.FunctionDeclaration =>
+		ts.isFunctionDeclaration(u as ts.Node),
 	),
-	Schema.declare(
-		(u): u is ts.FunctionExpression => {
-			if (typeof u !== "object" || u === null) return false;
-			return ts.isFunctionExpression(u as ts.Node);
-		},
+	Schema.declare((u): u is ts.FunctionExpression =>
+		ts.isFunctionExpression(u as ts.Node),
 	),
-	Schema.declare(
-		(u): u is ts.ArrowFunction => {
-			if (typeof u !== "object" || u === null) return false;
-			return ts.isArrowFunction(u as ts.Node);
-		},
+	Schema.declare((u): u is ts.ArrowFunction =>
+		ts.isArrowFunction(u as ts.Node),
 	),
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
-class BaseViolationFields extends Schema.Class<BaseViolationFields>(
-	"BaseViolationFields",
-)({
+class BaseViolationFields extends Schema.Class<BaseViolationFields>("BaseViolationFields")({
 	ruleId: Schema.String.pipe(Schema.brand("RuleId")),
 	category: Schema.String,
 	message: Schema.String,
@@ -104,22 +83,6 @@ class BaseViolationFields extends Schema.Class<BaseViolationFields>(
 	),
 }) {}
 
-// Schema for violation with optional suggestion field
-const ViolationDataSchema = Schema.Struct({
-	ruleId: Schema.String,
-	category: Schema.String,
-	message: Schema.String,
-	filePath: Schema.String,
-	line: Schema.Number,
-	column: Schema.Number,
-	snippet: Schema.String,
-	certainty: Schema.Union(
-		Schema.Literal("definite"),
-		Schema.Literal("potential"),
-	),
-	suggestion: Schema.optional(Schema.String),
-});
-
 // Schema for violation construction with runtime validation
 class ViolationSchema extends Schema.Class<ViolationSchema>("ViolationSchema")({
 	...BaseViolationFields.fields,
@@ -127,103 +90,85 @@ class ViolationSchema extends Schema.Class<ViolationSchema>("ViolationSchema")({
 }) {}
 
 // Schema for valid violation objects that matches Violation interface
-class ValidViolationWithSuggestion extends Schema.Class<ValidViolationWithSuggestion>("ValidViolationWithSuggestion")({
+class ValidViolationWithSuggestion extends Schema.Class<ValidViolationWithSuggestion>(
+	"ValidViolationWithSuggestion",
+)({
 	...BaseViolationFields.fields,
 	suggestion: Schema.String,
 }) {}
 
-class ValidViolationWithoutSuggestion extends Schema.Class<ValidViolationWithoutSuggestion>("ValidViolationWithoutSuggestion")({
+class ValidViolationWithoutSuggestion extends Schema.Class<ValidViolationWithoutSuggestion>(
+	"ValidViolationWithoutSuggestion",
+)({
 	...BaseViolationFields.fields,
 }) {}
 
 // Helper to validate promise objects using Schema
-const validateIsPromiseExpression = (obj: {
-	isNewExpr: boolean;
-	isIdentifierExpr: boolean;
-	isPromiseText: boolean;
-}): Option.Option<{
-	isNewExpr: boolean;
-	isIdentifierExpr: boolean;
-	isPromiseText: boolean;
-}> => {
-	// Using Effect.Option for validation - pure transformation in sync context
-	return Match.value(obj).pipe(
-		Match.when(Schema.is(IsPromiseExpression), () =>
-			Option.some({
-				isNewExpr: true,
-				isIdentifierExpr: true,
-				isPromiseText: true,
-			}),
-		),
-		Match.orElse(() => Option.none()),
-	);
-};
+const validateIsPromiseExpression = Effect.fn("validateIsPromiseExpression")(
+	(obj: {
+		isNewExpr: boolean;
+		isIdentifierExpr: boolean;
+		isPromiseText: boolean;
+	}) => {
+		const result = Match.value(obj).pipe(
+			Match.when(Schema.is(IsPromiseExpression), () =>
+				Option.some({
+					isNewExpr: true,
+					isIdentifierExpr: true,
+					isPromiseText: true,
+				}),
+			),
+			Match.orElse(() => Option.none()),
+		);
+		return Effect.succeed(result);
+	},
+);
 
-// Helper to route violations to appropriate schema based on suggestion presence
-const normalizeViolation = (
-	data: Omit<Violation, never>,
-): Omit<Violation, never> =>
+// Schema union for violations - either with or without suggestion
+const ValidViolationUnion = Schema.Union(
+	ValidViolationWithSuggestion,
+	ValidViolationWithoutSuggestion,
+);
+
+// Helper to validate and decode violation data with comprehensive Option-based validation
+const decodeViolationData = (data: {
+	ruleId: string & { readonly RuleId: symbol };
+	category: string;
+	message: string;
+	filePath: string;
+	line: number;
+	column: number;
+	snippet: string;
+	certainty: "definite" | "potential";
+	suggestion?: string | undefined;
+}): Violation =>
 	Option.fromNullable(data.suggestion).pipe(
 		Option.match({
-			onSome: (suggestion) => ({
-				...data,
-				suggestion,
-			}),
-			onNone: () => Struct.omit(data, "suggestion"),
+			onSome: (suggestion) =>
+				Schema.decodeSync(ValidViolationWithSuggestion)({
+					...data,
+					suggestion,
+				}),
+			onNone: () => {
+				const rest = Struct.omit(data, "suggestion");
+				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+			},
 		}),
 	);
 
-// Schema for transforming raw input to validated violations
-// Combines approach from both branches: normalizeViolation helper with validation structure
+// Schema transform for conditional validation based on suggestion presence
 const ViolationTransform = Schema.transform(
-	Schema.Any, // Accept any input, we'll validate it
-	Schema.Struct({
-		ruleId: Schema.String.pipe(Schema.brand("RuleId")),
-		category: Schema.String,
-		message: Schema.String,
-		filePath: Schema.String,
-		line: Schema.Number,
-		column: Schema.Number,
-		snippet: Schema.String,
-		certainty: Schema.Union(
-			Schema.Literal("definite"),
-			Schema.Literal("potential"),
-		),
-		suggestion: Schema.optional(Schema.String),
-	}), // Output: validated structure
+	ViolationSchema,
+	ValidViolationUnion,
 	{
-		decode: (input: any) => {
-			// First pass: validate basic structure
-			const decoded = Schema.decodeSync(ViolationDataSchema)(input);
-			// Second pass: normalize suggestion field using helper
-			return normalizeViolation(decoded);
-		},
+		decode: decodeViolationData,
 		encode: Function.identity,
 		strict: true,
 	},
 );
 
-// Helper to create validated violations using Schema
-// Combines both approaches: validation with proper typing and Effect.fn for traceability
-const createViolation = Effect.fn("createViolation")(
-	(data: Omit<Violation, never>): Violation => {
-		const decoded = Schema.decodeSync(ViolationTransform)(data);
-		// Validate and return the violation based on whether suggestion is present
-		return Option.fromNullable(decoded.suggestion).pipe(
-			Option.match({
-				onSome: (suggestion) =>
-					Schema.decodeSync(ValidViolationWithSuggestion)({
-						...decoded,
-						suggestion,
-					}),
-				onNone: () => {
-					const rest = Struct.omit(decoded, "suggestion");
-					return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-				},
-			}),
-		);
-	},
-);
+// Helper to create validated violations using Schema.transform
+const createViolation = Schema.decodeSync(ViolationTransform);
 
 export const detect = (
 	filePath: string,
@@ -249,14 +194,14 @@ export const detect = (
 				const schemaCheck = Match.value(newExpr.expression).pipe(
 					Match.when(
 						ts.isIdentifier,
-						flow(
-							(expr: ts.Identifier) => ({
-								isNewExpr: true,
-								isIdentifierExpr: true,
-								isPromiseText: expr.text === "Promise",
-							}),
-							validateIsPromiseExpression,
-						),
+						(expr: ts.Identifier) =>
+							Effect.runSync(
+								validateIsPromiseExpression({
+									isNewExpr: true,
+									isIdentifierExpr: true,
+									isPromiseText: expr.text === "Promise",
+								}),
+							),
 					),
 					Match.orElse(() => Option.none()),
 				);
