@@ -44,28 +44,28 @@ class IsPromiseExpression extends Schema.Class<IsPromiseExpression>("IsPromiseEx
 // Note: Type predicates cannot use Effect.fn() as they must return boolean,
 // not Effect. This is a special case where pure type guards are necessary
 // for TypeScript AST filtering.
-// eslint-disable-next-line @effect-ts/rule-005
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
-	ts.isFunctionDeclaration(u as ts.Node);
+// Schema-based type guards using decodeUnknown for runtime validation of Node types
+// These must be implemented as type predicates (not Effect functions) for use with
+// Schema.is() and other type filtering operations
+const FunctionDeclarationSchema = Schema.declare(
+	(u): u is ts.FunctionDeclaration =>
+		typeof u === "object" && u !== null && ts.isFunctionDeclaration(u),
+);
 
-// eslint-disable-next-line @effect-ts/rule-005
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
-	ts.isFunctionExpression(u as ts.Node);
+const FunctionExpressionSchema = Schema.declare(
+	(u): u is ts.FunctionExpression =>
+		typeof u === "object" && u !== null && ts.isFunctionExpression(u),
+);
 
-// eslint-disable-next-line @effect-ts/rule-005
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
-	ts.isArrowFunction(u as ts.Node);
+const ArrowFunctionSchema = Schema.declare(
+	(u): u is ts.ArrowFunction =>
+		typeof u === "object" && u !== null && ts.isArrowFunction(u),
+);
 
 const FunctionNode = Schema.Union(
-	Schema.declare((u): u is ts.FunctionDeclaration =>
-		ts.isFunctionDeclaration(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.FunctionExpression =>
-		ts.isFunctionExpression(u as ts.Node),
-	),
-	Schema.declare((u): u is ts.ArrowFunction =>
-		ts.isArrowFunction(u as ts.Node),
-	),
+	FunctionDeclarationSchema,
+	FunctionExpressionSchema,
+	ArrowFunctionSchema,
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
