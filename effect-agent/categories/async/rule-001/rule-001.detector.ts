@@ -11,6 +11,7 @@ import {
 	Option,
 	Schema,
 	Struct,
+	pipe,
 } from "effect";
 import * as ts from "typescript";
 import {
@@ -142,6 +143,18 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
+// Composable helper functions for violation validation
+const decodeWithSuggestion = (data: ViolationData, suggestion: string): Violation =>
+	Schema.decodeSync(ValidViolationWithSuggestion)({
+		...data,
+		suggestion,
+	});
+
+const decodeWithoutSuggestion = (data: ViolationData): Violation => {
+	const rest = Struct.omit(data, "suggestion");
+	return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+};
+
 // Schema transform for conditional validation based on suggestion presence
 // Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
 // using Schema.transform pattern for type-safe transformation
@@ -150,17 +163,11 @@ const ViolationTransform = Schema.transform(
 	ValidViolationUnion,
 	{
 		decode: (data: ViolationData): Violation =>
-			Option.fromNullable(data.suggestion).pipe(
+			pipe(
+				Option.fromNullable(data.suggestion),
 				Option.match({
-					onSome: (suggestion) =>
-						Schema.decodeSync(ValidViolationWithSuggestion)({
-							...data,
-							suggestion,
-						}),
-					onNone: () => {
-						const rest = Struct.omit(data, "suggestion");
-						return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-					},
+					onSome: (suggestion) => decodeWithSuggestion(data, suggestion),
+					onNone: () => decodeWithoutSuggestion(data),
 				}),
 			),
 		encode: Function.identity,
