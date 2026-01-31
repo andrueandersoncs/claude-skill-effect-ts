@@ -144,19 +144,23 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Composable helper functions for violation validation
+// Composable helper functions for violation validation using Effect.fn for traceability
 const decodeWithSuggestion = Effect.fn("decodeWithSuggestion")(
-	(data: ViolationData, suggestion: string): Violation =>
-		Schema.decodeSync(ValidViolationWithSuggestion)({
-			...data,
-			suggestion,
-		}),
+	(data: ViolationData, suggestion: string) =>
+		Effect.succeed(
+			Schema.decodeSync(ValidViolationWithSuggestion)({
+				...data,
+				suggestion,
+			}),
+		),
 );
 
 const decodeWithoutSuggestion = Effect.fn("decodeWithoutSuggestion")(
-	(data: ViolationData): Violation => {
+	(data: ViolationData) => {
 		const rest = Struct.omit(data, "suggestion");
-		return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+		return Effect.succeed(
+			Schema.decodeSync(ValidViolationWithoutSuggestion)(rest),
+		);
 	},
 );
 
@@ -167,15 +171,17 @@ const ViolationTransform = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
 	{
-		decode: (data: ViolationData): Violation =>
+		decode: (data): Violation =>
 			pipe(
 				Option.fromNullable(data.suggestion),
 				Option.match({
-					onSome: (suggestion) => decodeWithSuggestion(data, suggestion),
-					onNone: () => decodeWithoutSuggestion(data),
+					onSome: (suggestion) =>
+						Effect.runSync(decodeWithSuggestion(data as unknown as ViolationData, suggestion)),
+					onNone: () =>
+						Effect.runSync(decodeWithoutSuggestion(data as unknown as ViolationData)),
 				}),
 			),
-		encode: Function.identity,
+		encode: (v) => v as unknown as ViolationSchema,
 		strict: true,
 	},
 );
