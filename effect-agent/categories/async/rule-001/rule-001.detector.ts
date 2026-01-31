@@ -243,20 +243,31 @@ const buildViolationEffectFn = Effect.fn("buildViolation")(
 );
 
 // Synchronous wrapper that evaluates the Effect immediately
-const buildViolation = (data: {
-	ruleId: string;
-	category: string;
-	message: string;
-	filePath: string;
-	line: number;
-	column: number;
-	snippet: string;
-	certainty: "definite" | "potential";
-	suggestion?: string;
-}): Violation => Effect.runSync(buildViolationEffectFn(data));
+// Using Effect.fn() for traceability as per rule-005
+const buildViolation = Effect.fn("buildViolation")(
+	(data: {
+		ruleId: string;
+		category: string;
+		message: string;
+		filePath: string;
+		line: number;
+		column: number;
+		snippet: string;
+		certainty: "definite" | "potential";
+		suggestion?: string;
+	}) =>
+		Effect.sync(() => {
+			// This sync wrapper runs the Effect transformation synchronously
+			return Effect.runSync(buildViolationEffectFn(data));
+		}),
+);
+
+// Run the Effect immediately to get the synchronous callable function
+const buildViolationSync = (data: Parameters<typeof buildViolation>[0]): Violation =>
+	Effect.runSync(buildViolation(data));
 
 // Alias for backward compatibility with existing code
-const createViolationWithTransform = buildViolation;
+const createViolationWithTransform = buildViolationSync;
 
 export const detect = (
 	filePath: string,
