@@ -107,25 +107,32 @@ const validateIsPromiseExpression = (obj: {
 		Match.orElse(() => Option.none()),
 	);
 
-// Validate violations using Schema.transform for bidirectional conversion
+// Schema union for violations - either with or without suggestion
+const ValidViolationUnion = Schema.Union(
+	ValidViolationWithSuggestion,
+	ValidViolationWithoutSuggestion,
+);
 
-// Helper to create validated violations using Schema
+// Schema transform for conditional validation based on suggestion presence
+const ViolationToValidTransform = Schema.transform(
+	ViolationSchema,
+	ValidViolationUnion,
+	{
+		decode: (data) =>
+			data.suggestion !== undefined
+				? ({
+						...data,
+						suggestion: data.suggestion,
+					} as typeof ValidViolationWithSuggestion.Type)
+				: (Struct.omit(data, "suggestion") as typeof ValidViolationWithoutSuggestion.Type),
+		encode: Function.identity,
+		strict: true,
+	},
+);
+
+// Helper to create validated violations using Schema.transform
 const createViolation = (data: Omit<Violation, never>): Violation => {
-	const decoded = Schema.decodeSync(ViolationSchema)(data);
-	// Validate and return the violation based on whether suggestion is present
-	return Option.fromNullable(decoded.suggestion).pipe(
-		Option.match({
-			onSome: (suggestion) =>
-				Schema.decodeSync(ValidViolationWithSuggestion)({
-					...decoded,
-					suggestion,
-				}),
-			onNone: () => {
-				const rest = Struct.omit(decoded, "suggestion");
-				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-			},
-		}),
-	);
+	return Schema.decodeSync(ViolationToValidTransform)(data);
 };
 
 export const detect = (
