@@ -107,26 +107,44 @@ const validateIsPromiseExpression = (obj: {
 		Match.orElse(() => Option.none()),
 	);
 
-// Validate violations using Schema.transform for bidirectional conversion
-
-// Helper to create validated violations using Schema
-const createViolation = (data: Omit<Violation, never>): Violation => {
-	const decoded = Schema.decodeSync(ViolationSchema)(data);
-	// Validate and return the violation based on whether suggestion is present
-	return Option.fromNullable(decoded.suggestion).pipe(
+// Helper to validate and decode violation data
+const decodeViolationData = (data: {
+	ruleId: string & { readonly RuleId: symbol };
+	category: string;
+	message: string;
+	filePath: string;
+	line: number;
+	column: number;
+	snippet: string;
+	certainty: "definite" | "potential";
+	suggestion?: string | undefined;
+}): Violation =>
+	Option.fromNullable(data.suggestion).pipe(
 		Option.match({
 			onSome: (suggestion) =>
 				Schema.decodeSync(ValidViolationWithSuggestion)({
-					...decoded,
+					...data,
 					suggestion,
 				}),
 			onNone: () => {
-				const rest = Struct.omit(decoded, "suggestion");
+				const rest = Struct.omit(data, "suggestion");
 				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
 			},
 		}),
 	);
-};
+
+// Validate violations using Schema.transform for bidirectional conversion
+const ViolationTransform = Schema.transform(
+	ViolationSchema,
+	Schema.Union(ValidViolationWithSuggestion, ValidViolationWithoutSuggestion),
+	{
+		decode: decodeViolationData,
+		encode: Function.identity,
+		strict: true,
+	},
+);
+
+const createViolation = Schema.decodeSync(ViolationTransform);
 
 export const detect = (
 	filePath: string,
