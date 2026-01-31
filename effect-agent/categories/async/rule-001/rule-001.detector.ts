@@ -32,11 +32,11 @@ const meta = Schema.decodeUnknownSync(MetaSchema)({
 });
 
 // Schema for detecting new Promise() patterns
-const IsPromiseExpression = Schema.Struct({
+class IsPromiseExpression extends Schema.Class<IsPromiseExpression>("IsPromiseExpression")({
 	isNewExpr: Schema.Literal(true),
 	isIdentifierExpr: Schema.Literal(true),
 	isPromiseText: Schema.Literal(true),
-});
+}) {}
 
 // Schema for function node types
 // Using type predicates with proper narrowing for TypeScript AST nodes
@@ -56,7 +56,7 @@ const FunctionNode = Schema.Union(
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
-const BaseViolationFields = Schema.Struct({
+class BaseViolationFields extends Schema.Class<BaseViolationFields>("BaseViolationFields")({
 	ruleId: Schema.String.pipe(Schema.brand("RuleId")),
 	category: Schema.String,
 	message: Schema.String,
@@ -68,23 +68,27 @@ const BaseViolationFields = Schema.Struct({
 		Schema.Literal("definite"),
 		Schema.Literal("potential"),
 	),
-});
+}) {}
 
 // Schema for violation construction with runtime validation
-const ViolationSchema = Schema.Struct({
+class ViolationSchema extends Schema.Class<ViolationSchema>("ViolationSchema")({
 	...BaseViolationFields.fields,
 	suggestion: Schema.optional(Schema.String),
-});
+}) {}
 
 // Schema for valid violation objects that matches Violation interface
-const ValidViolationWithSuggestion = Schema.Struct({
+class ValidViolationWithSuggestion extends Schema.Class<ValidViolationWithSuggestion>(
+	"ValidViolationWithSuggestion",
+)({
 	...BaseViolationFields.fields,
 	suggestion: Schema.String,
-});
+}) {}
 
-const ValidViolationWithoutSuggestion = Schema.Struct({
+class ValidViolationWithoutSuggestion extends Schema.Class<ValidViolationWithoutSuggestion>(
+	"ValidViolationWithoutSuggestion",
+)({
 	...BaseViolationFields.fields,
-});
+}) {}
 
 // Helper to validate promise objects using Schema
 const validateIsPromiseExpression = (obj: {
