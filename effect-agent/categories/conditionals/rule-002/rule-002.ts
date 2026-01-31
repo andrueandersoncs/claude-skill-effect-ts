@@ -4,7 +4,7 @@
 // @original-name: schema-conditionals
 
 import { Function, Match, Schema } from "effect";
-import * as ts from "typescript";
+import type * as ts from "typescript";
 import type { User } from "../../_fixtures.js";
 
 // =============================================================================
@@ -122,7 +122,7 @@ const FunctionNode = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.FunctionDeclaration === 263
-		const kind = u["kind"];
+		const kind = u.kind;
 		if (typeof kind === "number" && kind === 263) {
 			return true;
 		}
@@ -134,7 +134,7 @@ const FunctionNode = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.FunctionExpression === 219
-		const kind = u["kind"];
+		const kind = u.kind;
 		if (typeof kind === "number" && kind === 219) {
 			return true;
 		}
@@ -146,7 +146,7 @@ const FunctionNode = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.ArrowFunction === 220
-		const kind = u["kind"];
+		const kind = u.kind;
 		if (typeof kind === "number" && kind === 220) {
 			return true;
 		}
@@ -162,7 +162,7 @@ const LoopStatement = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.ForStatement === 242
-		const kind = u["kind"];
+		const kind = u.kind;
 		if (typeof kind === "number" && kind === 242) {
 			return true;
 		}
@@ -174,7 +174,7 @@ const LoopStatement = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.WhileStatement === 243
-		const kind = u["kind"];
+		const kind = u.kind;
 		if (typeof kind === "number" && kind === 243) {
 			return true;
 		}
@@ -186,7 +186,7 @@ const LoopStatement = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.DoStatement === 244
-		const kind = u["kind"];
+		const kind = u.kind;
 		if (typeof kind === "number" && kind === 244) {
 			return true;
 		}
@@ -202,7 +202,7 @@ const DeclarationNode = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.VariableDeclaration === 254
-		const kind = u["kind"];
+		const kind = u.kind;
 		if (typeof kind === "number" && kind === 254) {
 			return true;
 		}
@@ -214,7 +214,7 @@ const DeclarationNode = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.FunctionDeclaration === 263
-		const kind = u["kind"];
+		const kind = u.kind;
 		if (typeof kind === "number" && kind === 263) {
 			return true;
 		}
@@ -226,7 +226,7 @@ const DeclarationNode = Schema.Union(
 		}
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.ClassDeclaration === 265
-		const kind = u["kind"];
+		const kind = u.kind;
 		if (typeof kind === "number" && kind === 265) {
 			return true;
 		}
