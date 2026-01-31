@@ -77,14 +77,14 @@ const ViolationSchema = Schema.Struct({
 });
 
 // Schema for valid violation objects that matches Violation interface
-const ValidViolationWithSuggestion = Schema.Struct({
+class ValidViolationWithSuggestion extends Schema.Class<ValidViolationWithSuggestion>("ValidViolationWithSuggestion")({
 	...BaseViolationFields.fields,
 	suggestion: Schema.String,
-});
+}) {}
 
-const ValidViolationWithoutSuggestion = Schema.Struct({
+class ValidViolationWithoutSuggestion extends Schema.Class<ValidViolationWithoutSuggestion>("ValidViolationWithoutSuggestion")({
 	...BaseViolationFields.fields,
-});
+}) {}
 
 // Helper to validate promise objects using Schema
 const validateIsPromiseExpression = (obj: {
