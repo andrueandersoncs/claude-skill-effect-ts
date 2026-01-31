@@ -45,7 +45,11 @@ export const detect = (
 			}
 		}
 		// For variable declarations with arrow functions, check the arrow function directly
-		if (ts.isVariableDeclaration(node) && node.initializer && ts.isArrowFunction(node.initializer)) {
+		if (
+			ts.isVariableDeclaration(node) &&
+			node.initializer &&
+			ts.isArrowFunction(node.initializer)
+		) {
 			return isTypePredicate(node.initializer);
 		}
 		return false;

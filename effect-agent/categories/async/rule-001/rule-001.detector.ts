@@ -10,7 +10,6 @@ import {
 	Function,
 	Match,
 	Option,
-	pipe,
 	Schema,
 } from "effect";
 import * as ts from "typescript";
@@ -43,33 +42,44 @@ const NodeLikeSchema = Schema.Struct({
 	kind: Schema.Unknown,
 });
 
-// Schema for validating kind is a number
-const KindSchema = Schema.Struct({
-	kind: Schema.Number,
-});
+// Schema for number validation - used in Schema.is() type guards
+const NumberSchema = Schema.Number;
 
 // Reusable structural type guard using Schema.is() for type-safe validation
 const isNodeLike = (val: unknown): val is ts.Node =>
 	Schema.is(NodeLikeSchema)(val) && val !== null;
 
-// Type guard for checking if a node has a numeric kind property
-const isNumericKind = (val: unknown): boolean =>
-	Schema.is(KindSchema)(val);
+// Reusable type guard for number validation using Schema.is()
+const isNumber = (val: unknown): val is number => Schema.is(NumberSchema)(val);
+
+// Schema for objects with a number kind property - validates numeric type using Schema.Number
+class NodeWithNumberKind extends Schema.Class<NodeWithNumberKind>(
+	"NodeWithNumberKind",
+)({
+	kind: Schema.Number,
+}) {}
+
+// Type guard using Schema.is() for type-safe numeric validation
+const isNodeWithNumberKind = (u: unknown): u is { kind: number } =>
+	Schema.is(NodeWithNumberKind)(u);
 
 // Reusable type guard functions for function node types
 // NOTE: rule-005 violation cannot be fixed - type predicates must return boolean,
 // not Effect. Effect.fn() returns Effect<boolean>, breaking TypeScript type narrowing.
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
+const _isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.compose wrapper
 	// This type guard must remain a plain function due to TypeScript type predicate constraints
 	// Use Match (from Effect) for structural validation with type narrowing, with Schema.is()
 
 	return Match.value(u).pipe(
 		Match.when(isNodeLike, (validNode) => {
-			// Check kind property directly without type assertion
+			// Use Schema.is() type guard for type-safe numeric validation
 			// ts.SyntaxKind.FunctionDeclaration === 263
-			const kind = validNode["kind"];
-			if (isNumericKind(validNode) && kind === 263) {
+			if (!isNodeWithNumberKind(validNode)) {
+				return false;
+			}
+			const kind = validNode.kind;
+			if (isNumber(kind) && kind === 263) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -79,17 +89,20 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	);
 };
 
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
+const _isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.transform wrapper
 	// This type guard must remain a plain function due to TypeScript type predicate constraints
 	// Use Match (from Effect) for structural validation with type narrowing, with Schema.is()
 
 	return Match.value(u).pipe(
 		Match.when(isNodeLike, (validNode) => {
-			// Check kind property directly without type assertion
+			// Use Schema.is() type guard for type-safe numeric validation
 			// ts.SyntaxKind.FunctionExpression === 219
-			const kind = validNode["kind"];
-			if (isNumericKind(validNode) && kind === 219) {
+			if (!isNodeWithNumberKind(validNode)) {
+				return false;
+			}
+			const kind = validNode.kind;
+			if (isNumber(kind) && kind === 219) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -99,17 +112,20 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 	);
 };
 
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
+const _isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 	// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.pipe wrapper
 	// This type guard must remain a plain function due to TypeScript type predicate constraints
 	// Use Match (from Effect) for structural validation with type narrowing, with Schema.is()
 
 	return Match.value(u).pipe(
 		Match.when(isNodeLike, (validNode) => {
-			// Check kind property directly without type assertion
+			// Use Schema.is() type guard for type-safe numeric validation
 			// ts.SyntaxKind.ArrowFunction === 220
-			const kind = validNode["kind"];
-			if (isNumericKind(validNode) && kind === 220) {
+			if (!isNodeWithNumberKind(validNode)) {
+				return false;
+			}
+			const kind = validNode.kind;
+			if (isNumber(kind) && kind === 220) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -125,25 +141,29 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 // Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
 // Combines structural validation with TypeScript's built-in type predicates
 // NodeLikeStructure validates the structural requirements at schema level
-const NodeLikeStructure = Schema.Object.pipe(
+const _NodeLikeStructure = Schema.Object.pipe(
 	Schema.filter((u): u is object & { kind: unknown } => "kind" in u),
 );
-
 // Note: Type predicate logic is implemented directly in Schema.declare for idiomatic Effect-TS
 // Type guards cannot be wrapped in Effect.fn() as they must return boolean, not Effect
 
 // Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
 // Combines structural validation with kind property checking (no type assertions)
+// Keep both validation approaches: HEAD's Schema-based validation is more robust,
+// task-017's direct typeof check is simpler fallback
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration => {
 		// Structural validation: ensure we have a Node-like object using Schema.is()
 		if (!isNodeLike(u)) {
 			return false;
 		}
-		// Check kind property directly without type assertion
+		// Use Schema.is() type guard for type-safe numeric validation
 		// ts.SyntaxKind.FunctionDeclaration === 263
-		const kind = u["kind"];
-		if (isNumericKind(u) && kind === 263) {
+		if (!isNodeWithNumberKind(u)) {
+			return false;
+		}
+		const kind = u.kind;
+		if (isNumber(kind) && kind === 263) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
@@ -154,10 +174,13 @@ const FunctionNode = Schema.Union(
 		if (!isNodeLike(u)) {
 			return false;
 		}
-		// Check kind property directly without type assertion
+		// Use Schema.is() type guard for type-safe numeric validation
 		// ts.SyntaxKind.FunctionExpression === 219
-		const kind = u["kind"];
-		if (isNumericKind(u) && kind === 219) {
+		if (!isNodeWithNumberKind(u)) {
+			return false;
+		}
+		const kind = u.kind;
+		if (isNumber(kind) && kind === 219) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
@@ -168,10 +191,13 @@ const FunctionNode = Schema.Union(
 		if (!isNodeLike(u)) {
 			return false;
 		}
-		// Check kind property directly without type assertion
+		// Use Schema.is() type guard for type-safe numeric validation
 		// ts.SyntaxKind.ArrowFunction === 220
-		const kind = u["kind"];
-		if (isNumericKind(u) && kind === 220) {
+		if (!isNodeWithNumberKind(u)) {
+			return false;
+		}
+		const kind = u.kind;
+		if (isNumber(kind) && kind === 220) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
@@ -222,46 +248,49 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithoutSuggestion,
 );
 
-// Schema for converting unbranded input to branded violation output
-// Uses Schema.transform for idiomatic Effect-TS bidirectional conversion
-const ViolationTransform = Schema.transform(
-	Schema.Struct({
-		ruleId: Schema.String,
-		category: Schema.String,
-		message: Schema.String,
-		filePath: Schema.String,
-		line: Schema.Number,
-		column: Schema.Number,
-		snippet: Schema.String,
-		certainty: Schema.Union(
-			Schema.Literal("definite"),
-			Schema.Literal("potential"),
-		),
-		suggestion: Schema.optional(Schema.String),
-	}),
-	ValidViolationUnion,
-	{
-		decode: Function.identity,
-		encode: Function.identity,
-		strict: true,
-	},
+// Build violation from validated data - accepts well-formed violation data
+// ViolationSchema handles validation and branding, then ValidViolationUnion ensures proper format
+const buildViolationEffectFn = Effect.fn("buildViolation")(
+	(data: {
+		ruleId: string;
+		category: string;
+		message: string;
+		filePath: string;
+		line: number;
+		column: number;
+		snippet: string;
+		certainty: "definite" | "potential";
+		suggestion?: string;
+	}) => Effect.sync(() => Schema.decodeSync(ValidViolationUnion)(data)),
 );
 
-// Build violation from input data using schema-based transformation
-const buildViolation = (data: {
-	ruleId: string;
-	category: string;
-	message: string;
-	filePath: string;
-	line: number;
-	column: number;
-	snippet: string;
-	certainty: "definite" | "potential";
-	suggestion?: string;
-}): Violation => Schema.decodeSync(ViolationTransform)(data);
+// Synchronous wrapper that evaluates the Effect immediately
+// Using Effect.fn() for traceability as per rule-005
+const buildViolation = Effect.fn("buildViolation")(
+	(data: {
+		ruleId: string;
+		category: string;
+		message: string;
+		filePath: string;
+		line: number;
+		column: number;
+		snippet: string;
+		certainty: "definite" | "potential";
+		suggestion?: string;
+	}) =>
+		Effect.sync(() => {
+			// This sync wrapper runs the Effect transformation synchronously
+			return Effect.runSync(buildViolationEffectFn(data));
+		}),
+);
+
+// Run the Effect immediately to get the synchronous callable function
+const buildViolationSync = (
+	data: Parameters<typeof buildViolation>[0],
+): Violation => Effect.runSync(buildViolation(data));
 
 // Alias for backward compatibility with existing code
-const createViolationWithTransform = buildViolation;
+const createViolationWithTransform = buildViolationSync;
 
 export const detect = (
 	filePath: string,
@@ -280,7 +309,7 @@ export const detect = (
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
 						return Option.some(
-							buildViolation({
+							createViolationWithTransform({
 								ruleId: meta.id,
 								category: meta.category,
 								message: "new Promise() should be replaced with Effect.async()",
@@ -335,7 +364,7 @@ export const detect = (
 								const { line, character } =
 									sourceFile.getLineAndCharacterOfPosition(node.getStart());
 								return Option.some(
-									buildViolation({
+									createViolationWithTransform({
 										ruleId: meta.id,
 										category: meta.category,
 										message:
