@@ -76,7 +76,6 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 	// eslint-disable-next-line @effect-ts/rule-002
 	return ts.isArrowFunction(assertAsNode(u));
 };
-
 const FunctionNode = Schema.Union(
 	Schema.declare(isFunctionDeclaration),
 	Schema.declare(isFunctionExpression),
