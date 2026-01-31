@@ -38,7 +38,7 @@ const meta = new MetaSchema({
 // Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
 // This is a special case where pure type guards are necessary for TypeScript AST filtering.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const assertAsNode = (u: any): ts.Node => u;
+const assertAsNode: (u: any) => ts.Node = Function.identity;
 
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	// Structural validation: ensure we have a Node-like object
@@ -78,6 +78,9 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 };
 
 // Type narrowing helper for FunctionNode types using enhanced structural validation
+// NOTE: Type guard must return boolean (not Effect) for TypeScript type narrowing.
+// This is a special case where pure type guards are necessary for AST filtering.
+// eslint-disable-next-line @effect-ts/rule-005
 const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
 	return (
 		isFunctionDeclaration(node) ||
