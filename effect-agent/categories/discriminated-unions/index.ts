@@ -8,7 +8,6 @@ export * from "./rule-001/rule-001.js";
 export * from "./rule-002/rule-002.js";
 export * from "./rule-003/rule-003.js";
 export * from "./rule-004/rule-004.js";
-export * from "./rule-005/rule-005.js";
 
 /**
  * Rule metadata for this category
@@ -37,12 +36,6 @@ export const rules = [
 		category: "discriminated-unions",
 		name: "schema-is-vs-match-tag",
 		rule: "Never use Match.tag when you need class methods; use Schema.is()",
-	},
-	{
-		id: "rule-005",
-		category: "discriminated-unions",
-		name: "schema-tagged-error",
-		rule: "Never use Data.TaggedError; use Schema.TaggedError for full compatibility",
 	},
 ] as const;
 
