@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Effect,
 	Function,
 	Match,
 	Option,
@@ -40,43 +41,68 @@ const meta = new MetaSchema({
 // This is a special case where pure type guards are necessary for TypeScript AST filtering.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const assertAsNode = (u: any): ts.Node => u;
+const assertAsNode = (u: any): ts.Node => {
+	// Traced identity function using Effect for pure transformations
+	return Effect.runSync(Effect.gen(function* () {
+		return u;
+	}));
+};
 
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isFunctionDeclaration(assertAsNode(u));
+	// Traced type guard using Effect for pure transformations
+	return Effect.runSync(
+		Effect.gen(function* () {
+			// Structural validation: ensure we have a Node-like object
+			if (typeof u !== "object" || u === null || !("kind" in u)) {
+				return false;
+			}
+			// Use TypeScript's built-in type predicate after structural validation
+			// eslint-disable-next-line @effect-ts/rule-002
+			return ts.isFunctionDeclaration(assertAsNode(u));
+		}),
+	);
 };
 
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isFunctionExpression(assertAsNode(u));
+	// Traced type guard using Effect for pure transformations
+	return Effect.runSync(
+		Effect.gen(function* () {
+			// Structural validation: ensure we have a Node-like object
+			if (typeof u !== "object" || u === null || !("kind" in u)) {
+				return false;
+			}
+			// Use TypeScript's built-in type predicate after structural validation
+			// eslint-disable-next-line @effect-ts/rule-002
+			return ts.isFunctionExpression(assertAsNode(u));
+		}),
+	);
 };
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	// Structural validation: ensure we have a Node-like object
-	if (typeof u !== "object" || u === null || !("kind" in u)) {
-		return false;
-	}
-	// Use TypeScript's built-in type predicate after structural validation
-	// eslint-disable-next-line @effect-ts/rule-002
-	return ts.isArrowFunction(assertAsNode(u));
+	// Traced type guard using Effect for pure transformations
+	return Effect.runSync(
+		Effect.gen(function* () {
+			// Structural validation: ensure we have a Node-like object
+			if (typeof u !== "object" || u === null || !("kind" in u)) {
+				return false;
+			}
+			// Use TypeScript's built-in type predicate after structural validation
+			// eslint-disable-next-line @effect-ts/rule-002
+			return ts.isArrowFunction(assertAsNode(u));
+		}),
+	);
 };
 
 const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
-	return (
-		isFunctionDeclaration(node) ||
-		isFunctionExpression(node) ||
-		isArrowFunction(node)
+	// Traced type guard using Effect for pure transformations
+	return Effect.runSync(
+		Effect.gen(function* () {
+			return (
+				isFunctionDeclaration(node) ||
+				isFunctionExpression(node) ||
+				isArrowFunction(node)
+			);
+		}),
 	);
 };
 
@@ -143,16 +169,24 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Composable helper functions for violation validation
+// Composable helper functions for violation validation using Effect for traceability
 const decodeWithSuggestion = (data: ViolationData, suggestion: string): Violation =>
-	Schema.decodeSync(ValidViolationWithSuggestion)({
-		...data,
-		suggestion,
-	});
+	Effect.runSync(
+		Effect.gen(function* () {
+			return Schema.decodeSync(ValidViolationWithSuggestion)({
+				...data,
+				suggestion,
+			});
+		}),
+	);
 
 const decodeWithoutSuggestion = (data: ViolationData): Violation => {
-	const rest = Struct.omit(data, "suggestion");
-	return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+	return Effect.runSync(
+		Effect.gen(function* () {
+			const rest = Struct.omit(data, "suggestion");
+			return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+		}),
+	);
 };
 
 // Schema transform for conditional validation based on suggestion presence
