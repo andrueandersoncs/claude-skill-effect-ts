@@ -226,8 +226,6 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Build violation from validated data - accepts well-formed violation data
-// ViolationSchema handles validation and branding, then ValidViolationUnion ensures proper format
 const buildViolationEffectFn = Effect.fn("buildViolation")(
 	(data: {
 		ruleId: string;
