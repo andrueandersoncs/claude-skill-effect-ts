@@ -4,9 +4,27 @@
 // @category: code-style
 // @original-name: fix-types
 
-declare const data: unknown;
-declare const incompatibleFunction: (x: string) => string;
+// This rule detects @ts-ignore/@ts-expect-error for GENERAL type errors
+// (not exhaustiveness-related, which is handled by rule-007)
 
-// BAD: @ts-expect-error to suppress type errors
+interface User {
+	id: string;
+	name: string;
+	email: string;
+}
+
+declare const data: unknown;
+declare const processUser: (user: User) => void;
+declare const getUserName: (user: User) => string;
+
+// BAD: @ts-expect-error to suppress type mismatch (unknown -> User)
 // @ts-expect-error - TODO fix types later
-export const result = incompatibleFunction(data);
+export const result1 = processUser(data);
+
+// BAD: @ts-ignore to suppress argument type error
+// @ts-ignore
+export const result2 = getUserName({ id: 123, name: "test" });
+
+// BAD: @ts-expect-error to suppress property access on unknown
+// @ts-expect-error
+export const result3 = data.nonExistentProperty;
