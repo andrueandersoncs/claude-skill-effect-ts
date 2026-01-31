@@ -213,19 +213,6 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithoutSuggestion,
 );
 
-// Type definition for violation data
-type ViolationData = {
-	ruleId: string & { readonly RuleId: symbol };
-	category: string;
-	message: string;
-	filePath: string;
-	line: number;
-	column: number;
-	snippet: string;
-	certainty: "definite" | "potential";
-	suggestion?: string | undefined;
-};
-
 // Build violation from validated data - accepts well-formed violation data
 // ViolationSchema handles validation and branding, then ValidViolationUnion ensures proper format
 const buildViolationEffectFn = Effect.fn("buildViolation")(
