@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Either,
 	Function,
 	Match,
 	Option,
@@ -42,33 +43,47 @@ const meta = new MetaSchema({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const assertAsNode = (u: any): ts.Node => u;
 
-// Schema for Node-like object structural validation
+// Schema defining a Node-like object with structural properties
+// This validates the basic structure before delegating to TypeScript's type predicates
 const NodeLike = Schema.Struct({
-	kind: Schema.Any,
+	kind: Schema.Number,
 });
 
 const isNodeLike = (u: unknown): boolean =>
-	Match.value(u).pipe(
-		Match.when(Schema.is(NodeLike), () => true),
-		Match.orElse(() => false),
+	pipe(
+		Schema.decodeUnknownEither(NodeLike)(u),
+		Either.match({
+			onRight: () => true,
+			onLeft: () => false,
+		}),
 	);
 
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
-	Match.value(u).pipe(
-		Match.when(Schema.is(NodeLike), () => ts.isFunctionDeclaration(assertAsNode(u))),
-		Match.orElse(() => false),
+	pipe(
+		Schema.decodeUnknownEither(NodeLike)(u),
+		Either.match({
+			onRight: () => ts.isFunctionDeclaration(assertAsNode(u)),
+			onLeft: () => false,
+		}),
 	);
 
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
-	Match.value(u).pipe(
-		Match.when(Schema.is(NodeLike), () => ts.isFunctionExpression(assertAsNode(u))),
-		Match.orElse(() => false),
+	pipe(
+		Schema.decodeUnknownEither(NodeLike)(u),
+		Either.match({
+			onRight: () => ts.isFunctionExpression(assertAsNode(u)),
+			onLeft: () => false,
+		}),
 	);
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
-	Match.value(u).pipe(
-		Match.when(Schema.is(NodeLike), () => ts.isArrowFunction(assertAsNode(u))),
-		Match.orElse(() => false),
+	pipe(
+		Schema.decodeUnknownEither(NodeLike)(u),
+		Either.match({
+			onRight: () => ts.isArrowFunction(assertAsNode(u)),
+			onLeft: () => false,
+		}),
+	);
 	);
 
 const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
