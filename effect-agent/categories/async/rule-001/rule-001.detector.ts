@@ -92,28 +92,44 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 // Note: Type predicate logic is inlined where needed in Match.when for type narrowing
 // Type guards cannot be wrapped in Effect.fn() as they must return boolean, not Effect
 
-// Schema for basic node-like structure validation
-const NodeLike = Schema.Struct({
+// Schema for Node-like objects with required "kind" property
+// This validates the basic structure that TypeScript AST nodes conform to
+const NodeLikeSchema = Schema.Struct({
 	kind: Schema.Unknown,
 });
 
-// Helper to narrow a value that passes NodeLike validation to ts.Node for the TypeScript API
-// This is necessary because TypeScript's built-in predicates require a ts.Node type
-const narrowToNode = (u: unknown): u is ts.Node => Schema.is(NodeLike)(u);
-
 // Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
+// Combines structural validation with TypeScript's built-in type predicates
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration => {
-		// Validate structure, then delegate to TypeScript predicate
-		return narrowToNode(u) && ts.isFunctionDeclaration(assertAsNode(u));
+		// Structural validation using Match with positive conditions
+		return Match.value(u).pipe(
+			Match.when(Schema.is(NodeLikeSchema), (validNode) =>
+				// eslint-disable-next-line @effect-ts/rule-002
+				ts.isFunctionDeclaration(assertAsNode(validNode)),
+			),
+			Match.orElse(() => false),
+		);
 	}),
 	Schema.declare((u): u is ts.FunctionExpression => {
-		// Validate structure, then delegate to TypeScript predicate
-		return narrowToNode(u) && ts.isFunctionExpression(assertAsNode(u));
+		// Structural validation using Match with positive conditions
+		return Match.value(u).pipe(
+			Match.when(Schema.is(NodeLikeSchema), (validNode) =>
+				// eslint-disable-next-line @effect-ts/rule-002
+				ts.isFunctionExpression(assertAsNode(validNode)),
+			),
+			Match.orElse(() => false),
+		);
 	}),
 	Schema.declare((u): u is ts.ArrowFunction => {
-		// Validate structure, then delegate to TypeScript predicate
-		return narrowToNode(u) && ts.isArrowFunction(assertAsNode(u));
+		// Structural validation using Match with positive conditions
+		return Match.value(u).pipe(
+			Match.when(Schema.is(NodeLikeSchema), (validNode) =>
+				// eslint-disable-next-line @effect-ts/rule-002
+				ts.isArrowFunction(assertAsNode(validNode)),
+			),
+			Match.orElse(() => false),
+		);
 	}),
 );
 
