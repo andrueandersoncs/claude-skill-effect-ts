@@ -26,6 +26,24 @@ A successful fix run MUST satisfy ALL of these invariants:
 
 **If ANY invariant is violated, the fix FAILED and changes MUST be reverted.**
 
+## ⛔⛔⛔ TYPE ERROR PREVENTION - VALIDATE AT EVERY STEP ⛔⛔⛔
+
+Type errors MUST be caught EARLY, not just in Phase 5. Validation happens at:
+
+| Stage | Who Validates | What to Check | Action on Failure |
+|-------|---------------|---------------|-------------------|
+| Task-worker BEFORE commit | Task-worker | `bun run check` | Revert, report UNFIXABLE |
+| Merge-worker BEFORE merge | Merge-worker | `bun run check` on branch | REJECT branch |
+| Phase 5 AFTER tournament | Primary agent | `bun run check` on main | REVERT all changes |
+
+**WHY 3 LAYERS?**
+- Task-workers catch bad fixes IMMEDIATELY (prevents bad commits)
+- Merge-workers catch missed validation (prevents bad branches from merging)
+- Phase 5 catches anything that slipped through (final safety net)
+
+**If task-workers validated properly, Phase 5 should NEVER find type errors.**
+If Phase 5 finds type errors, it means task-workers FAILED to validate.
+
 ## ⛔⛔⛔ THE GOLDEN RULE: UNFIXABLE ≠ SUPPRESS ⛔⛔⛔
 
 **If code cannot be converted to Effect patterns, the ONLY valid action is NO CHANGE.**
@@ -155,20 +173,40 @@ Without this documentation FROM A TASK-WORKER, assume it CAN be fixed.
 
 **UNFIXABLE means "leave it alone", NOT "suppress the error".**
 
-### Type Predicates and Schema Callbacks Are Special
+### ⛔⛔⛔ ARCHITECTURALLY INCOMPATIBLE PATTERNS - ALWAYS UNFIXABLE ⛔⛔⛔
 
-Some violations occur in code that CANNOT be converted to Effect:
-- **Type predicates** (`function isFoo(x): x is Foo`) - TypeScript requires boolean return
-- **Schema.declare callbacks** - Must be synchronous
-- **Type guard functions** - Caller expects boolean, not Effect
+Some violations occur in code that CANNOT be converted to Effect **by design**:
 
-**For these patterns:**
-1. DO NOT wrap in Effect.gen (breaks caller contract)
-2. DO NOT add @ts-ignore (hides the problem)
-3. DO leave the code as-is
-4. DO commit with "UNFIXABLE: TypeScript type predicate requires boolean return, cannot return Effect"
+| Pattern | Why Unfixable | TypeScript Constraint |
+|---------|---------------|----------------------|
+| Type predicates `x is Foo` | Must return boolean | Effect<boolean> ≠ boolean |
+| Schema.declare callbacks | Must be synchronous | Effect is async |
+| Type guard functions | Caller expects sync bool | Breaking caller contract |
+| Zod/Yup refinements | External library API | Cannot change signature |
+| Array.filter predicates | Must return boolean | Same as type predicates |
 
-**The correct action for truly unfixable code is NO ACTION, not suppression.**
+**For these patterns, the ONLY valid action is:**
+1. ✅ Leave the code COMPLETELY UNCHANGED
+2. ✅ Commit with message: `UNFIXABLE: [pattern] requires [constraint], cannot use Effect`
+3. ❌ DO NOT wrap in Effect.gen (introduces type errors)
+4. ❌ DO NOT add @ts-ignore (suppression = failure)
+5. ❌ DO NOT add `as any` (type safety violation)
+
+**The correct fix for architecturally incompatible code is NO CHANGE.**
+
+**If you attempt to fix these and get type errors, that's expected. REVERT and report UNFIXABLE.**
+
+### How to Identify Architecturally Incompatible Code
+
+**Type predicate signature:** `function name(x: T): x is U`
+**Schema callback context:** Inside `Schema.declare()`, `Schema.filter()`, `Schema.transform()` callbacks
+**Type guard in conditional:** `if (isX(value))` where `isX` returns boolean
+
+**When you see these patterns and the detector flags them:**
+1. DO NOT attempt to convert to Effect
+2. Recognize this is EXPECTED to be unfixable
+3. Commit unchanged with UNFIXABLE message
+4. This is NOT a failure - it's correct handling of incompatible patterns
 
 **TL;DR: If detector found N violations, you MUST spawn N task-workers. Period.**
 
@@ -370,30 +408,51 @@ cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:all <file-path> --json 2
 
 If the violation still appears, the fix is INCOMPLETE. Try again with a real fix.
 
-### ⛔ TASK-WORKER SELF-VERIFICATION BEFORE COMMITTING
+### ⛔⛔⛔ TASK-WORKER SELF-VERIFICATION BEFORE COMMITTING ⛔⛔⛔
 
-**EVERY task-worker MUST run these checks BEFORE committing:**
+**THIS IS NOT OPTIONAL. EVERY task-worker MUST run ALL 4 checks BEFORE committing.**
 
+**⛔ CHECK 1: Suppression comments (FORBIDDEN)**
 ```bash
-# 1. Check for suppression comments (FORBIDDEN)
 grep -n "eslint-disable\|@ts-ignore\|@ts-expect-error\|biome-ignore\|prettier-ignore\|@ts-nocheck" <file>
-# If ANY output: YOUR FIX IS INVALID. Remove and fix properly, or report UNFIXABLE.
-
-# 2. Check for type errors (FORBIDDEN)
-cd <project-root> && bun run check 2>&1 | grep -A2 "<file>"
-# If errors: YOUR FIX INTRODUCED TYPE ERRORS. Revert and fix properly, or report UNFIXABLE.
-
-# 3. Check for dangerous type assertions (FORBIDDEN)
-grep -n "as any\|as unknown" <file>
-# If ANY new assertions added: YOUR FIX IS INVALID. Remove and fix properly.
 ```
+If ANY output: YOUR FIX IS INVALID. Remove and fix properly, or report UNFIXABLE.
 
-**If ANY check fails, the task-worker MUST:**
-1. Revert the changes: `git checkout -- <file>`
-2. Report the violation as UNFIXABLE (with specific reason)
-3. Commit the UNCHANGED file with UNFIXABLE message
+**⛔ CHECK 2: Type errors (FORBIDDEN) - FULL PROJECT CHECK**
+```bash
+cd <project-root> && bun run check 2>&1
+```
+**Count the errors. If error count INCREASED from before your change: YOUR FIX IS INVALID.**
+If your file appears in NEW errors: YOUR FIX INTRODUCED TYPE ERRORS. Revert and report UNFIXABLE.
 
-**A fix that introduces type errors or suppression is WORSE than no fix.**
+**⛔ CHECK 3: Dangerous type assertions (FORBIDDEN)**
+```bash
+git diff HEAD -- <file> | grep -E "^\+.*as (any|unknown)"
+```
+If ANY new assertions added: YOUR FIX IS INVALID. Remove and fix properly.
+
+**⛔ CHECK 4: Detector re-check (REQUIRED)**
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:all <file> --json 2>/dev/null | jq '.violations | length'
+```
+If violation count for your specific rule/line did NOT decrease: YOUR FIX DID NOT WORK.
+
+### ⛔ IF ANY CHECK FAILS, YOU MUST:
+1. **IMMEDIATELY revert**: `git checkout -- <file>`
+2. **Report UNFIXABLE** with the SPECIFIC failure (type error message, suppression found, etc.)
+3. **Commit the UNCHANGED file** with message: `UNFIXABLE: [reason from check failure]`
+
+**⛔ DO NOT COMMIT BROKEN CODE. A fix that introduces type errors is WORSE than no fix.**
+
+### ⛔ VERIFICATION FAILURE = UNFIXABLE, NOT "TRY HARDER"
+
+If `bun run check` shows NEW errors after your change:
+- ❌ WRONG: Try to "fix" the type error by adding `as any`
+- ❌ WRONG: Add `@ts-ignore` to suppress the error
+- ❌ WRONG: Keep trying different approaches
+- ✅ CORRECT: Revert immediately, commit unchanged, report UNFIXABLE
+
+**The violation is ARCHITECTURALLY INCOMPATIBLE with Effect patterns if fixing it breaks types.**
 
 ### WHY THIS MATTERS
 
@@ -406,6 +465,61 @@ Suppression comments hide problems without solving them. The user ran `--fix` ex
 **A suppression comment is NOT a fix. It is a FAILURE.**
 
 **⛔ AFTER ALL TASK-WORKERS RETURN: GO TO PHASE 4 IMMEDIATELY. DO NOT STOP.**
+
+## ⛔⛔⛔ VALIDATION FLOW - TYPE ERRORS MUST BE CAUGHT EARLY ⛔⛔⛔
+
+```
+Task-worker makes fix
+       │
+       ▼
+┌─────────────────────────────┐
+│ SELF-VALIDATION (4 checks)  │
+│ • Suppression comments?     │
+│ • bun run check - new errors│
+│ • as any / as unknown?      │
+│ • Detector re-run           │
+└─────────────────────────────┘
+       │
+       ├── ANY FAIL ──▶ git checkout -- <file>
+       │                Commit unchanged + "UNFIXABLE: [reason]"
+       │
+       ▼ ALL PASS
+  Commit fix to branch
+       │
+       ▼
+┌─────────────────────────────┐
+│ MERGE-WORKER VALIDATION     │
+│ • Suppression in diff?      │
+│ • as any in diff?           │
+│ • bun run check on branch   │
+└─────────────────────────────┘
+       │
+       ├── ANY FAIL ──▶ REJECT branch
+       │                Delete worktree
+       │                Report rejection
+       │
+       ▼ ALL PASS
+  Merge into survivor branch
+       │
+       ▼ (repeat tournament rounds)
+       │
+       ▼
+┌─────────────────────────────┐
+│ PHASE 5 FINAL VALIDATION    │
+│ • Suppression comments?     │
+│ • bun run check on main     │
+│ • Violation count decreased?│
+└─────────────────────────────┘
+       │
+       ├── ANY FAIL ──▶ git reset --hard <pre-fix-commit>
+       │                Report: "FIX FAILED: [reason]"
+       │
+       ▼ ALL PASS
+  Report SUCCESS
+```
+
+**If validation worked at each step, Phase 5 should NEVER fail.**
+**Phase 5 failures indicate task-workers or merge-workers skipped validation.**
 
 Example prompt for task-worker:
 ```
@@ -451,24 +565,32 @@ REQUIRED (what a real fix looks like):
 
 Apply the idiomatic Effect-TS fix in your worktree. Commit to your task branch.
 
-⛔ BEFORE COMMITTING - MANDATORY SELF-CHECK (ALL 3 MUST PASS):
+⛔⛔⛔ MANDATORY SELF-VALIDATION BEFORE COMMITTING (ALL 4 MUST PASS) ⛔⛔⛔
 
-   1. Suppression check:
+   ⛔ CHECK 1: Suppression comments
       Run: grep -n "eslint-disable\|@ts-ignore\|@ts-expect-error\|biome-ignore\|@ts-nocheck" <your-file>
-      If ANY matches: YOUR FIX IS INVALID. Remove suppression comments and fix properly OR report UNFIXABLE.
+      If ANY matches: INVALID. Revert and report UNFIXABLE.
 
-   2. Type error check:
-      Run: cd <project-root> && bun run check 2>&1 | grep -A2 "<your-file>"
-      If ANY errors: YOUR FIX INTRODUCED TYPE ERRORS. Revert changes and report UNFIXABLE.
+   ⛔ CHECK 2: Type errors (CRITICAL - RUN FULL PROJECT CHECK)
+      Run: cd <project-root> && bun run check 2>&1
+      BEFORE your fix, note the error count.
+      AFTER your fix, run again and count errors.
+      If error count INCREASED: YOUR FIX BROKE THE BUILD. Revert and report UNFIXABLE.
+      If your file appears in NEW errors: YOUR FIX INTRODUCED TYPE ERRORS. Revert and report UNFIXABLE.
 
-   3. Type assertion check:
+   ⛔ CHECK 3: Type assertions
       Run: git diff HEAD -- <your-file> | grep -E "^\+.*as (any|unknown)"
-      If ANY new assertions: YOUR FIX IS INVALID. Remove type casts and fix properly OR report UNFIXABLE.
+      If ANY new assertions: INVALID. Revert and report UNFIXABLE.
 
-   ⛔ IF ANY CHECK FAILS:
-      - Run: git checkout -- <your-file>
-      - Report as UNFIXABLE with the specific failure reason
-      - Do NOT commit broken code
+   ⛔ CHECK 4: Detector re-run
+      Run: cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:all <your-file> --json 2>/dev/null
+      If your specific violation at your line still appears: FIX DID NOT WORK. Try again or report UNFIXABLE.
+
+   ⛔⛔⛔ IF ANY CHECK FAILS ⛔⛔⛔
+      1. IMMEDIATELY: git checkout -- <your-file>
+      2. Report UNFIXABLE with the exact failure output
+      3. Commit the UNCHANGED file with UNFIXABLE message
+      4. DO NOT attempt workarounds like @ts-ignore or as any
 
 ⛔ DO NOT remove the worktree or delete the branch after committing.
    Leave them intact - they will be merged by merge-workers in Phase 4.
@@ -667,31 +789,43 @@ For each pair (branch_a, branch_b), use Task tool with:
     git diff main...branch_b | grep -E "(eslint-disable|@ts-ignore|@ts-expect-error|biome-ignore|prettier-ignore|@ts-nocheck)"
     ```
 
-    ⛔ BEFORE MERGING - VALIDATE BOTH BRANCHES:
+    ⛔⛔⛔ MANDATORY PRE-MERGE VALIDATION (ALL 3 CHECKS MUST PASS) ⛔⛔⛔
 
-    For EACH branch (branch_a AND branch_b), check:
+    For EACH branch (branch_a AND branch_b), run ALL 3 checks:
+
+    **CHECK 1: Suppression comments (REJECT if found)**
     ```bash
-    # Check for suppression comments
     git diff main...<branch> | grep -E "(eslint-disable|@ts-ignore|@ts-expect-error|biome-ignore|prettier-ignore|@ts-nocheck)"
+    ```
 
-    # Check for type assertions added
+    **CHECK 2: Dangerous type assertions (REJECT if found)**
+    ```bash
     git diff main...<branch> | grep -E "^\+.*as (any|unknown)"
     ```
 
-    If suppression comments OR dangerous type assertions found:
-    - DO NOT merge that branch
-    - Delete the branch and its worktree
-    - Report: "REJECTED [BRANCH]: Contains suppression comments or unsafe type casts"
-    - Continue with the other branch (or neither if both invalid)
+    **CHECK 3: Type errors (REJECT if branch introduces errors)**
+    ```bash
+    git checkout <branch>
+    bun run check 2>&1 | wc -l  # Count error lines
+    git checkout -  # Go back
+    ```
+    Compare to main's error count. If <branch> has MORE errors than main: REJECT.
 
-    If BOTH branches are invalid:
-    - Report: "BOTH BRANCHES REJECTED: Neither contains valid fixes"
+    ⛔ REJECTION RULES:
+    - If suppression comments found: REJECT branch, delete worktree, report "REJECTED [BRANCH]: suppression comments"
+    - If dangerous type assertions found: REJECT branch, delete worktree, report "REJECTED [BRANCH]: unsafe type casts"
+    - If type errors increased: REJECT branch, delete worktree, report "REJECTED [BRANCH]: introduces N new type errors"
+    - Continue with valid branch only (or neither if both invalid)
+
+    ⛔ IF BOTH BRANCHES INVALID:
+    - Report: "BOTH BRANCHES REJECTED: [reasons]"
     - Clean up both worktrees and branches
     - Return with no surviving branch
 
-    If no issues found:
-    - Merge branch_b INTO branch_a. Keep ALL fixes from BOTH.
-    - Clean up branch_b's worktree and delete branch_b after success.
+    ⛔ ONLY IF ALL CHECKS PASS FOR A BRANCH:
+    - Merge branch_b INTO branch_a (if both valid) or keep the single valid branch
+    - Keep ALL fixes from BOTH sides
+    - Clean up consumed branch's worktree and delete consumed branch after success
 ```
 
 ---
@@ -756,6 +890,9 @@ git branch -d <surviving-branch>
 - ❌ Saying "I'll merge these directly" instead of spawning agents
 - ❌ Any deviation from the tournament algorithm
 - ❌ Using `run_in_background: true` for merge-worker agents
+- ❌ **Merging a branch without running `bun run check` first**
+- ❌ **Accepting a branch that introduces type errors**
+- ❌ **Skipping the 3-check validation (suppression, type assertions, type errors)**
 
 ## REQUIRED BEHAVIORS IN PHASE 4
 
@@ -765,6 +902,9 @@ git branch -d <surviving-branch>
 - ✅ WAIT for all agents in a round to complete before next round
 - ✅ Continue rounds until exactly 1 branch remains
 - ✅ Only then merge the final branch into main
+- ✅ **Each merge-worker MUST validate branches with `bun run check` BEFORE merging**
+- ✅ **REJECT any branch that increases type error count**
+- ✅ **Track rejected branches in the report**
 
 ## Output Format
 
