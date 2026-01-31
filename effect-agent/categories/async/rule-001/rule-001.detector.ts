@@ -6,7 +6,6 @@
 
 import {
 	Array as EffectArray,
-	Effect,
 	Function,
 	Match,
 	Option,
@@ -179,49 +178,19 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Composable helper functions for violation validation using Effect.fn for traceability
-const decodeWithSuggestion = Effect.fn("decodeWithSuggestion")(
-	(data: ViolationData, suggestion: string) =>
-		Effect.succeed(
-			Schema.decodeSync(ValidViolationWithSuggestion)({
-				...data,
-				suggestion,
-			}),
-		),
-);
-
-const decodeWithoutSuggestion = Effect.fn("decodeWithoutSuggestion")(
-	(data: ViolationData) => {
-		const rest = Struct.omit(data, "suggestion");
-		return Effect.succeed(
-			Schema.decodeSync(ValidViolationWithoutSuggestion)(rest),
-		);
-	},
-);
-// Schema transform for conditional validation based on suggestion presence
-// Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
-// This uses Schema.transform to ensure bidirectional type-safe conversion
-const ViolationTransform = Schema.transform(
-	ViolationSchema,
-	ValidViolationUnion,
-	{
-		decode: (data): Violation =>
-			pipe(
-				Option.fromNullable(data.suggestion),
-				Option.match({
-					onSome: (suggestion) =>
-						Effect.runSync(decodeWithSuggestion(data as unknown as ViolationData, suggestion)),
-					onNone: () =>
-						Effect.runSync(decodeWithoutSuggestion(data as unknown as ViolationData)),
-				}),
-			),
-		encode: (v) => v as unknown as ViolationSchema,
-		strict: true,
-	},
-);
-
-// Helper to create validated violations using Schema.transform
-const createViolation = Schema.decodeSync(ViolationTransform);
+// Build violation from validated data
+const buildViolation = (data: unknown): Violation => {
+	try {
+		// Parse the input using the violation union schema
+		const result = Schema.validate(ValidViolationUnion)(data);
+		if (result._tag === "Failure") {
+			throw new Error("Invalid violation data");
+		}
+		return result.value;
+	} catch {
+		throw new Error("Invalid violation data structure");
+	}
+};
 
 export const detect = (
 	filePath: string,
@@ -240,7 +209,7 @@ export const detect = (
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
 						return Option.some(
-							createViolation({
+							buildViolation({
 								ruleId: meta.id,
 								category: meta.category,
 								message: "new Promise() should be replaced with Effect.async()",
@@ -295,7 +264,7 @@ export const detect = (
 								const { line, character } =
 									sourceFile.getLineAndCharacterOfPosition(node.getStart());
 								return Option.some(
-									createViolation({
+									buildViolation({
 										ruleId: meta.id,
 										category: meta.category,
 										message:
