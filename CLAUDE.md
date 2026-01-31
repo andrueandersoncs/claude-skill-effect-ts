@@ -1,5 +1,23 @@
 # Effect-TS Plugin
 
+## Problem-First Methodology
+
+**Always frame requests as problems.** Before taking action, explicitly restate or reframe the user's request as a clear problem statement. **Ask the user to confirm the problem statement is correct before proceeding.**
+
+**Always create a reproduction script.** For every confirmed problem, write a Bun script that reproduces it:
+- Script succeeds (exit 0) = problem still exists
+- Script fails (exit 1) = problem is solved
+- Must be runnable with `bun run <script>` or `bun -e "<code>"`
+
+**Example workflow:**
+1. User: "The detector isn't catching X pattern"
+2. Problem statement: "Detector should output violation for X pattern, but outputs nothing"
+3. **Ask user to confirm problem statement**
+4. Reproduction script: Creates test file with X, runs detector, exits 0 if no violation found
+5. Run script → exits 0 (problem confirmed)
+6. Implement fix
+7. Run script → exits 1 (problem no longer reproduces = solved)
+
 ## Task Management
 
 **Always use tasks.** For every user request, create a task list with specific tasks that are as independent as possible so they can be parallelized across subagents.
@@ -32,8 +50,48 @@ Use semantic versioning. Keep versions in sync between both files.
 
 ## Package Manager
 
-Always use **Bun** for all package management operations:
+Always use **Bun** for all operations. Never use Bash.
 
+**Bun replaces Bash entirely.** Bun is a Turing-complete runtime with built-in modules for shell commands, file system, network, and everything else needed to control a computer.
+
+**Inline code execution:**
+```bash
+bun -e "console.log('Hello, world!')"
+bun -e "import { $ } from 'bun'; console.log(await $\`ls -la\`.text())"
+```
+
+**Shell commands via `$` template literal:**
+```typescript
+import { $ } from "bun";
+
+await $`echo "Hello World!"`;                    // Run command
+const result = await $`ls -la`.text();           // Capture output as string
+const pkg = await $`cat package.json`.json();    // Parse JSON output
+await $`pwd`.cwd("/tmp");                        // Change working directory
+const { exitCode } = await $`cmd`.nothrow();     // Don't throw on error
+```
+
+**File operations via `Bun.file()` and `Bun.write()`:**
+```typescript
+const file = Bun.file("./config.json");
+const text = await file.text();                  // Read as string
+const json = await file.json();                  // Read and parse JSON
+const exists = await file.exists();              // Check existence
+
+await Bun.write("output.txt", "Hello");          // Write string
+await Bun.write("data.json", JSON.stringify(x)); // Write JSON
+await Bun.write("copy.txt", Bun.file("src.txt"));// Copy file
+```
+
+**Directory operations via `node:fs`:**
+```typescript
+import { readdir, mkdir, rm } from "node:fs/promises";
+const files = await readdir(".");                // List directory
+await mkdir("newdir", { recursive: true });      // Create directory
+await rm("file.txt");                            // Delete file
+```
+
+**Package management:**
 - Install dependencies: `bun install`
 - Add packages: `bun add <package>` or `bun add -D <package>` for dev dependencies
 - Run scripts: `bun run <script>`
