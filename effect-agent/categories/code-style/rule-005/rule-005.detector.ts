@@ -22,12 +22,46 @@ export const detect = (
 ): Violation[] => {
 	const violations: Violation[] = [];
 
+	// Helper to check if a function is a type predicate
+	const isTypePredicate = (node: ts.Node): boolean => {
+		// Check if node has a return type annotation with "is" keyword (type predicate)
+		if (ts.isArrowFunction(node) && node.type) {
+			const typeText = node.type.getText(sourceFile);
+			// Type predicate pattern: (param): param is Type
+			if (typeText.includes(" is ")) {
+				return true;
+			}
+		}
+		if (ts.isFunctionExpression(node) && node.type) {
+			const typeText = node.type.getText(sourceFile);
+			if (typeText.includes(" is ")) {
+				return true;
+			}
+		}
+		if (ts.isFunctionDeclaration(node) && node.type) {
+			const typeText = node.type.getText(sourceFile);
+			if (typeText.includes(" is ")) {
+				return true;
+			}
+		}
+		// For variable declarations with arrow functions, check the arrow function directly
+		if (ts.isVariableDeclaration(node) && node.initializer && ts.isArrowFunction(node.initializer)) {
+			return isTypePredicate(node.initializer);
+		}
+		return false;
+	};
+
 	// Helper to check if a function body is a pure transformation
 	const checkPureFunction = (
 		funcName: string,
 		body: ts.Node,
 		startNode: ts.Node,
 	) => {
+		// Skip type predicates - they must return boolean, not Effect
+		if (isTypePredicate(startNode)) {
+			return;
+		}
+
 		const bodyText = body.getText(sourceFile);
 
 		// Check if it's a pure transformation (no side effects indicators)
