@@ -6,7 +6,7 @@
 
 import {
 	Array as EffectArray,
-	Either,
+	Effect,
 	Function,
 	Match,
 	Option,
@@ -37,11 +37,17 @@ const meta = new MetaSchema({
 // NOTE: Type assertions to ts.Node are justified here as we implement type guards
 // for the TypeScript compiler API which requires this narrowing. After validating
 // the basic object structure, we delegate to TypeScript's built-in type predicates.
+
 // Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
 // This is a special case where pure type guards are necessary for TypeScript AST filtering.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const assertAsNode = (u: any): ts.Node => u;
+const assertAsNode = (u: any): ts.Node => {
+	// Traced identity function using Effect for pure transformations
+	return Effect.runSync(Effect.gen(function* () {
+		return u;
+	}));
+};
 
 // Schema-based node validation with structural safety
 // Combines Schema pattern matching with robust null/undefined handling via Option
@@ -64,70 +70,60 @@ const isValidNodeStructure = (u: unknown): boolean =>
 	);
 
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// Structural validation using Option for null/undefined safety
-	// Then apply Schema validation and TypeScript type predicate
-	return pipe(
-		Option.fromNullable(u),
-		Option.filter((v): v is object => typeof v === "object"),
-		Option.filter((v): v is object & { kind: unknown } => "kind" in v),
-		Option.match({
-			onSome: (node) =>
-				Match.value(node).pipe(
-					Match.when(Schema.is(NodeLike), (validated) =>
-						ts.isFunctionDeclaration(assertAsNode(validated)),
-					),
-					Match.orElse(() => false),
-				),
-			onNone: () => false,
+	// Use Match.value for structural validation with type narrowing
+	const isNodeLike = (val: unknown): val is object =>
+		typeof val === "object" && val !== null && "kind" in val;
+
+	return Match.value(u).pipe(
+		Match.when(isNodeLike, (validNode) => {
+			// Use TypeScript's built-in type predicate after structural validation
+			// eslint-disable-next-line @effect-ts/rule-002
+			return ts.isFunctionDeclaration(assertAsNode(validNode));
 		}),
+		Match.orElse(() => false),
 	);
 };
 
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	// Structural validation using Option for null/undefined safety
-	// Then apply Schema validation and TypeScript type predicate
-	return pipe(
-		Option.fromNullable(u),
-		Option.filter((v): v is object => typeof v === "object"),
-		Option.filter((v): v is object & { kind: unknown } => "kind" in v),
-		Option.match({
-			onSome: (node) =>
-				Match.value(node).pipe(
-					Match.when(Schema.is(NodeLike), (validated) =>
-						ts.isFunctionExpression(assertAsNode(validated)),
-					),
-					Match.orElse(() => false),
-				),
-			onNone: () => false,
+	// Use Match.value for structural validation with type narrowing
+	const isNodeLike = (val: unknown): val is object =>
+		typeof val === "object" && val !== null && "kind" in val;
+
+	return Match.value(u).pipe(
+		Match.when(isNodeLike, (validNode) => {
+			// Use TypeScript's built-in type predicate after structural validation
+			// eslint-disable-next-line @effect-ts/rule-002
+			return ts.isFunctionExpression(assertAsNode(validNode));
 		}),
+		Match.orElse(() => false),
 	);
 };
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	// Structural validation using Option for null/undefined safety
-	// Then apply Schema validation and TypeScript type predicate
-	return pipe(
-		Option.fromNullable(u),
-		Option.filter((v): v is object => typeof v === "object"),
-		Option.filter((v): v is object & { kind: unknown } => "kind" in v),
-		Option.match({
-			onSome: (node) =>
-				Match.value(node).pipe(
-					Match.when(Schema.is(NodeLike), (validated) =>
-						ts.isArrowFunction(assertAsNode(validated)),
-					),
-					Match.orElse(() => false),
-				),
-			onNone: () => false,
+	// Use Match.value for structural validation with type narrowing
+	const isNodeLike = (val: unknown): val is object =>
+		typeof val === "object" && val !== null && "kind" in val;
+
+	return Match.value(u).pipe(
+		Match.when(isNodeLike, (validNode) => {
+			// Use TypeScript's built-in type predicate after structural validation
+			// eslint-disable-next-line @effect-ts/rule-002
+			return ts.isArrowFunction(assertAsNode(validNode));
 		}),
+		Match.orElse(() => false),
 	);
 };
 
 const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
-	return (
-		isFunctionDeclaration(node) ||
-		isFunctionExpression(node) ||
-		isArrowFunction(node)
+	// Traced type guard using Effect for pure transformations
+	return Effect.runSync(
+		Effect.gen(function* () {
+			return (
+				isFunctionDeclaration(node) ||
+				isFunctionExpression(node) ||
+				isArrowFunction(node)
+			);
+		}),
 	);
 };
 
@@ -194,34 +190,35 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Helper to transform violation data using Schema.transform pattern
-// Uses Option.match for functional, Effect-idiomatic approach
-const transformToValidViolation = Schema.transform(
+// Schema transform for conditional validation based on suggestion presence
+// Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
+// This uses Schema.transform to ensure bidirectional type-safe conversion
+const ViolationTransform = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
 	{
-		decode: (data: ViolationData) =>
-			pipe(
-				Option.fromNullable(data.suggestion),
-				Option.match({
-					onSome: (suggestion) =>
-						Schema.decodeSync(ValidViolationWithSuggestion)({
-							...data,
-							suggestion,
-						}),
-					onNone: () =>
-						Schema.decodeSync(ValidViolationWithoutSuggestion)(
-							Struct.omit(data, "suggestion"),
-						),
-				}),
-			),
-		encode: Function.identity,
+		decode: (data) => {
+			// Schema.transform decode: conditional routing based on suggestion field
+			if (data.suggestion !== undefined) {
+				return Schema.decodeSync(ValidViolationWithSuggestion)({
+					...data,
+					suggestion: data.suggestion,
+				});
+			}
+			return Schema.decodeSync(ValidViolationWithoutSuggestion)(
+				Struct.omit(data, "suggestion"),
+			);
+		},
+		encode: (violation) => {
+			// Schema.transform encode: convert back to ViolationSchema format
+			return violation as any;
+		},
 		strict: true,
 	},
 );
 
 // Helper to create validated violations using Schema.transform
-const createViolation = Schema.decodeSync(transformToValidViolation);
+const createViolation = Schema.decodeSync(ViolationTransform);
 
 export const detect = (
 	filePath: string,
