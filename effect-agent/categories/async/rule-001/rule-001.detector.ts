@@ -45,47 +45,66 @@ const NodeLike = Schema.Struct({
 	kind: Schema.Unknown,
 });
 
-// Helper function to validate structural properties with Schema
+// Helper function to validate structural properties with Schema (from task-001)
 const isValidNode = (u: unknown): boolean =>
 	Match.value(u).pipe(
 		Match.when(Schema.is(NodeLike), () => true),
 		Match.orElse(() => false),
 	);
 
-// Helper to validate structural requirements using Option for null/undefined checks
-// This provides an alternative validation approach using Option.match
-const validateNodeStructure = (u: unknown): boolean => {
-	return Option.fromNullable(u).pipe(
+// Helper to validate structural requirements for TypeScript AST nodes (from task-005)
+// Returns Option to enable Option.match for null checking
+const validateNodeStructure = (u: unknown): Option.Option<unknown> =>
+	Option.fromNullable(u).pipe(
 		Option.filter((val) => typeof val === "object"),
+		Option.filter((val) => val !== null),
 		Option.filter((val) => "kind" in val),
+	);
+
+const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
+	// Combined validation: use both Schema-based and Option-based approaches
+	// Both validate structural requirements, Schema-based handles edge cases (from task-001)
+	// Use Option-based validation with TypeScript's built-in type predicate (from task-005)
+	return validateNodeStructure(u).pipe(
 		Option.match({
-			onSome: () => true,
+			onSome: (val) => {
+				// Verify with both approaches: Schema validation AND TypeScript's type predicate
+				return isValidNode(val) && ts.isFunctionDeclaration(assertAsNode(val));
+			},
 			onNone: () => false,
 		}),
 	);
 };
 
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// Combined validation: use both Schema-based and Option-based approaches
-	// Both validate structural requirements, Schema-based handles edge cases
-	return (
-		isValidNode(u) && ts.isFunctionDeclaration(assertAsNode(u))
-	);
-};
-
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 	// Combined validation: use both Schema-based and Option-based approaches
-	// Both validate structural requirements, Schema-based handles edge cases
-	return (
-		isValidNode(u) && ts.isFunctionExpression(assertAsNode(u))
+	// Both validate structural requirements, Schema-based handles edge cases (from task-001)
+	// Use Option-based validation with TypeScript's built-in type predicate (from task-005)
+	return validateNodeStructure(u).pipe(
+		Option.match({
+			onSome: (val) => {
+				// Verify with both approaches: Schema validation AND TypeScript's type predicate
+				// eslint-disable-next-line @effect-ts/rule-002
+				return isValidNode(val) && ts.isFunctionExpression(assertAsNode(val));
+			},
+			onNone: () => false,
+		}),
 	);
 };
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 	// Combined validation: use both Schema-based and Option-based approaches
-	// Both validate structural requirements, Schema-based handles edge cases
-	return (
-		isValidNode(u) && ts.isArrowFunction(assertAsNode(u))
+	// Both validate structural requirements, Schema-based handles edge cases (from task-001)
+	// Use Option-based validation with TypeScript's built-in type predicate (from task-005)
+	return validateNodeStructure(u).pipe(
+		Option.match({
+			onSome: (val) => {
+				// Verify with both approaches: Schema validation AND TypeScript's type predicate
+				// eslint-disable-next-line @effect-ts/rule-002
+				return isValidNode(val) && ts.isArrowFunction(assertAsNode(val));
+			},
+			onNone: () => false,
+		}),
 	);
 };
 
@@ -128,24 +147,18 @@ class ViolationSchema extends Schema.Class<ViolationSchema>("ViolationSchema")({
 	suggestion: Schema.optional(Schema.String),
 }) {}
 
-// Schema for valid violation objects that matches Violation interface
-class ValidViolationWithSuggestion extends Schema.Class<ValidViolationWithSuggestion>(
-	"ValidViolationWithSuggestion",
-)({
-	...BaseViolationFields.fields,
-	suggestion: Schema.String,
-}) {}
-
-class ValidViolationWithoutSuggestion extends Schema.Class<ValidViolationWithoutSuggestion>(
-	"ValidViolationWithoutSuggestion",
-)({
-	...BaseViolationFields.fields,
-}) {}
-
-// Schema union for violations - either with or without suggestion
-const ValidViolationUnion = Schema.Union(
-	ValidViolationWithSuggestion,
-	ValidViolationWithoutSuggestion,
+// Schema for valid violation objects using Schema.transform to normalize optional suggestion
+const ValidViolation = Schema.transform(
+	ViolationSchema,
+	Schema.Struct({
+		...BaseViolationFields.fields,
+		suggestion: Schema.optional(Schema.String),
+	}),
+	{
+		decode: Function.identity,
+		encode: Function.identity,
+		strict: true,
+	},
 );
 
 // Type definition for violation data
@@ -161,34 +174,8 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Schema transform for conditional validation based on suggestion presence
-// Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
-// using Schema.transform pattern for type-safe transformation
-const ViolationTransform = Schema.transform(
-	ViolationSchema,
-	ValidViolationUnion,
-	{
-		decode: (data: ViolationData): Violation =>
-			Option.fromNullable(data.suggestion).pipe(
-				Option.match({
-					onSome: (suggestion) =>
-						Schema.decodeSync(ValidViolationWithSuggestion)({
-							...data,
-							suggestion,
-						}),
-					onNone: () => {
-						const rest = Struct.omit(data, "suggestion");
-						return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-					},
-				}),
-			),
-		encode: Function.identity,
-		strict: true,
-	},
-);
-
 // Helper to create validated violations using Schema.transform
-const createViolation = Schema.decodeSync(ViolationTransform);
+const createViolation = Schema.decodeSync(ValidViolation);
 
 export const detect = (
 	filePath: string,
