@@ -39,8 +39,9 @@ const meta = new MetaSchema({
 // Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
 // This is a special case where pure type guards are necessary for TypeScript AST filtering.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const assertAsNode = (u: any): ts.Node => u;
+// Use Function.identity from Effect instead of identity function
+// Identity function is already imported from effect package
+const assertAsNode = Function.identity;
 
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	// Structural validation: ensure we have a Node-like object
