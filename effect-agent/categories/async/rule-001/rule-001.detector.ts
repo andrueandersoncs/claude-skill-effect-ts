@@ -130,39 +130,49 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithoutSuggestion,
 );
 
-// Helper to validate and decode violation data with comprehensive Option-based validation
-const decodeViolationData = (data: {
-	ruleId: string & { readonly RuleId: symbol };
-	category: string;
-	message: string;
-	filePath: string;
-	line: number;
-	column: number;
-	snippet: string;
-	certainty: "definite" | "potential";
-	suggestion?: string | undefined;
+// Helper to decode violation data, handling the conditional suggestion
+const decodeViolation = (_: ViolationSchema, data: {
+	readonly message: string;
+	readonly category: string;
+	readonly filePath: string;
+	readonly line: number;
+	readonly column: number;
+	readonly snippet: string;
+	readonly ruleId: string;
+	readonly certainty: "definite" | "potential";
+	readonly suggestion?: string | undefined;
 }): Violation =>
 	Option.fromNullable(data.suggestion).pipe(
 		Option.match({
-			onSome: (suggestion) =>
-				Schema.decodeSync(ValidViolationWithSuggestion)({
-					...data,
-					suggestion,
-				}),
-			onNone: () => {
-				const rest = Struct.omit(data, "suggestion");
-				return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-			},
+			onSome: (suggestion) => ({
+				...data,
+				suggestion,
+			}),
+			onNone: () => Struct.omit(data, "suggestion"),
 		}),
-	);
+	) as Violation;
+
+// Helper to encode violation back to schema format
+const encodeViolation = (violation: Violation): ViolationSchema =>
+	({
+		ruleId: violation.ruleId,
+		category: violation.category,
+		message: violation.message,
+		filePath: violation.filePath,
+		line: violation.line,
+		column: violation.column,
+		snippet: violation.snippet,
+		certainty: violation.certainty,
+		suggestion: violation.suggestion,
+	}) as ViolationSchema;
 
 // Schema transform for conditional validation based on suggestion presence
 const ViolationTransform = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
 	{
-		decode: decodeViolationData,
-		encode: Function.identity,
+		decode: decodeViolation,
+		encode: encodeViolation,
 		strict: true,
 	},
 );
