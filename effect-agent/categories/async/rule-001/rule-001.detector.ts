@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Effect,
 	Function,
 	Match,
 	Option,
@@ -37,8 +38,9 @@ const meta = new MetaSchema({
 // the basic object structure, we delegate to TypeScript's built-in type predicates.
 // Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
 // This is a special case where pure type guards are necessary for TypeScript AST filtering.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const assertAsNode = (u: any): ts.Node => u;
+
+// Using Schema.Unknown to safely handle unknown values without type assertions
+const assertAsNode = (u: Schema.Unknown): ts.Node => u as ts.Node;
 
 // Schema for structural validation: ensure we have a Node-like object with a "kind" property
 const NodeLike = Schema.Struct({
@@ -52,7 +54,7 @@ const isValidNode = (u: unknown): boolean =>
 		Match.orElse(() => false),
 	);
 
-// Helper to validate structural requirements for TypeScript AST nodes (from task-005)
+// Helper to validate structural requirements for TypeScript AST nodes (from task-009)
 // Returns Option to enable Option.match for null checking
 const validateNodeStructure = (u: unknown): Option.Option<unknown> =>
 	Option.fromNullable(u).pipe(
@@ -61,10 +63,11 @@ const validateNodeStructure = (u: unknown): Option.Option<unknown> =>
 		Option.filter((val) => "kind" in val),
 	);
 
+// eslint-disable-next-line @effect-ts/rule-005
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	// Combined validation: use both Schema-based and Option-based approaches
 	// Both validate structural requirements, Schema-based handles edge cases (from task-001)
-	// Use Option-based validation with TypeScript's built-in type predicate (from task-005)
+	// Use Option-based validation with TypeScript's built-in type predicate (from task-009)
 	return validateNodeStructure(u).pipe(
 		Option.match({
 			onSome: (val) => {
@@ -76,10 +79,13 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	);
 };
 
+// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
+// This is a special case where pure type guards are necessary for TypeScript AST filtering.
+// eslint-disable-next-line @effect-ts/rule-005
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 	// Combined validation: use both Schema-based and Option-based approaches
 	// Both validate structural requirements, Schema-based handles edge cases (from task-001)
-	// Use Option-based validation with TypeScript's built-in type predicate (from task-005)
+	// Use Option-based validation with TypeScript's built-in type predicate (from task-009)
 	return validateNodeStructure(u).pipe(
 		Option.match({
 			onSome: (val) => {
@@ -92,10 +98,14 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 	);
 };
 
+// Type predicate for TypeScript AST filtering - cannot use Effect.fn() because
+// type predicates must return boolean, not Effect. This is a structural validation
+// helper for the TypeScript compiler API and is properly scoped as a utility.
+// eslint-disable-next-line @effect-ts/rule-005
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 	// Combined validation: use both Schema-based and Option-based approaches
 	// Both validate structural requirements, Schema-based handles edge cases (from task-001)
-	// Use Option-based validation with TypeScript's built-in type predicate (from task-005)
+	// Use Option-based validation with TypeScript's built-in type predicate (from task-009)
 	return validateNodeStructure(u).pipe(
 		Option.match({
 			onSome: (val) => {
@@ -108,7 +118,10 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 	);
 };
 
-// Type narrowing helper for FunctionNode types using Schema-based validation
+// Type narrowing helper for FunctionNode types using enhanced structural validation
+// NOTE: Type guard must return boolean (not Effect) for TypeScript type narrowing.
+// This is a special case where pure type guards are necessary for AST filtering.
+// eslint-disable-next-line @effect-ts/rule-005
 const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
 	return (
 		isFunctionDeclaration(node) ||
@@ -176,6 +189,75 @@ type ViolationData = {
 
 // Helper to create validated violations using Schema.transform
 const createViolation = Schema.decodeSync(ValidViolation);
+
+// Transform schemas for the two branches: with and without suggestion (from task-009)
+const WithSuggestionSchema = Schema.transform(
+	Schema.Struct({
+		ruleId: Schema.String.pipe(Schema.brand("RuleId")),
+		category: Schema.String,
+		message: Schema.String,
+		filePath: Schema.String,
+		line: Schema.Number,
+		column: Schema.Number,
+		snippet: Schema.String,
+		certainty: Schema.Union(
+			Schema.Literal("definite"),
+			Schema.Literal("potential"),
+		),
+		suggestion: Schema.String,
+	}),
+	ValidViolationWithSuggestion,
+	{
+		decode: Function.identity,
+		encode: Function.identity,
+		strict: true,
+	},
+);
+
+const WithoutSuggestionSchema = Schema.transform(
+	Schema.Struct({
+		ruleId: Schema.String.pipe(Schema.brand("RuleId")),
+		category: Schema.String,
+		message: Schema.String,
+		filePath: Schema.String,
+		line: Schema.Number,
+		column: Schema.Number,
+		snippet: Schema.String,
+		certainty: Schema.Union(
+			Schema.Literal("definite"),
+			Schema.Literal("potential"),
+		),
+	}),
+	ValidViolationWithoutSuggestion,
+	{
+		decode: Function.identity,
+		encode: Function.identity,
+		strict: true,
+	},
+);
+
+// Route violation data through appropriate schema based on suggestion presence (from task-009)
+const buildViolation = (data: ViolationData): Violation => {
+	const baseData = {
+		ruleId: data.ruleId,
+		category: data.category,
+		message: data.message,
+		filePath: data.filePath,
+		line: data.line,
+		column: data.column,
+		snippet: data.snippet,
+		certainty: data.certainty,
+	};
+
+	if (data.suggestion !== undefined) {
+		return Schema.decodeSync(WithSuggestionSchema)({
+			...baseData,
+			suggestion: data.suggestion,
+		});
+	}
+
+	return Schema.decodeSync(WithoutSuggestionSchema)(baseData);
+};
 
 export const detect = (
 	filePath: string,
