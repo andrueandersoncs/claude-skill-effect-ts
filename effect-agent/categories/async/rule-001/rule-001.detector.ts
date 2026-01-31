@@ -143,30 +143,34 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Schema.transform that routes violations based on suggestion presence
-// This transform handles the conditional conversion using Schema.transform pattern
-const ViolationRouterTransform = Schema.transform(
+// Helper to transform violation data using Schema.transform pattern
+// Uses Option.match for functional, Effect-idiomatic approach
+const transformToValidViolation = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
 	{
-		decode: (data: ViolationData) => {
-			// Schema.transform routed decoder: conditional validation
-			return data.suggestion
-				? Schema.decodeSync(ValidViolationWithSuggestion)({
-						...data,
-						suggestion: data.suggestion,
-				  })
-				: Schema.decodeSync(ValidViolationWithoutSuggestion)(
-						Struct.omit(data, "suggestion"),
-				  );
-		},
+		decode: (data: ViolationData) =>
+			pipe(
+				Option.fromNullable(data.suggestion),
+				Option.match({
+					onSome: (suggestion) =>
+						Schema.decodeSync(ValidViolationWithSuggestion)({
+							...data,
+							suggestion,
+						}),
+					onNone: () =>
+						Schema.decodeSync(ValidViolationWithoutSuggestion)(
+							Struct.omit(data, "suggestion"),
+						),
+				}),
+			),
 		encode: Function.identity,
 		strict: true,
 	},
 );
 
-// Helper to create validated violations - uses Schema.transform directly
-const createViolation = Schema.decodeSync(ViolationRouterTransform);
+// Helper to create validated violations using Schema.transform
+const createViolation = Schema.decodeSync(transformToValidViolation);
 
 export const detect = (
 	filePath: string,
