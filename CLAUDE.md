@@ -156,6 +156,8 @@ When writing complex logic (multi-step pipelines, nested transformations, intric
 
 ## Behavior
 
+- **Never declare something "unfixable" or "impossible"** - When constraints seem insurmountable, question the constraints. Ask: "Why does this constraint exist? Can we restructure to avoid it entirely?" If `Schema.declare` requires synchronous booleans, maybe the design shouldn't use `Schema.declare`. Zoom out before giving up.
+- **Escalate abstraction when stuck** - If you can't solve a problem at level N, try level N+1. Can't fix code in a function? Redesign the function. Can't redesign the function? Restructure the module. Can't restructure? Question the architecture.
 - **Follow the scientific method** - When an approach fails, don't ask "what should I do next?" Experiment safely until finding a solution. Hypothesize, test, iterate.
 - **Minimize primary agent context** - Delegate heavy work to scripts and `claude -p` (headless mode). Primary agent orchestrates; subprocesses execute.
 - **Don't ask for direction when goal is clear** - If the goal is established and an attempt fails, try a different approach. Only ask when genuinely stuck after multiple experiments.
