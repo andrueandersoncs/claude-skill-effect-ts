@@ -25,9 +25,19 @@ Two-phase analysis: fast AST-based detection followed by LLM-powered analysis.
 1. **Phase 1: Detection** - Run AST-based detectors to flag violations (fast)
 2. **Phase 2: Task Creation** - Create one task per violation for tracking
 3. **Phase 3: Analysis/Fix** - Spawn agents in parallel (one per EVERY violation)
-4. **Phase 4: Report/Merge** - Aggregate results; if fix mode, merge branches and cleanup worktrees
+4. **Phase 4: Report/Merge** - ⛔ MANDATORY - Aggregate results; if fix mode, run tournament merge
 
 **Always use task lists.** Create specific, independent tasks to maximize parallelization.
+
+## ⛔ CRITICAL: YOU MUST COMPLETE ALL 4 PHASES
+
+**Phase 4 is NOT optional.** After all task-worker agents return in Phase 3:
+- You MUST immediately proceed to Phase 4
+- You MUST NOT stop after receiving task worker results
+- You MUST run the tournament merge (fix mode) or aggregate results (analyze mode)
+- You MUST output the final report
+
+**FORBIDDEN: Stopping after Phase 3.** The workflow is incomplete without Phase 4.
 
 **MANDATORY: Investigate EVERY violation.** Do NOT filter, skip, or prioritize. Spawn an agent for EVERY error, warning, AND info violation found. No exceptions.
 
@@ -153,7 +163,8 @@ Each task-worker will:
 2. Read the source file and rule documentation
 3. Apply the idiomatic fix
 4. Commit the change
-5. Mark the task complete
+5. **DO NOT clean up the worktree** - leave it for the merge-worker
+6. Mark the task complete
 
 Example prompt for task-worker:
 ```
@@ -182,7 +193,31 @@ To see good/bad examples for this rule:
 Rule documentation: ${CLAUDE_PLUGIN_ROOT}/effect-agent/categories/[category]/rule-NNN/rule-NNN.md
 
 Apply the idiomatic Effect-TS fix in your worktree. Commit to your task branch.
+
+⛔ DO NOT remove the worktree or delete the branch after committing.
+   Leave them intact - they will be merged by merge-workers in Phase 4.
 ```
+
+### ⛔ MANDATORY: AFTER ALL TASK-WORKERS RETURN, PROCEED TO PHASE 4
+
+When all task-worker agents have returned their results:
+
+1. **List all branches created** - Run `git branch | grep task-` to get all task branches
+2. **Verify branches exist** - Each successful task-worker should have left a branch
+3. **Begin Phase 4 immediately** - Do NOT stop, do NOT ask the user, do NOT hesitate
+
+**FORBIDDEN after Phase 3:**
+- ❌ Saying "all fixes have been applied" and stopping
+- ❌ Asking the user "should I merge the branches?"
+- ❌ Summarizing results without proceeding to merge
+- ❌ Any output that doesn't include starting Phase 4
+
+**REQUIRED after Phase 3:**
+- ✅ Immediately list the task branches
+- ✅ Begin the tournament merge algorithm
+- ✅ Continue until all branches are merged into main
+
+---
 
 ### Phase 4: Parallel Tournament Merge
 
@@ -190,7 +225,7 @@ Apply the idiomatic Effect-TS fix in your worktree. Commit to your task branch.
 
 Collect results from all category-checker agents and present a unified report. Mark tasks as completed as agents finish.
 
-#### Fix Mode: Tournament Merge
+#### Fix Mode: Tournament Merge (MANDATORY)
 
 ## ⚠️ CRITICAL: MANDATORY PARALLEL TOURNAMENT MERGE ⚠️
 
@@ -425,6 +460,22 @@ For quick detection without LLM analysis, run the detector directly:
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:errors <file>
 ```
+
+## ⛔ COMPLETION CHECKLIST (Fix Mode)
+
+Before reporting completion, verify ALL of these:
+
+- [ ] Phase 1: Detectors ran and produced violations
+- [ ] Phase 2: Created exactly N tasks for N violations
+- [ ] Phase 3: Spawned exactly N task-workers for N violations
+- [ ] Phase 3: All task-workers returned (wait for ALL of them)
+- [ ] Phase 4: Listed all task-* branches with `git branch | grep task-`
+- [ ] Phase 4: Ran tournament merge rounds until 1 branch remained
+- [ ] Phase 4: Merged final branch into main
+- [ ] Phase 4: Cleaned up all worktrees and task branches
+- [ ] Output: Presented final compliance report
+
+**If ANY checkbox is not complete, the workflow is INCOMPLETE. Continue working.**
 
 ## Usage
 
