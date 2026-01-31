@@ -40,14 +40,21 @@ const IsPromiseExpression = Schema.Struct({
 
 // Schema for function node types
 // Using type predicates with proper narrowing for TypeScript AST nodes
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
-	ts.isFunctionDeclaration(u as ts.Node);
+// These are type guards that work with the TypeScript compiler API
+const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
+	if (typeof u !== "object" || u === null) return false;
+	return ts.isFunctionDeclaration(u as ts.Node);
+};
 
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
-	ts.isFunctionExpression(u as ts.Node);
+const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
+	if (typeof u !== "object" || u === null) return false;
+	return ts.isFunctionExpression(u as ts.Node);
+};
 
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
-	ts.isArrowFunction(u as ts.Node);
+const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
+	if (typeof u !== "object" || u === null) return false;
+	return ts.isArrowFunction(u as ts.Node);
+};
 
 const FunctionNode = Schema.Union(
 	Schema.declare(isFunctionDeclaration),
