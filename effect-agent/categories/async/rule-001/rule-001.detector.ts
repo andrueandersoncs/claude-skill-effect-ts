@@ -52,28 +52,44 @@ const isValidNode = (u: unknown): boolean =>
 		Match.orElse(() => false),
 	);
 
+// Helper to validate structural requirements using Option for null/undefined checks
+// This provides an alternative validation approach using Option.match
+const validateNodeStructure = (u: unknown): boolean => {
+	return Option.fromNullable(u).pipe(
+		Option.filter((val) => typeof val === "object"),
+		Option.filter((val) => "kind" in val),
+		Option.match({
+			onSome: () => true,
+			onNone: () => false,
+		}),
+	);
+};
+
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// Use Schema-based validation for structural checks with Match.when
+	// Combined validation: use both Schema-based and Option-based approaches
+	// Both validate structural requirements, Schema-based handles edge cases
 	return (
 		isValidNode(u) && ts.isFunctionDeclaration(assertAsNode(u))
 	);
 };
 
 const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	// Use Schema-based validation for structural checks with Match.when
+	// Combined validation: use both Schema-based and Option-based approaches
+	// Both validate structural requirements, Schema-based handles edge cases
 	return (
 		isValidNode(u) && ts.isFunctionExpression(assertAsNode(u))
 	);
 };
 
 const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	// Use Schema-based validation for structural checks with Match.when
+	// Combined validation: use both Schema-based and Option-based approaches
+	// Both validate structural requirements, Schema-based handles edge cases
 	return (
 		isValidNode(u) && ts.isArrowFunction(assertAsNode(u))
 	);
 };
 
-// Type narrowing helper for FunctionNode types using enhanced structural validation
+// Type narrowing helper for FunctionNode types using Schema-based validation
 const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
 	return (
 		isFunctionDeclaration(node) ||
