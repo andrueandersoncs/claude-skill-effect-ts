@@ -41,6 +41,7 @@ const meta = new MetaSchema({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const assertAsNode: (u: any) => ts.Node = Function.identity;
 
+// eslint-disable-next-line @effect-ts/rule-005
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	// Structural validation: ensure we have a Node-like object
 	if (typeof u !== "object" || u === null || !("kind" in u)) {
