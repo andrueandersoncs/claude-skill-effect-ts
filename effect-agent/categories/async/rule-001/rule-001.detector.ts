@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Effect,
 	Function,
 	Match,
 	Option,
@@ -144,16 +145,20 @@ type ViolationData = {
 };
 
 // Composable helper functions for violation validation
-const decodeWithSuggestion = (data: ViolationData, suggestion: string): Violation =>
-	Schema.decodeSync(ValidViolationWithSuggestion)({
-		...data,
-		suggestion,
-	});
+const decodeWithSuggestion = Effect.fn("decodeWithSuggestion")(
+	(data: ViolationData, suggestion: string): Violation =>
+		Schema.decodeSync(ValidViolationWithSuggestion)({
+			...data,
+			suggestion,
+		}),
+);
 
-const decodeWithoutSuggestion = (data: ViolationData): Violation => {
-	const rest = Struct.omit(data, "suggestion");
-	return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-};
+const decodeWithoutSuggestion = Effect.fn("decodeWithoutSuggestion")(
+	(data: ViolationData): Violation => {
+		const rest = Struct.omit(data, "suggestion");
+		return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
+	},
+);
 
 // Schema transform for conditional validation based on suggestion presence
 // Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
