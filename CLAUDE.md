@@ -156,6 +156,9 @@ When writing complex logic (multi-step pipelines, nested transformations, intric
 
 ## Behavior
 
+- **Follow the scientific method** - When an approach fails, don't ask "what should I do next?" Experiment safely until finding a solution. Hypothesize, test, iterate.
+- **Minimize primary agent context** - Delegate heavy work to scripts and `claude -p` (headless mode). Primary agent orchestrates; subprocesses execute.
+- **Don't ask for direction when goal is clear** - If the goal is established and an attempt fails, try a different approach. Only ask when genuinely stuck after multiple experiments.
 - **Never self-limit based on cost or time** - Run the most thorough test, spawn all necessary workers, execute end-to-end. Cost and time are the user's concern, not yours.
 - **Never cite resource constraints as a reason to do less** - "That would take significant time/cost" is not a valid excuse. Do the work.
 - Never ask "should I?" - try it and show results
