@@ -2,9 +2,10 @@
  * imperative rules index
  *
  * This file exports all rules in the imperative category.
+ * NOTE: rule-001 (array-splice-modification) and rule-009 (splitting-array-by-condition)
+ *       have been consolidated into native-apis/rule-001-array-operations
  */
 
-export { inserted, removed } from "./rule-001/rule-001.js";
 export { obj } from "./rule-002/rule-002.js";
 export { goodExample as rule003Example } from "./rule-003/rule-003.js";
 export { total } from "./rule-004/rule-004.js";
@@ -12,18 +13,11 @@ export { goodExample as rule005Example } from "./rule-005/rule-005.js";
 export { allTags } from "./rule-006/rule-006.js";
 export { goodExample as rule007Example } from "./rule-007/rule-007.js";
 export { processTree } from "./rule-008/rule-008.js";
-export { adults, minors } from "./rule-009/rule-009.js";
 
 /**
  * Rule metadata for this category
  */
 export const rules = [
-	{
-		id: "rule-001",
-		category: "imperative",
-		name: "array-splice-modification",
-		rule: "Never mutate variables (let, push, pop, splice); use immutable operations",
-	},
 	{
 		id: "rule-002",
 		category: "imperative",
@@ -65,12 +59,6 @@ export const rules = [
 		category: "imperative",
 		name: "recursive-effect-processing",
 		rule: "Never use imperative loops for tree traversal; use recursion with Effect",
-	},
-	{
-		id: "rule-009",
-		category: "imperative",
-		name: "splitting-array-by-condition",
-		rule: "Never filter twice with opposite conditions; use Array.partition",
 	},
 ] as const;
 
