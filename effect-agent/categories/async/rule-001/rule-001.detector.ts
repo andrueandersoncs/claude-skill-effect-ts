@@ -104,10 +104,16 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 
 // Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
 // Combines structural validation with TypeScript's built-in type predicates
+// NodeLikeStructure validates the structural requirements at schema level
+const NodeLikeStructure = Schema.Object.pipe(
+	Schema.filter((u): u is object & { kind: unknown } => "kind" in u),
+);
+
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
+		// Structural validation using Schema.is() for idiomatic type guards
+		const isNodeLike = Schema.is(NodeLikeStructure);
+		if (!isNodeLike(u)) {
 			return false;
 		}
 		// Use TypeScript's built-in type predicate after structural validation
@@ -115,8 +121,9 @@ const FunctionNode = Schema.Union(
 		return ts.isFunctionDeclaration(u as ts.Node);
 	}),
 	Schema.declare((u): u is ts.FunctionExpression => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
+		// Structural validation using Schema.is() for idiomatic type guards
+		const isNodeLike = Schema.is(NodeLikeStructure);
+		if (!isNodeLike(u)) {
 			return false;
 		}
 		// Use TypeScript's built-in type predicate after structural validation
@@ -124,8 +131,9 @@ const FunctionNode = Schema.Union(
 		return ts.isFunctionExpression(u as ts.Node);
 	}),
 	Schema.declare((u): u is ts.ArrowFunction => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
+		// Structural validation using Schema.is() for idiomatic type guards
+		const isNodeLike = Schema.is(NodeLikeStructure);
+		if (!isNodeLike(u)) {
 			return false;
 		}
 		// Use TypeScript's built-in type predicate after structural validation
