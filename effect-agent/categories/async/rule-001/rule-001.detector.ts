@@ -38,37 +38,12 @@ const meta = new MetaSchema({
 // for the TypeScript compiler API which requires this narrowing. After validating
 // the basic object structure, we delegate to TypeScript's built-in type predicates.
 
+// Using Function.identity from Effect for pure identity transformation
 // Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
 // This is a special case where pure type guards are necessary for TypeScript AST filtering.
+const assertAsNode = Function.identity;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const assertAsNode = (u: any): ts.Node => {
-	// Traced identity function using Effect for pure transformations
-	return Effect.runSync(Effect.gen(function* () {
-		return u;
-	}));
-};
-
-// Schema-based node validation with structural safety
-// Combines Schema pattern matching with robust null/undefined handling via Option
-// This ensures we validate the structure before applying TypeScript's built-in predicates
-const NodeLike = Schema.Struct({
-	kind: Schema.Unknown,
-});
-
-// Helper function that validates structural requirements using Option.match
-// Returns whether the value is a valid Node-like object with a "kind" property
-const isValidNodeStructure = (u: unknown): boolean =>
-	pipe(
-		Option.fromNullable(u),
-		Option.filter((val) => typeof val === "object"),
-		Option.filter((val) => "kind" in val),
-		Option.match({
-			onSome: () => true,
-			onNone: () => false,
-		}),
-	);
-
+// Reusable type guard functions for function node types
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	// Use Match.value for structural validation with type narrowing
 	const isNodeLike = (val: unknown): val is object =>
@@ -114,24 +89,38 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 	);
 };
 
-const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
-	// Traced type guard using Effect for pure transformations
-	return Effect.runSync(
-		Effect.gen(function* () {
-			return (
-				isFunctionDeclaration(node) ||
-				isFunctionExpression(node) ||
-				isArrowFunction(node)
-			);
-		}),
-	);
-};
+// Note: Type predicate logic is inlined where needed in Match.when for type narrowing
+// Type guards cannot be wrapped in Effect.fn() as they must return boolean, not Effect
 
-// Schema for function node types using discriminated union of type guards
+// Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
 const FunctionNode = Schema.Union(
-	Schema.declare(isFunctionDeclaration),
-	Schema.declare(isFunctionExpression),
-	Schema.declare(isArrowFunction),
+	Schema.declare((u): u is ts.FunctionDeclaration => {
+		// Structural validation: ensure we have a Node-like object
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Use TypeScript's built-in type predicate after structural validation
+		// eslint-disable-next-line @effect-ts/rule-002
+		return ts.isFunctionDeclaration(assertAsNode(u));
+	}),
+	Schema.declare((u): u is ts.FunctionExpression => {
+		// Structural validation: ensure we have a Node-like object
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Use TypeScript's built-in type predicate after structural validation
+		// eslint-disable-next-line @effect-ts/rule-002
+		return ts.isFunctionExpression(assertAsNode(u));
+	}),
+	Schema.declare((u): u is ts.ArrowFunction => {
+		// Structural validation: ensure we have a Node-like object
+		if (typeof u !== "object" || u === null || !("kind" in u)) {
+			return false;
+		}
+		// Use TypeScript's built-in type predicate after structural validation
+		// eslint-disable-next-line @effect-ts/rule-002
+		return ts.isArrowFunction(assertAsNode(u));
+	}),
 );
 
 // Base schema for shared violation fields with branded ruleId for type safety
@@ -190,6 +179,25 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
+// Composable helper functions for violation validation using Effect.fn for traceability
+const decodeWithSuggestion = Effect.fn("decodeWithSuggestion")(
+	(data: ViolationData, suggestion: string) =>
+		Effect.succeed(
+			Schema.decodeSync(ValidViolationWithSuggestion)({
+				...data,
+				suggestion,
+			}),
+		),
+);
+
+const decodeWithoutSuggestion = Effect.fn("decodeWithoutSuggestion")(
+	(data: ViolationData) => {
+		const rest = Struct.omit(data, "suggestion");
+		return Effect.succeed(
+			Schema.decodeSync(ValidViolationWithoutSuggestion)(rest),
+		);
+	},
+);
 // Schema transform for conditional validation based on suggestion presence
 // Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
 // This uses Schema.transform to ensure bidirectional type-safe conversion
@@ -197,22 +205,17 @@ const ViolationTransform = Schema.transform(
 	ViolationSchema,
 	ValidViolationUnion,
 	{
-		decode: (data) => {
-			// Schema.transform decode: conditional routing based on suggestion field
-			if (data.suggestion !== undefined) {
-				return Schema.decodeSync(ValidViolationWithSuggestion)({
-					...data,
-					suggestion: data.suggestion,
-				});
-			}
-			return Schema.decodeSync(ValidViolationWithoutSuggestion)(
-				Struct.omit(data, "suggestion"),
-			);
-		},
-		encode: (violation) => {
-			// Schema.transform encode: convert back to ViolationSchema format
-			return violation as any;
-		},
+		decode: (data): Violation =>
+			pipe(
+				Option.fromNullable(data.suggestion),
+				Option.match({
+					onSome: (suggestion) =>
+						Effect.runSync(decodeWithSuggestion(data as unknown as ViolationData, suggestion)),
+					onNone: () =>
+						Effect.runSync(decodeWithoutSuggestion(data as unknown as ViolationData)),
+				}),
+			),
+		encode: (v) => v as unknown as ViolationSchema,
 		strict: true,
 	},
 );
@@ -264,7 +267,7 @@ export const detect = (
 
 		// Detect callback patterns (functions with callback parameter names)
 		const functionCheckResult = Match.value(node).pipe(
-			Match.when((n): n is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => isFunctionNode(n), (typedNode) => {
+			Match.when(Schema.is(FunctionNode), (typedNode) => {
 				return Option.fromNullable(typedNode.parameters.at(-1)).pipe(
 					Option.flatMap((lastParam) => {
 						const paramName = lastParam.name.getText(sourceFile).toLowerCase();
