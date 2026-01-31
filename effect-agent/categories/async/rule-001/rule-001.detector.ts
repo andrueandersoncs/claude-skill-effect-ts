@@ -19,13 +19,13 @@ import {
 	type Violation,
 } from "../../../detectors/types.ts";
 
-const MetaSchema = Schema.Struct({
+class MetaSchema extends Schema.Class<MetaSchema>("MetaSchema")({
 	id: Schema.Literal("rule-001"),
 	category: Schema.Literal("async"),
 	name: Schema.Literal("callback-api"),
-});
+}) {}
 
-const meta = Schema.decodeUnknownSync(MetaSchema)({
+const meta = new MetaSchema({
 	id: "rule-001",
 	category: "async",
 	name: "callback-api",
@@ -119,10 +119,22 @@ const validateIsPromiseExpression = (obj: {
 		Match.orElse(() => Option.none()),
 	);
 
-// Validate violations using Schema.transform for bidirectional conversion
+// Helper to route violations to appropriate schema based on suggestion presence
+const normalizeViolation = (
+	data: Omit<Violation, never>,
+): Omit<Violation, never> =>
+	Option.fromNullable(data.suggestion).pipe(
+		Option.match({
+			onSome: (suggestion) => ({
+				...data,
+				suggestion,
+			}),
+			onNone: () => Struct.omit(data, "suggestion"),
+		}),
+	);
 
-// Schema transform: convert raw data to validated Violation
-// Transforms raw input into a properly validated Violation object
+// Schema for transforming raw input to validated violations
+// Combines approach from both branches: normalizeViolation helper with validation structure
 const ViolationTransform = Schema.transform(
 	Schema.Any, // Accept any input, we'll validate it
 	Schema.Struct({
@@ -143,21 +155,16 @@ const ViolationTransform = Schema.transform(
 		decode: (input: any) => {
 			// First pass: validate basic structure
 			const decoded = Schema.decodeSync(ViolationDataSchema)(input);
-			// Second pass: validate specific constraint (suggestion present/absent)
-			if (decoded.suggestion !== undefined && decoded.suggestion !== null) {
-				// Ensure suggestion is actually present if field exists
-				return decoded;
-			} else {
-				// Ensure suggestion is omitted if not present
-				return Struct.omit(decoded, "suggestion") as any;
-			}
+			// Second pass: normalize suggestion field using helper
+			return normalizeViolation(decoded);
 		},
-		encode: (output) => output,
+		encode: Function.identity,
 		strict: true,
 	},
 );
 
 // Helper to create validated violations using Schema
+// Combines both approaches: validation with proper typing
 const createViolation = (data: Omit<Violation, never>): Violation => {
 	const decoded = Schema.decodeSync(ViolationTransform)(data);
 	// Cast to Violation - schema validation ensures type safety at runtime
