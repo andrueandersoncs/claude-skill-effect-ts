@@ -130,24 +130,18 @@ class ViolationSchema extends Schema.Class<ViolationSchema>("ViolationSchema")({
 	suggestion: Schema.optional(Schema.String),
 }) {}
 
-// Schema for valid violation objects that matches Violation interface
-class ValidViolationWithSuggestion extends Schema.Class<ValidViolationWithSuggestion>(
-	"ValidViolationWithSuggestion",
-)({
-	...BaseViolationFields.fields,
-	suggestion: Schema.String,
-}) {}
-
-class ValidViolationWithoutSuggestion extends Schema.Class<ValidViolationWithoutSuggestion>(
-	"ValidViolationWithoutSuggestion",
-)({
-	...BaseViolationFields.fields,
-}) {}
-
-// Schema union for violations - either with or without suggestion
-const ValidViolationUnion = Schema.Union(
-	ValidViolationWithSuggestion,
-	ValidViolationWithoutSuggestion,
+// Schema for valid violation objects using Schema.transform to normalize optional suggestion
+const ValidViolation = Schema.transform(
+	ViolationSchema,
+	Schema.Struct({
+		...BaseViolationFields.fields,
+		suggestion: Schema.optional(Schema.String),
+	}),
+	{
+		decode: Function.identity,
+		encode: Function.identity,
+		strict: true,
+	},
 );
 
 // Type definition for violation data
@@ -163,34 +157,8 @@ type ViolationData = {
 	suggestion?: string | undefined;
 };
 
-// Schema transform for conditional validation based on suggestion presence
-// Routes input to ValidViolationWithSuggestion or ValidViolationWithoutSuggestion
-// using Schema.transform pattern for type-safe transformation
-const ViolationTransform = Schema.transform(
-	ViolationSchema,
-	ValidViolationUnion,
-	{
-		decode: (data: ViolationData): Violation =>
-			Option.fromNullable(data.suggestion).pipe(
-				Option.match({
-					onSome: (suggestion) =>
-						Schema.decodeSync(ValidViolationWithSuggestion)({
-							...data,
-							suggestion,
-						}),
-					onNone: () => {
-						const rest = Struct.omit(data, "suggestion");
-						return Schema.decodeSync(ValidViolationWithoutSuggestion)(rest);
-					},
-				}),
-			),
-		encode: Function.identity,
-		strict: true,
-	},
-);
-
 // Helper to create validated violations using Schema.transform
-const createViolation = Schema.decodeSync(ViolationTransform);
+const createViolation = Schema.decodeSync(ValidViolation);
 
 export const detect = (
 	filePath: string,
