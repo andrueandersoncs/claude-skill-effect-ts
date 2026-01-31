@@ -39,15 +39,31 @@ const IsPromiseExpression = Schema.Struct({
 });
 
 // Schema for function node types
-// Using type predicates with proper narrowing for TypeScript AST nodes
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
-	ts.isFunctionDeclaration(u as ts.Node);
+// Validate TypeScript AST nodes using Schema.decodeUnknown for runtime type validation
+const AstNodeSchema = Schema.Struct({
+	kind: Schema.Number,
+});
 
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
-	ts.isFunctionExpression(u as ts.Node);
+const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
+	// Validate the shape using Schema.is (which doesn't throw)
+	if (!Schema.is(AstNodeSchema)(u)) return false;
+	// Now we know the shape is correct, decode to get typed access to properties
+	// This will not throw since we already validated with Schema.is
+	const decoded = Schema.decodeUnknownSync(AstNodeSchema)(u);
+	return decoded.kind === ts.SyntaxKind.FunctionDeclaration;
+};
 
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
-	ts.isArrowFunction(u as ts.Node);
+const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
+	if (!Schema.is(AstNodeSchema)(u)) return false;
+	const decoded = Schema.decodeUnknownSync(AstNodeSchema)(u);
+	return decoded.kind === ts.SyntaxKind.FunctionExpression;
+};
+
+const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
+	if (!Schema.is(AstNodeSchema)(u)) return false;
+	const decoded = Schema.decodeUnknownSync(AstNodeSchema)(u);
+	return decoded.kind === ts.SyntaxKind.ArrowFunction;
+};
 
 const FunctionNode = Schema.Union(
 	Schema.declare(isFunctionDeclaration),
