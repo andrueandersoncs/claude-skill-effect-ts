@@ -32,11 +32,11 @@ const meta = Schema.decodeUnknownSync(MetaSchema)({
 });
 
 // Schema for detecting new Promise() patterns
-const IsPromiseExpression = Schema.Struct({
+class IsPromiseExpression extends Schema.Class<IsPromiseExpression>("IsPromiseExpression")({
 	isNewExpr: Schema.Literal(true),
 	isIdentifierExpr: Schema.Literal(true),
 	isPromiseText: Schema.Literal(true),
-});
+}) {}
 
 // Schema for function node types
 // Using type predicates with proper narrowing for TypeScript AST nodes
