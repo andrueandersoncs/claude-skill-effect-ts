@@ -166,6 +166,8 @@ Each task-worker will:
 5. **DO NOT clean up the worktree** - leave it for the merge-worker
 6. Mark the task complete
 
+**⛔ AFTER ALL TASK-WORKERS RETURN: GO TO PHASE 4 IMMEDIATELY. DO NOT STOP.**
+
 Example prompt for task-worker:
 ```
 Task ID: [TASK_ID]
@@ -198,24 +200,65 @@ Apply the idiomatic Effect-TS fix in your worktree. Commit to your task branch.
    Leave them intact - they will be merged by merge-workers in Phase 4.
 ```
 
-### ⛔ MANDATORY: AFTER ALL TASK-WORKERS RETURN, PROCEED TO PHASE 4
+---
 
-When all task-worker agents have returned their results:
+## ⛔⛔⛔ END OF PHASE 3 - PHASE 4 IS NEXT ⛔⛔⛔
 
-1. **List all branches created** - Run `git branch | grep task-` to get all task branches
-2. **Verify branches exist** - Each successful task-worker should have left a branch
-3. **Begin Phase 4 immediately** - Do NOT stop, do NOT ask the user, do NOT hesitate
+**YOU ARE HERE:** Task-workers have returned. Fixes are on branches. **THE WORK IS NOT DONE.**
 
-**FORBIDDEN after Phase 3:**
-- ❌ Saying "all fixes have been applied" and stopping
-- ❌ Asking the user "should I merge the branches?"
-- ❌ Summarizing results without proceeding to merge
-- ❌ Any output that doesn't include starting Phase 4
+**YOUR NEXT STEP:** Run `git branch | grep task-` and begin tournament merge.
 
-**REQUIRED after Phase 3:**
-- ✅ Immediately list the task branches
-- ✅ Begin the tournament merge algorithm
-- ✅ Continue until all branches are merged into main
+**DO NOT:** Stop, summarize, or report. **DO:** Continue to Phase 4.
+
+### ⛔⛔⛔ STOP! READ THIS BEFORE CONTINUING ⛔⛔⛔
+
+## MANDATORY PHASE 4 TRANSITION - YOU ARE NOT DONE AFTER PHASE 3
+
+**WHEN ALL TASK-WORKERS RETURN, PHASE 3 IS COMPLETE. PHASE 4 MUST START IMMEDIATELY.**
+
+**YOU ARE ONLY 75% DONE WHEN PHASE 3 COMPLETES.**
+
+The task-workers have created branches with fixes. Those fixes are NOT in main. The user's code is UNCHANGED until you complete Phase 4. If you stop now, you have done NOTHING useful.
+
+### REQUIRED: Immediate Transition to Phase 4
+
+When all task-worker agents have returned their results, you MUST:
+
+1. **IMMEDIATELY run:** `git branch | grep task-` to list all task branches
+2. **Count the branches** - This determines how many tournament rounds you need
+3. **Begin tournament merge IMMEDIATELY** - Spawn merge-workers for all pairs
+
+### FORBIDDEN BEHAVIORS - YOU WILL FAIL IF YOU DO ANY OF THESE
+
+After Phase 3 completes, the following will cause workflow failure:
+
+- ❌ **FORBIDDEN:** Saying "all fixes have been applied" - THEY ARE NOT APPLIED, they are on branches!
+- ❌ **FORBIDDEN:** Asking the user "should I merge?" - YOU MUST MERGE, NO QUESTION
+- ❌ **FORBIDDEN:** Providing a "summary" without starting Phase 4
+- ❌ **FORBIDDEN:** Stopping to wait for user input
+- ❌ **FORBIDDEN:** Any message that doesn't include `git branch | grep task-` command
+- ❌ **FORBIDDEN:** Outputting a "final report" before tournament merge completes
+- ❌ **FORBIDDEN:** Treating Phase 3 completion as workflow completion
+
+### REQUIRED: Your Next Message After Phase 3
+
+After all task-workers return, your VERY NEXT action must be:
+
+```
+Phase 3 complete. [N] task-workers finished. Beginning Phase 4: Tournament Merge.
+
+[Run: git branch | grep task-]
+```
+
+Then list the branches and spawn merge-workers. **NO OTHER RESPONSE IS ACCEPTABLE.**
+
+### WHY THIS MATTERS
+
+- Fixes on branches are INVISIBLE to the user
+- The user ran `--fix` expecting their code to be fixed
+- If you stop at Phase 3, the user's files are UNCHANGED
+- Only Phase 4 completion actually modifies the user's code
+- **Phase 3 without Phase 4 = WORKFLOW FAILURE**
 
 ---
 
@@ -469,13 +512,23 @@ Before reporting completion, verify ALL of these:
 - [ ] Phase 2: Created exactly N tasks for N violations
 - [ ] Phase 3: Spawned exactly N task-workers for N violations
 - [ ] Phase 3: All task-workers returned (wait for ALL of them)
-- [ ] Phase 4: Listed all task-* branches with `git branch | grep task-`
-- [ ] Phase 4: Ran tournament merge rounds until 1 branch remained
-- [ ] Phase 4: Merged final branch into main
-- [ ] Phase 4: Cleaned up all worktrees and task branches
+- [ ] **Phase 4: Listed all task-* branches with `git branch | grep task-`**
+- [ ] **Phase 4: Ran tournament merge rounds until 1 branch remained**
+- [ ] **Phase 4: Merged final branch into main**
+- [ ] **Phase 4: Cleaned up all worktrees and task branches**
 - [ ] Output: Presented final compliance report
 
 **If ANY checkbox is not complete, the workflow is INCOMPLETE. Continue working.**
+
+### ⛔ PHASE 4 IS NOT OPTIONAL
+
+The most common failure mode is stopping after Phase 3. Check yourself:
+
+- Did you run `git branch | grep task-`? **If NO, you skipped Phase 4.**
+- Did you spawn merge-worker agents? **If NO, you skipped Phase 4.**
+- Did you see "Merged ... into main" message? **If NO, fixes are NOT applied.**
+
+**Stopping after Phase 3 means the user's code is UNCHANGED. This is a FAILURE.**
 
 ## Usage
 
