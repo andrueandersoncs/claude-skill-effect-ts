@@ -39,32 +39,26 @@ class IsPromiseExpression extends Schema.Class<IsPromiseExpression>("IsPromiseEx
 	isPromiseText: Schema.Literal(true),
 }) {}
 
-// Schema for function node types
-// Using type predicates with proper narrowing for TypeScript AST nodes
-// Note: Type predicates cannot use Effect.fn() as they must return boolean,
-// not Effect. This is a special case where pure type guards are necessary
-// for TypeScript AST filtering.
-// eslint-disable-next-line @effect-ts/rule-005
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
-	ts.isFunctionDeclaration(u as ts.Node);
+// Type narrowing helper for FunctionNode types without type assertions
+// Using native TypeScript type guards with a discriminated union approach
+const isFunctionNode = (node: unknown): node is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => {
+	return (
+		ts.isFunctionDeclaration(node) ||
+		ts.isFunctionExpression(node) ||
+		ts.isArrowFunction(node)
+	);
+};
 
-// eslint-disable-next-line @effect-ts/rule-005
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
-	ts.isFunctionExpression(u as ts.Node);
-
-// eslint-disable-next-line @effect-ts/rule-005
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
-	ts.isArrowFunction(u as ts.Node);
-
+// Schema for function node types using discriminated union of type guards
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration =>
-		ts.isFunctionDeclaration(u as ts.Node),
+		ts.isFunctionDeclaration(u),
 	),
 	Schema.declare((u): u is ts.FunctionExpression =>
-		ts.isFunctionExpression(u as ts.Node),
+		ts.isFunctionExpression(u),
 	),
 	Schema.declare((u): u is ts.ArrowFunction =>
-		ts.isArrowFunction(u as ts.Node),
+		ts.isArrowFunction(u),
 	),
 );
 
@@ -240,7 +234,7 @@ export const detect = (
 
 		// Detect callback patterns (functions with callback parameter names)
 		const functionCheckResult = Match.value(node).pipe(
-			Match.when(Schema.is(FunctionNode), (typedNode) => {
+			Match.when((n): n is ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction => isFunctionNode(n), (typedNode) => {
 				return Option.fromNullable(typedNode.parameters.at(-1)).pipe(
 					Option.flatMap((lastParam) => {
 						const paramName = lastParam.name.getText(sourceFile).toLowerCase();
