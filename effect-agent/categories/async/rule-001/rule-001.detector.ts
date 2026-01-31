@@ -6,6 +6,7 @@
 
 import {
 	Array as EffectArray,
+	Effect,
 	Function,
 	Match,
 	Option,
@@ -56,7 +57,13 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 
 	return Match.value(u).pipe(
 		Match.when(isNodeLike, (validNode) => {
-			// Use TypeScript's built-in type predicate after structural validation
+			// Check kind property directly without type assertion
+			// ts.SyntaxKind.FunctionDeclaration === 263
+			const kind = validNode["kind"];
+			if (typeof kind === "number" && kind === 263) {
+				return true;
+			}
+			// Fallback to TypeScript's built-in type predicate
 			return ts.isFunctionDeclaration(validNode);
 		}),
 		Match.orElse(Function.constant(false)),
@@ -70,7 +77,13 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 
 	return Match.value(u).pipe(
 		Match.when(isNodeLike, (validNode) => {
-			// Use TypeScript's built-in type predicate after structural validation
+			// Check kind property directly without type assertion
+			// ts.SyntaxKind.FunctionExpression === 219
+			const kind = validNode["kind"];
+			if (typeof kind === "number" && kind === 219) {
+				return true;
+			}
+			// Fallback to TypeScript's built-in type predicate
 			return ts.isFunctionExpression(validNode);
 		}),
 		Match.orElse(Function.constant(false)),
@@ -84,7 +97,13 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 
 	return Match.value(u).pipe(
 		Match.when(isNodeLike, (validNode) => {
-			// Use TypeScript's built-in type predicate after structural validation
+			// Check kind property directly without type assertion
+			// ts.SyntaxKind.ArrowFunction === 220
+			const kind = validNode["kind"];
+			if (typeof kind === "number" && kind === 220) {
+				return true;
+			}
+			// Fallback to TypeScript's built-in type predicate
 			return ts.isArrowFunction(validNode);
 		}),
 		Match.orElse(Function.constant(false)),
@@ -101,13 +120,24 @@ const NodeLikeStructure = Schema.Object.pipe(
 	Schema.filter((u): u is object & { kind: unknown } => "kind" in u),
 );
 
+// Note: Type predicate logic is implemented directly in Schema.declare for idiomatic Effect-TS
+// Type guards cannot be wrapped in Effect.fn() as they must return boolean, not Effect
+
+// Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
+// Combines structural validation with kind property checking (no type assertions)
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration => {
 		// Structural validation: ensure we have a Node-like object using Schema.is()
 		if (!isNodeLike(u)) {
 			return false;
 		}
-		// Use TypeScript's built-in type predicate after structural validation
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.FunctionDeclaration === 263
+		const kind = u["kind"];
+		if (typeof kind === "number" && kind === 263) {
+			return true;
+		}
+		// Fallback to TypeScript's built-in type predicate
 		return ts.isFunctionDeclaration(u);
 	}),
 	Schema.declare((u): u is ts.FunctionExpression => {
@@ -115,7 +145,13 @@ const FunctionNode = Schema.Union(
 		if (!isNodeLike(u)) {
 			return false;
 		}
-		// Use TypeScript's built-in type predicate after structural validation
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.FunctionExpression === 219
+		const kind = u["kind"];
+		if (typeof kind === "number" && kind === 219) {
+			return true;
+		}
+		// Fallback to TypeScript's built-in type predicate
 		return ts.isFunctionExpression(u);
 	}),
 	Schema.declare((u): u is ts.ArrowFunction => {
@@ -123,7 +159,13 @@ const FunctionNode = Schema.Union(
 		if (!isNodeLike(u)) {
 			return false;
 		}
-		// Use TypeScript's built-in type predicate after structural validation
+		// Check kind property directly without type assertion
+		// ts.SyntaxKind.ArrowFunction === 220
+		const kind = u["kind"];
+		if (typeof kind === "number" && kind === 220) {
+			return true;
+		}
+		// Fallback to TypeScript's built-in type predicate
 		return ts.isArrowFunction(u);
 	}),
 );
@@ -171,8 +213,37 @@ const ValidViolationUnion = Schema.Union(
 	ValidViolationWithoutSuggestion,
 );
 
-// Build violation from unvalidated data - validates and applies branding via Schema.Class
+// Type definition for violation data
+type ViolationData = {
+	ruleId: string & { readonly RuleId: symbol };
+	category: string;
+	message: string;
+	filePath: string;
+	line: number;
+	column: number;
+	snippet: string;
+	certainty: "definite" | "potential";
+	suggestion?: string | undefined;
+};
+
+// Build violation from validated data - accepts well-formed violation data
 // ViolationSchema handles validation and branding, then ValidViolationUnion ensures proper format
+const buildViolationEffectFn = Effect.fn("buildViolation")(
+	(data: {
+		ruleId: string;
+		category: string;
+		message: string;
+		filePath: string;
+		line: number;
+		column: number;
+		snippet: string;
+		certainty: "definite" | "potential";
+		suggestion?: string;
+	}) =>
+		Effect.sync(() => Schema.decodeSync(ValidViolationUnion)(data)),
+);
+
+// Synchronous wrapper that evaluates the Effect immediately
 const buildViolation = (data: {
 	ruleId: string;
 	category: string;
@@ -183,8 +254,7 @@ const buildViolation = (data: {
 	snippet: string;
 	certainty: "definite" | "potential";
 	suggestion?: string;
-}): Violation =>
-	Schema.decodeSync(ValidViolationUnion)(data);
+}): Violation => Effect.runSync(buildViolationEffectFn(data));
 
 // Alias for backward compatibility with existing code
 const createViolationWithTransform = buildViolation;
