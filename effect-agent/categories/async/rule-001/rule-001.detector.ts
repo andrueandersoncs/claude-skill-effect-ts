@@ -102,35 +102,36 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 // Note: Type predicate logic is inlined where needed in Match.when for type narrowing
 // Type guards cannot be wrapped in Effect.fn() as they must return boolean, not Effect
 
+// Schema-based validation helper for Node-like objects
+// Define structure expectations as Schema for declarative validation
+const NodeStructure = Schema.Struct({
+	kind: Schema.Unknown,
+});
+
+// Type predicate for Node-like validation: checks type, nullability, and structure
+// Using reusable isNodeLike guard to avoid repeated conditionals
+const checkIsNodeLike = (u: unknown): u is object => isNodeLike(u);
+
 // Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
 // Combines structural validation with TypeScript's built-in type predicates
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration => {
 		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isFunctionDeclaration(u as ts.Node);
+		return checkIsNodeLike(u)
+			? ts.isFunctionDeclaration(u as ts.Node)
+			: false;
 	}),
 	Schema.declare((u): u is ts.FunctionExpression => {
 		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isFunctionExpression(u as ts.Node);
+		return checkIsNodeLike(u)
+			? ts.isFunctionExpression(u as ts.Node)
+			: false;
 	}),
 	Schema.declare((u): u is ts.ArrowFunction => {
 		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isArrowFunction(u as ts.Node);
+		return checkIsNodeLike(u)
+			? ts.isArrowFunction(u as ts.Node)
+			: false;
 	}),
 );
 
