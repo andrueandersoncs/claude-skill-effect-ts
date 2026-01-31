@@ -35,23 +35,6 @@ const IsPromiseExpression = Schema.Struct({
 	isPromiseText: Schema.Literal(true),
 });
 
-// Composable pipeline for schema validation
-const _validatePromiseExpression = (expr: ts.Identifier) =>
-	Match.value({
-		isNewExpr: true,
-		isIdentifierExpr: true,
-		isPromiseText: expr.text === "Promise",
-	}).pipe(
-		Match.when(Schema.is(IsPromiseExpression), () =>
-			Option.some({
-				isNewExpr: true,
-				isIdentifierExpr: true,
-				isPromiseText: true,
-			}),
-		),
-		Match.orElse(() => Option.none()),
-	);
-
 // Schema for function node types
 // Using type predicates with proper narrowing for TypeScript AST nodes
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
@@ -104,22 +87,6 @@ const ValidViolationWithSuggestion = Schema.Struct({
 const ValidViolationWithoutSuggestion = Schema.Struct({
 	...BaseViolationFields.fields,
 });
-
-// Use Schema.transform to handle optional field omission per rule-010
-const _RemoveSuggestionSchema = Schema.transform(
-	ViolationSchema,
-	ValidViolationWithoutSuggestion,
-	{
-		decode(input) {
-			const { suggestion: _unused, ...rest } = input as Record<string, unknown>;
-			return rest as Schema.Schema.Type<typeof ValidViolationWithoutSuggestion>;
-		},
-		encode(output) {
-			return output as Schema.Schema.Type<typeof ViolationSchema>;
-		},
-		strict: true,
-	},
-);
 
 // Helper to validate promise objects using Schema
 const validateIsPromiseExpression = (obj: {
