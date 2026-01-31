@@ -5,14 +5,14 @@
  */
 
 import {
-	Array as EffectArray,
 	Effect,
+	Array as EffectArray,
 	Function,
 	Match,
 	Option,
+	pipe,
 	Schema,
 	Struct,
-	pipe,
 } from "effect";
 import * as ts from "typescript";
 import {
@@ -38,56 +38,9 @@ const meta = new MetaSchema({
 // for the TypeScript compiler API which requires this narrowing. After validating
 // the basic object structure, we delegate to TypeScript's built-in type predicates.
 
-// Using Function.identity from Effect for pure identity transformation
-// Type predicates cannot use Effect.fn() as they must return boolean, not Effect.
-// This is a special case where pure type guards are necessary for TypeScript AST filtering.
-const assertAsNode = Function.identity;
-
-// Reusable type guard functions for function node types
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
-	// Use Match.value for structural validation with type narrowing
-	const isNodeLike = (val: unknown): val is object =>
-		typeof val === "object" && val !== null && "kind" in val;
-
-	return Match.value(u).pipe(
-		Match.when(isNodeLike, (validNode) => {
-			// Use TypeScript's built-in type predicate after structural validation
-			// eslint-disable-next-line @effect-ts/rule-002
-			return ts.isFunctionDeclaration(assertAsNode(validNode));
-		}),
-		Match.orElse(() => false),
-	);
-};
-
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
-	// Use Match.value for structural validation with type narrowing
-	const isNodeLike = (val: unknown): val is object =>
-		typeof val === "object" && val !== null && "kind" in val;
-
-	return Match.value(u).pipe(
-		Match.when(isNodeLike, (validNode) => {
-			// Use TypeScript's built-in type predicate after structural validation
-			// eslint-disable-next-line @effect-ts/rule-002
-			return ts.isFunctionExpression(assertAsNode(validNode));
-		}),
-		Match.orElse(() => false),
-	);
-};
-
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
-	// Use Match.value for structural validation with type narrowing
-	const isNodeLike = (val: unknown): val is object =>
-		typeof val === "object" && val !== null && "kind" in val;
-
-	return Match.value(u).pipe(
-		Match.when(isNodeLike, (validNode) => {
-			// Use TypeScript's built-in type predicate after structural validation
-			// eslint-disable-next-line @effect-ts/rule-002
-			return ts.isArrowFunction(assertAsNode(validNode));
-		}),
-		Match.orElse(() => false),
-	);
-};
+// Reusable structural type guard for Node-like objects
+const isNodeLike = (val: unknown): val is ts.Node =>
+	typeof val === "object" && val !== null && "kind" in val;
 
 // Note: Type predicate logic is inlined where needed in Match.when for type narrowing
 // Type guards cannot be wrapped in Effect.fn() as they must return boolean, not Effect
@@ -95,31 +48,37 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 // Schema for function node types using Schema.declare() for idiomatic Effect-TS type guards
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isFunctionDeclaration(assertAsNode(u));
+		// Use declarative pattern matching with Match.when for structural validation
+		return Match.value(u).pipe(
+			Match.when(isNodeLike, (validNode) => {
+				// Use TypeScript's built-in type predicate after structural validation
+				// eslint-disable-next-line @effect-ts/rule-002
+				return ts.isFunctionDeclaration(validNode);
+			}),
+			Match.orElse(() => false),
+		);
 	}),
 	Schema.declare((u): u is ts.FunctionExpression => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isFunctionExpression(assertAsNode(u));
+		// Use declarative pattern matching with Match.when for structural validation
+		return Match.value(u).pipe(
+			Match.when(isNodeLike, (validNode) => {
+				// Use TypeScript's built-in type predicate after structural validation
+				// eslint-disable-next-line @effect-ts/rule-002
+				return ts.isFunctionExpression(validNode);
+			}),
+			Match.orElse(() => false),
+		);
 	}),
 	Schema.declare((u): u is ts.ArrowFunction => {
-		// Structural validation: ensure we have a Node-like object
-		if (typeof u !== "object" || u === null || !("kind" in u)) {
-			return false;
-		}
-		// Use TypeScript's built-in type predicate after structural validation
-		// eslint-disable-next-line @effect-ts/rule-002
-		return ts.isArrowFunction(assertAsNode(u));
+		// Use declarative pattern matching with Match.when for structural validation
+		return Match.value(u).pipe(
+			Match.when(isNodeLike, (validNode) => {
+				// Use TypeScript's built-in type predicate after structural validation
+				// eslint-disable-next-line @effect-ts/rule-002
+				return ts.isArrowFunction(validNode);
+			}),
+			Match.orElse(() => false),
+		);
 	}),
 );
 
@@ -210,9 +169,16 @@ const ViolationTransform = Schema.transform(
 				Option.fromNullable(data.suggestion),
 				Option.match({
 					onSome: (suggestion) =>
-						Effect.runSync(decodeWithSuggestion(data as unknown as ViolationData, suggestion)),
+						Effect.runSync(
+							decodeWithSuggestion(
+								data as unknown as ViolationData,
+								suggestion,
+							),
+						),
 					onNone: () =>
-						Effect.runSync(decodeWithoutSuggestion(data as unknown as ViolationData)),
+						Effect.runSync(
+							decodeWithoutSuggestion(data as unknown as ViolationData),
+						),
 				}),
 			),
 		encode: (v) => v as unknown as ViolationSchema,
