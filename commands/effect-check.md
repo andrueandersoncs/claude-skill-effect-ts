@@ -15,6 +15,17 @@ allowed-tools:
 
 Two-phase analysis: fast AST-based detection followed by LLM-powered analysis.
 
+## ⛔⛔⛔ FIX MODE INVARIANTS - THESE MUST ALWAYS BE TRUE ⛔⛔⛔
+
+A successful fix run MUST satisfy ALL of these invariants:
+
+1. **Violation count MUST decrease** (M < N where N=before, M=after)
+2. **ZERO suppression comments** (no eslint-disable, @ts-ignore, biome-ignore, etc.)
+3. **ZERO new type errors** (bun run check must not show new errors)
+4. **All 4 phases MUST complete** (Detection → Tasks → Workers → Tournament Merge)
+
+**If ANY invariant is violated, the fix FAILED and changes MUST be reverted.**
+
 ## Modes
 
 - **Analyze mode** (default): Spawns `category-checker` agents to analyze violations and provide recommendations
@@ -253,18 +264,36 @@ Each task-worker will:
 
 **Task-workers MUST fix the actual code. Suppression comments are FORBIDDEN.**
 
-### FORBIDDEN - These are NOT fixes:
+### FORBIDDEN - These are NOT fixes (ANY OF THESE = AUTOMATIC REJECTION):
 
-- ❌ `// eslint-disable-next-line`
-- ❌ `// @ts-ignore`
-- ❌ `// @ts-expect-error`
-- ❌ `/* eslint-disable */`
-- ❌ `// biome-ignore`
-- ❌ `// prettier-ignore`
-- ❌ Any comment that suppresses, ignores, or disables a rule
-- ❌ Wrapping code in `try/catch` without fixing the underlying issue
-- ❌ Adding `as any` or `as unknown` type assertions to hide errors
-- ❌ Deleting the violating code without replacement
+- ❌ `// eslint-disable-next-line` - **FORBIDDEN**
+- ❌ `// @ts-ignore` - **FORBIDDEN**
+- ❌ `// @ts-expect-error` - **FORBIDDEN**
+- ❌ `/* eslint-disable */` - **FORBIDDEN**
+- ❌ `// biome-ignore` - **FORBIDDEN**
+- ❌ `// prettier-ignore` - **FORBIDDEN**
+- ❌ `// @ts-nocheck` - **FORBIDDEN**
+- ❌ `// type-coverage:ignore-next-line` - **FORBIDDEN**
+- ❌ Any comment that suppresses, ignores, or disables a rule - **FORBIDDEN**
+- ❌ Wrapping code in `try/catch` without fixing the underlying issue - **FORBIDDEN**
+- ❌ Adding `as any` or `as unknown` type assertions to hide errors - **FORBIDDEN**
+- ❌ Deleting the violating code without replacement - **FORBIDDEN**
+- ❌ Adding empty catch blocks `catch {}` or `catch (e) {}` - **FORBIDDEN**
+- ❌ Using `Function`, `Object`, or `any` types to escape type checking - **FORBIDDEN**
+
+### ⛔ MERGE-WORKERS MUST REJECT SUPPRESSION COMMENTS
+
+**Merge-workers: Before merging ANY branch, you MUST check for suppression comments:**
+
+```bash
+git diff branch_a...branch_b | grep -E "(eslint-disable|@ts-ignore|@ts-expect-error|biome-ignore|prettier-ignore|@ts-nocheck)"
+```
+
+**If suppression comments are found:**
+1. **DO NOT MERGE that branch**
+2. Report: "REJECTED branch [name]: Contains suppression comments instead of real fixes"
+3. Delete the branch and its worktree
+4. The fix is INVALID - it does not count as a fix
 
 ### REQUIRED - What "fixing" means:
 
@@ -351,6 +380,10 @@ REQUIRED (what a real fix looks like):
 - The fixed code must pass the detector
 
 Apply the idiomatic Effect-TS fix in your worktree. Commit to your task branch.
+
+⛔ BEFORE COMMITTING - SELF-CHECK:
+   Run: grep -n "eslint-disable\|@ts-ignore\|@ts-expect-error\|biome-ignore" <your-file>
+   If ANY matches: YOUR FIX IS INVALID. Remove suppression comments and fix properly.
 
 ⛔ DO NOT remove the worktree or delete the branch after committing.
    Leave them intact - they will be merged by merge-workers in Phase 4.
@@ -526,8 +559,20 @@ For each pair (branch_a, branch_b), use Task tool with:
     - branch_a (survives): [BRANCH_A]
     - branch_b (consumed): [BRANCH_B]
 
-    Merge branch_b INTO branch_a. Keep ALL fixes from BOTH.
-    Clean up branch_b's worktree and delete branch_b after success.
+    ⛔ BEFORE MERGING - CHECK FOR SUPPRESSION COMMENTS:
+    ```bash
+    git diff main...branch_b | grep -E "(eslint-disable|@ts-ignore|@ts-expect-error|biome-ignore|prettier-ignore|@ts-nocheck)"
+    ```
+
+    If suppression comments found in branch_b:
+    - DO NOT merge branch_b
+    - Delete branch_b and its worktree
+    - Report: "REJECTED [BRANCH_B]: Contains suppression comments"
+    - Continue with branch_a only
+
+    If no suppression comments:
+    - Merge branch_b INTO branch_a. Keep ALL fixes from BOTH.
+    - Clean up branch_b's worktree and delete branch_b after success.
 ```
 
 ---
@@ -683,20 +728,26 @@ cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:errors <file>
 
 Before reporting completion, verify ALL of these:
 
-- [ ] Phase 1: Detectors ran and produced violations
+- [ ] Phase 1: Detectors ran and produced violations (record count: N)
 - [ ] Phase 2: Created exactly N tasks for N violations
 - [ ] Phase 3: Spawned exactly N task-workers for N violations
 - [ ] Phase 3: All task-workers returned (wait for ALL of them)
 - [ ] **Phase 4: Listed all task-* branches with `git branch | grep task-`**
+- [ ] **Phase 4: Merge-workers checked each branch for suppression comments BEFORE merging**
+- [ ] **Phase 4: Rejected any branches containing suppression comments**
 - [ ] **Phase 4: Ran tournament merge rounds until 1 branch remained**
 - [ ] **Phase 4: Merged final branch into main**
 - [ ] **Phase 4: Cleaned up all worktrees and task branches**
-- [ ] **Phase 5: VERIFICATION - Re-run detectors on fixed file**
-- [ ] **Phase 5: Confirm ZERO violations remain (or report failures)**
+- [ ] **Phase 5: VERIFICATION - Re-run detectors on fixed file (record count: M)**
+- [ ] **Phase 5: Verify M < N (violation count DECREASED)**
 - [ ] **Phase 5: Check for suppression comments - if found, FIX FAILED**
+- [ ] **Phase 5: Run type check - if errors introduced, FIX FAILED**
+- [ ] **Phase 5: If FIX FAILED, REVERT changes and restore original code**
 - [ ] Output: Presented final compliance report WITH verification results
 
 **If ANY checkbox is not complete, the workflow is INCOMPLETE. Continue working.**
+
+**If verification fails (suppression comments, type errors, or increased violations), REVERT and report failure.**
 
 ## ⛔ MANDATORY PHASE 5: VERIFICATION
 
@@ -709,7 +760,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:all <file-path> --json 2
 
 ### Step 2: Check for suppression comments
 ```bash
-grep -n "eslint-disable\|@ts-ignore\|@ts-expect-error\|biome-ignore" <file-path>
+grep -n "eslint-disable\|@ts-ignore\|@ts-expect-error\|biome-ignore\|prettier-ignore\|@ts-nocheck" <file-path>
 ```
 
 ### Step 3: Run type check
@@ -717,25 +768,63 @@ grep -n "eslint-disable\|@ts-ignore\|@ts-expect-error\|biome-ignore" <file-path>
 cd <project-root> && bun run check 2>&1 | grep -A2 "<file-path>"
 ```
 
+### Step 4: Compare violation counts
+```
+Original violations: N (from Phase 1)
+Current violations: M (from Step 1 re-run)
+
+If M > N: FIX FAILED - violation count INCREASED
+If M == N: FIX FAILED - nothing was fixed
+If M < N: Partial or full success
+If M == 0: Full success (if no suppression comments or type errors)
+```
+
 ### Verification Outcomes:
 
-**SUCCESS:** Zero violations AND zero suppression comments AND no type errors
+**SUCCESS:** Zero violations AND zero suppression comments AND no type errors AND violation count decreased
 - Report: "✅ All N violations fixed. File is now compliant."
 
-**PARTIAL FAILURE:** Some violations remain
+**PARTIAL SUCCESS:** Some violations fixed, some remain, no regressions
 - Report: "⚠️ X of N violations fixed. Y violations remain."
 - List the remaining violations
 
-**TOTAL FAILURE:** Suppression comments were added instead of fixes
+**TOTAL FAILURE - SUPPRESSION COMMENTS:** Suppression comments were added instead of fixes
 - Report: "❌ FIX FAILED: Workers added suppression comments instead of fixing code."
 - This is a BUG in the workflow - the user got ZERO value
 - List the suppression comments found
+- **YOU MUST REVERT THE CHANGES** - the "fix" made things worse
 
-**TYPE ERRORS:** Fixes introduced type errors
-- Report: "⚠️ Fixes applied but introduced type errors:"
+**TOTAL FAILURE - TYPE ERRORS INTRODUCED:** Fixes broke type safety
+- Report: "❌ FIX FAILED: Workers introduced N type errors."
 - List the type errors
+- **YOU MUST REVERT THE CHANGES** - the "fix" made things worse
 
-**NEVER report success if suppression comments exist.** They are evidence of failure.
+**TOTAL FAILURE - VIOLATION COUNT INCREASED:** More violations after "fix" than before
+- Report: "❌ FIX FAILED: Violation count increased from N to M."
+- This means fixes were WRONG - they created new problems
+- **YOU MUST REVERT THE CHANGES** - the "fix" made things worse
+
+**NEVER report success if:**
+- Suppression comments exist - They are evidence of failure
+- Type errors were introduced - The code is now broken
+- Violation count increased - The "fix" created more problems than it solved
+
+### ⛔ MANDATORY REVERT ON FAILURE
+
+If Phase 5 verification shows ANY of:
+- Suppression comments added
+- Type errors introduced
+- Violation count increased
+
+**YOU MUST:**
+```bash
+git log --oneline -5  # Find the commit before task-workers started
+git reset --hard <commit-before-fixes>
+```
+
+Report: "❌ Fixes reverted. Original code restored. Fix attempt failed because: [reason]"
+
+**The user is better off with their original code than with broken "fixes".**
 
 ### ⛔ PHASE 4 IS NOT OPTIONAL
 
