@@ -44,17 +44,6 @@ class IsPromiseExpression extends Schema.Class<IsPromiseExpression>("IsPromiseEx
 // Note: Type predicates cannot use Effect.fn() as they must return boolean,
 // not Effect. This is a special case where pure type guards are necessary
 // for TypeScript AST filtering.
-// eslint-disable-next-line @effect-ts/rule-005
-const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration =>
-	ts.isFunctionDeclaration(u as ts.Node);
-
-// eslint-disable-next-line @effect-ts/rule-005
-const isFunctionExpression = (u: unknown): u is ts.FunctionExpression =>
-	ts.isFunctionExpression(u as ts.Node);
-
-// eslint-disable-next-line @effect-ts/rule-005
-const isArrowFunction = (u: unknown): u is ts.ArrowFunction =>
-	ts.isArrowFunction(u as ts.Node);
 
 const FunctionNode = Schema.Union(
 	Schema.declare((u): u is ts.FunctionDeclaration =>
