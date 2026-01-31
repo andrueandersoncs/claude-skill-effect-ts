@@ -107,7 +107,13 @@ const validateIsPromiseExpression = (obj: {
 		Match.orElse(() => Option.none()),
 	);
 
-// Helper to validate and decode violation data
+// Schema union for violations - either with or without suggestion
+const ValidViolationUnion = Schema.Union(
+	ValidViolationWithSuggestion,
+	ValidViolationWithoutSuggestion,
+);
+
+// Helper to validate and decode violation data with comprehensive Option-based validation
 const decodeViolationData = (data: {
 	ruleId: string & { readonly RuleId: symbol };
 	category: string;
@@ -133,10 +139,10 @@ const decodeViolationData = (data: {
 		}),
 	);
 
-// Validate violations using Schema.transform for bidirectional conversion
+// Schema transform for conditional validation based on suggestion presence
 const ViolationTransform = Schema.transform(
 	ViolationSchema,
-	Schema.Union(ValidViolationWithSuggestion, ValidViolationWithoutSuggestion),
+	ValidViolationUnion,
 	{
 		decode: decodeViolationData,
 		encode: Function.identity,
@@ -144,6 +150,7 @@ const ViolationTransform = Schema.transform(
 	},
 );
 
+// Helper to create validated violations using Schema.transform
 const createViolation = Schema.decodeSync(ViolationTransform);
 
 export const detect = (
