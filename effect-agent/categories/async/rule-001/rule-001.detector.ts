@@ -60,7 +60,7 @@ const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 			// Check kind property directly without type assertion
 			// ts.SyntaxKind.FunctionDeclaration === 263
 			const kind = validNode["kind"];
-			if (typeof kind === "number" && kind === 263) {
+			if (Schema.is(Schema.Number)(kind) && kind === 263) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -80,7 +80,7 @@ const isFunctionExpression = (u: unknown): u is ts.FunctionExpression => {
 			// Check kind property directly without type assertion
 			// ts.SyntaxKind.FunctionExpression === 219
 			const kind = validNode["kind"];
-			if (typeof kind === "number" && kind === 219) {
+			if (Schema.is(Schema.Number)(kind) && kind === 219) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -100,7 +100,7 @@ const isArrowFunction = (u: unknown): u is ts.ArrowFunction => {
 			// Check kind property directly without type assertion
 			// ts.SyntaxKind.ArrowFunction === 220
 			const kind = validNode["kind"];
-			if (typeof kind === "number" && kind === 220) {
+			if (Schema.is(Schema.Number)(kind) && kind === 220) {
 				return true;
 			}
 			// Fallback to TypeScript's built-in type predicate
@@ -134,7 +134,7 @@ const FunctionNode = Schema.Union(
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.FunctionDeclaration === 263
 		const kind = u["kind"];
-		if (typeof kind === "number" && kind === 263) {
+		if (Schema.is(Schema.Number)(kind) && kind === 263) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
@@ -148,7 +148,7 @@ const FunctionNode = Schema.Union(
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.FunctionExpression === 219
 		const kind = u["kind"];
-		if (typeof kind === "number" && kind === 219) {
+		if (Schema.is(Schema.Number)(kind) && kind === 219) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
@@ -162,7 +162,7 @@ const FunctionNode = Schema.Union(
 		// Check kind property directly without type assertion
 		// ts.SyntaxKind.ArrowFunction === 220
 		const kind = u["kind"];
-		if (typeof kind === "number" && kind === 220) {
+		if (Schema.is(Schema.Number)(kind) && kind === 220) {
 			return true;
 		}
 		// Fallback to TypeScript's built-in type predicate
