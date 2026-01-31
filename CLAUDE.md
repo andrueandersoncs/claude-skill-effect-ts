@@ -1,170 +1,204 @@
 # Effect-TS Plugin
 
+> **⚠️ MANDATORY COMPLIANCE NOTICE**
+> 
+> Every instruction in this document is a **COMMAND**, not a suggestion. These rules are **REQUIRED** and **NON-NEGOTIABLE**. Violating any rule is a failure state. If you find yourself about to break a rule, STOP and reconsider your approach.
+
 ## Problem-First Methodology
 
-**Always frame requests as problems.** Before taking action, explicitly restate or reframe the user's request as a clear problem statement. **Ask the user to confirm the problem statement is correct before proceeding.**
+**REQUIRED: Frame every request as a problem statement.**
 
-**Always create a reproduction script.** For every confirmed problem, write a Bun script that reproduces it:
+1. **YOU MUST** restate the user's request as a clear problem statement BEFORE taking any action
+2. **YOU MUST** ask the user to confirm the problem statement is correct
+3. **YOU MUST NOT** proceed until the problem statement is confirmed
+
+**REQUIRED: Create a reproduction script for every problem.**
+
+- **YOU MUST** write a Bun script that reproduces the problem
 - Script succeeds (exit 0) = problem still exists
 - Script fails (exit 1) = problem is solved
-- Must be runnable with `bun run <script>` or `bun -e "<code>"`
+- **YOU MUST** run the script to confirm the problem before implementing fixes
+- **YOU MUST** run the script after fixes to prove the problem is solved
 
-**Example workflow:**
-1. User: "The detector isn't catching X pattern"
-2. Problem statement: "Detector should output violation for X pattern, but outputs nothing"
-3. **Ask user to confirm problem statement**
-4. Reproduction script: Creates test file with X, runs detector, exits 0 if no violation found
-5. Run script → exits 0 (problem confirmed)
-6. Implement fix
-7. Run script → exits 1 (problem no longer reproduces = solved)
+**VIOLATION:** Taking action without a confirmed problem statement or reproduction script.
 
 ## Task Management
 
-**Always use tasks.** For every user request, create a task list with specific tasks that are as independent as possible so they can be parallelized across subagents.
+**REQUIRED: Use task lists for every request.**
+
+**YOU MUST** create a task list with specific, independent tasks for EVERY user request. No exceptions.
+
+**VIOLATION:** Working without a task list.
 
 ## Parallelization
 
-**Maximize subagent parallelism.** Always spawn multiple Task tool subagents in a single message when tasks can run independently. Never work sequentially when parallel execution is possible.
+**REQUIRED: Maximize parallel execution.**
 
-**For codebase exploration:** When searching for multiple things or exploring different aspects of the codebase, spawn multiple `Explore` agents in parallel **in a single message**. Never run Explore agents sequentially when the searches are independent.
+**YOU MUST** spawn multiple Task tool subagents in a SINGLE message when tasks are independent. 
 
-- **One agent per directory/topic** - If analyzing N directories or N topics, spawn N agents
-- **Anti-pattern:** "Let me explore the full structure first" with a single agent
-- **Correct pattern:** Spawn one Explore agent per category/directory/topic simultaneously
+**YOU MUST NOT** run tasks sequentially when parallel execution is possible.
 
-**For tasks requiring file changes:** Spawn `effect-ts:task-worker` agents in parallel (use fully qualified name with `subagent_type="effect-ts:task-worker"`), one per task ID. Each worker creates its own worktree/branch.
+**For codebase exploration:**
+- **YOU MUST** spawn multiple `Explore` agents in parallel in a SINGLE message
+- **YOU MUST** spawn one agent per directory/topic
+- **VIOLATION:** Running Explore agents sequentially for independent searches
+- **VIOLATION:** "Let me explore the full structure first" with a single agent
 
-**After all workers complete, use tournament merge (NOT manual merging):**
-- Pair branches and spawn `effect-ts:merge-worker` agents in parallel (one per pair)
-- Each merge-worker merges branch_b INTO branch_a, keeps fixes from BOTH, deletes branch_b
-- Repeat rounds until one branch remains, then merge that into main
-- **Never merge manually** - it wastes primary agent context. O(log n) parallel rounds vs O(n) sequential.
+**For file changes:**
+- **YOU MUST** spawn `effect-ts:task-worker` agents in parallel, one per task ID
+- **YOU MUST** use tournament merge after workers complete (NOT manual merging)
+- **VIOLATION:** Merging branches manually instead of using `effect-ts:merge-worker`
 
 ## Git Commits
 
-When creating a git commit, always bump the version in both:
+**REQUIRED: Bump versions on every commit.**
+
+**YOU MUST** bump the version in BOTH files on every commit:
 - `.claude-plugin/marketplace.json`
 - `.claude-plugin/plugin.json`
 
-Use semantic versioning. Keep versions in sync between both files.
+**VIOLATION:** Committing without version bumps or with mismatched versions.
 
 ## Package Manager
 
-Always use **Bun** for all operations. Never use Bash.
+**REQUIRED: Use Bun exclusively. Bash is FORBIDDEN.**
 
-**Bun replaces Bash entirely.** Bun is a Turing-complete runtime with built-in modules for shell commands, file system, network, and everything else needed to control a computer.
+**YOU MUST** use Bun for ALL operations:
+- `bun -e "<code>"` for inline execution
+- `bun run <script.ts>` for script execution
+- `bun install`, `bun add`, `bun run`, `bunx` for package operations
 
-**Inline code execution:**
-```bash
-bun -e "console.log('Hello, world!')"
-bun -e "import { $ } from 'bun'; console.log(await $\`ls -la\`.text())"
-```
+**YOU MUST NOT** use raw Bash commands. Bun replaces Bash entirely.
 
-**Shell commands via `$` template literal:**
+**VIOLATION:** Using Bash directly instead of Bun.
+
+**Claude Code as a function call:**
+
+`claude -p "<prompt>"` can be invoked from Bun scripts as a computational primitive. Use it to calculate arbitrary values, make decisions, or perform complex reasoning within your scripts:
+
 ```typescript
 import { $ } from "bun";
 
-await $`echo "Hello World!"`;                    // Run command
-const result = await $`ls -la`.text();           // Capture output as string
-const pkg = await $`cat package.json`.json();    // Parse JSON output
-await $`pwd`.cwd("/tmp");                        // Change working directory
-const { exitCode } = await $`cmd`.nothrow();     // Don't throw on error
+// Use Claude to analyze code and return structured data
+const analysis = await $`claude -p "Analyze this function and return JSON: ${code}"`.json();
+
+// Use Claude to make decisions
+const decision = await $`claude -p "Should we retry? Context: ${error}. Reply YES or NO only."`.text();
+
+// Use Claude to generate code
+const impl = await $`claude -p "Write a function that ${spec}. Output only the code."`.text();
 ```
 
-**File operations via `Bun.file()` and `Bun.write()`:**
-```typescript
-const file = Bun.file("./config.json");
-const text = await file.text();                  // Read as string
-const json = await file.json();                  // Read and parse JSON
-const exists = await file.exists();              // Check existence
+Think of `claude -p` as a powerful function that can compute anything expressible in natural language. Delegate complex reasoning to it.
 
-await Bun.write("output.txt", "Hello");          // Write string
-await Bun.write("data.json", JSON.stringify(x)); // Write JSON
-await Bun.write("copy.txt", Bun.file("src.txt"));// Copy file
-```
+**Bun capabilities (use these, not Bash equivalents):**
 
-**Directory operations via `node:fs`:**
 ```typescript
+// Shell commands
+import { $ } from "bun";
+await $`echo "Hello"`;
+const result = await $`ls -la`.text();
+const pkg = await $`cat package.json`.json();
+
+// File operations
+const text = await Bun.file("./config.json").text();
+await Bun.write("output.txt", "Hello");
+
+// Directory operations
 import { readdir, mkdir, rm } from "node:fs/promises";
-const files = await readdir(".");                // List directory
-await mkdir("newdir", { recursive: true });      // Create directory
-await rm("file.txt");                            // Delete file
 ```
-
-**Package management:**
-- Install dependencies: `bun install`
-- Add packages: `bun add <package>` or `bun add -D <package>` for dev dependencies
-- Run scripts: `bun run <script>`
-- Execute binaries: `bunx <command>`
 
 ## Linting
 
-This project uses [Biome](https://biomejs.dev/) for linting and formatting in `effect-agent/`:
+**REQUIRED: Run linting before commits.**
 
-- Check for issues: `bun run lint`
-- Auto-fix issues: `bun run lint:fix`
-- Format only: `bun run format`
-
-Configuration is in `effect-agent/biome.json`. Key settings:
-- Tab indentation
-- Double quotes
-- Semicolons always
-- `noShadowRestrictedNames` disabled (Effect re-exports `Array`, `Record`, etc.)
+From `effect-agent/`:
+- `bun run lint` - Check for issues
+- `bun run lint:fix` - Auto-fix issues
+- `bun run format` - Format only
 
 ## Verification
 
-Before committing, run these checks from `effect-agent/`:
+**REQUIRED: Run all checks before committing.**
 
-- `bun run check` - TypeScript type checking (tsc --noEmit)
+From `effect-agent/`:
+- `bun run check` - TypeScript type checking
 - `bun run lint` - Biome lint/format check
-- `bun run detect:all <file>` - Run all detectors on a file
-- `bun run detect:errors <file>` - Show only definite errors (no potential issues)
-- `bun run detect:json <file>` - JSON output for programmatic use
+- `bun run detect:all <file>` - Run all detectors
+
+**VIOLATION:** Committing without running verification checks.
 
 ## Refactoring Guidelines
 
-When reorganizing or refactoring code:
-- **Extract before deleting** - Copy working code to new location first, verify it works, then delete original
-- **Test after each change** - Run `bun run detect:all <file> --json` to verify detectors still work
-- **Recover deleted code** - Use `git show HEAD~N:<path>` to recover accidentally deleted files
-- **Simple over complex** - Prefer direct copy/extraction over elaborate migration scripts
+**REQUIRED when refactoring:**
+
+- **YOU MUST** extract before deleting - copy to new location, verify it works, then delete original
+- **YOU MUST** test after each change with `bun run detect:all <file> --json`
+- **YOU MUST** use `git show HEAD~N:<path>` to recover accidentally deleted files
+- **YOU MUST** prefer simple direct approaches over elaborate migration scripts
 
 ## Complex Code Guidelines
 
-When writing complex logic (multi-step pipelines, nested transformations, intricate conditionals):
+**REQUIRED for complex logic:**
 
 **Decompose and verify:**
-- Break into small, independently testable functions
-- Test each function in isolation before composing them
-- Name intermediate steps - extract and name transformations for clarity and testability
+- **YOU MUST** break into small, independently testable functions
+- **YOU MUST** test each function in isolation before composing
+- **YOU MUST** name intermediate steps for clarity
 
-**State assumptions and failure modes explicitly:**
-- Document what inputs are expected and what guarantees the code provides
-- Identify edge cases (empty arrays, null values, concurrent access, etc.)
-- Handle each failure mode intentionally - don't let errors fall through silently
+**State assumptions explicitly:**
+- **YOU MUST** document expected inputs and guarantees
+- **YOU MUST** identify and handle all edge cases intentionally
 
-**Mental simulation before coding:**
-- Walk through the logic step-by-step with concrete example inputs
-- Trace edge cases mentally: What happens with empty input? Malformed data? Partial failures?
-- Predict intermediate values at each step - if you can't, the logic is too complex
-- Ask: "What assumptions am I making? What if they're wrong?"
+**Mental simulation:**
+- **YOU MUST** walk through logic with concrete examples before coding
+- **YOU MUST** trace edge cases: empty input, malformed data, partial failures
+- **YOU MUST** predict intermediate values - if you can't, simplify the logic
 
 ## Communication
 
-- When asked a question, answer it before taking action
-- Reflect on mistakes when asked, don't immediately start fixing
+**REQUIRED:**
+
+- **YOU MUST** answer questions before taking action
+- **YOU MUST** reflect on mistakes when asked, not immediately start fixing
 
 ## Behavior
 
-- **Never declare something "unfixable" or "impossible"** - When constraints seem insurmountable, question the constraints. Ask: "Why does this constraint exist? Can we restructure to avoid it entirely?" If `Schema.declare` requires synchronous booleans, maybe the design shouldn't use `Schema.declare`. Zoom out before giving up.
-- **Escalate abstraction when stuck** - If you can't solve a problem at level N, try level N+1. Can't fix code in a function? Redesign the function. Can't redesign the function? Restructure the module. Can't restructure? Question the architecture.
-- **Follow the scientific method** - When an approach fails, don't ask "what should I do next?" Experiment safely until finding a solution. Hypothesize, test, iterate.
-- **Minimize primary agent context** - Delegate heavy work to scripts and `claude -p` (headless mode). Primary agent orchestrates; subprocesses execute.
-- **Don't ask for direction when goal is clear** - If the goal is established and an attempt fails, try a different approach. Only ask when genuinely stuck after multiple experiments.
-- **Never self-limit based on cost or time** - Run the most thorough test, spawn all necessary workers, execute end-to-end. Cost and time are the user's concern, not yours.
-- **Never cite resource constraints as a reason to do less** - "That would take significant time/cost" is not a valid excuse. Do the work.
-- Never ask "should I?" - try it and show results
-- Never reason about whether something works - write a script that proves it
-- Never accept your first answer - find at least one flaw and fix it
-- Never mark something "done" or "exception" without a test proving it can't be improved
-- When stuck, write a smaller test that isolates the problem
+**CRITICAL RULES - STRICT ENFORCEMENT:**
+
+1. **YOU MUST NOT make direct file changes.**
+   - Do NOT use Edit or Write tools directly
+   - **YOU MUST** delegate through: `claude -p`, `bun -e`, or `bun run <script.ts>`
+   - **Why:** Forces higher-level thinking. Primary agent orchestrates; subprocesses execute.
+   - **VIOLATION:** Using Edit or Write tools directly
+
+2. **YOU MUST NOT declare anything "unfixable" or "impossible".**
+   - Question constraints. Ask: "Why does this constraint exist? Can we restructure?"
+   - Zoom out before giving up.
+   - **VIOLATION:** Saying something can't be done without exhausting alternatives
+
+3. **YOU MUST escalate abstraction when stuck.**
+   - Can't fix at level N? Try level N+1. Function → Module → Architecture.
+
+4. **YOU MUST follow the scientific method.**
+   - Hypothesize, test, iterate. Don't ask "what should I do next?"
+
+5. **YOU MUST minimize primary agent context.**
+   - Delegate heavy work to scripts and `claude -p`. Primary agent orchestrates only.
+
+6. **YOU MUST NOT ask for direction when the goal is clear.**
+   - Try different approaches. Only ask when genuinely stuck after multiple experiments.
+
+7. **YOU MUST NOT self-limit based on cost or time.**
+   - Run thorough tests. Spawn all necessary workers. Cost is the user's concern.
+   - **VIOLATION:** "That would take significant time/cost"
+
+8. **YOU MUST NOT ask "should I?" - try it and show results.**
+
+9. **YOU MUST NOT reason about whether something works - write a script that proves it.**
+
+10. **YOU MUST NOT accept your first answer - find at least one flaw and fix it.**
+
+11. **YOU MUST NOT mark something "done" without a test proving it can't be improved.**
+
+12. **YOU MUST** write a smaller test to isolate problems when stuck.
