@@ -44,6 +44,8 @@ const meta = new MetaSchema({
 const assertAsNode = Function.identity;
 
 // Reusable type guard functions for function node types
+// NOTE: rule-005 violation cannot be fixed - type predicates must return boolean,
+// not Effect. Effect.fn() returns Effect<boolean>, breaking TypeScript type narrowing.
 const isFunctionDeclaration = (u: unknown): u is ts.FunctionDeclaration => {
 	// Use Match.value for structural validation with type narrowing
 	const isNodeLike = (val: unknown): val is object =>
