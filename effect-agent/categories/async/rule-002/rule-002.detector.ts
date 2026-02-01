@@ -52,6 +52,15 @@ const findGenCallback = (
 };
 
 /**
+ * Extract the body from a generator function if it exists
+ */
+const getGenCallbackBody = (
+	genCallback: ts.FunctionExpression | undefined,
+): ts.Node | undefined => {
+	return genCallback?.body;
+};
+
+/**
  * Check if a yield expression is missing the * (delegate)
  * yield* expr -> has asteriskToken
  * yield expr -> no asteriskToken
@@ -77,7 +86,9 @@ export const detect = (
 		// Look for Effect.gen calls
 		if (isEffectGenCall(node)) {
 			const genCallback = findGenCallback(node);
-			if (genCallback && genCallback.body) {
+			const genBody = getGenCallbackBody(genCallback);
+
+			if (genBody) {
 				// Search within the generator body for yield without * or await
 				const visitGenBody = (innerNode: ts.Node) => {
 					// Check for yield without *
@@ -128,7 +139,7 @@ export const detect = (
 					}
 				};
 
-				ts.forEachChild(genCallback.body, visitGenBody);
+				ts.forEachChild(genBody, visitGenBody);
 			}
 		}
 
