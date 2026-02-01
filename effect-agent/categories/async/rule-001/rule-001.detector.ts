@@ -130,9 +130,8 @@ const detectNewPromise = Effect.fn("detectNewPromise")(
 
 const detectCallbackFunction = Effect.fn("detectCallbackFunction")(
 	(node: ts.Node, sourceFile: ts.SourceFile, filePath: string): Effect.Effect<Option.Option<Violation>> =>
-		Match.value(isFunctionLike(node)).pipe(
-			Match.when(true, () => {
-				const funcNode = node as ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction;
+		Match.type<ts.Node>().pipe(
+			Match.when(isFunctionLike, (funcNode) => {
 				const lastParam = Option.fromNullable(funcNode.parameters.at(-1));
 				const paramName = pipe(
 					lastParam,
@@ -169,7 +168,7 @@ const detectCallbackFunction = Effect.fn("detectCallbackFunction")(
 				);
 			}),
 			Match.orElse(() => Effect.succeed(Option.none())),
-		),
+		)(node),
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
