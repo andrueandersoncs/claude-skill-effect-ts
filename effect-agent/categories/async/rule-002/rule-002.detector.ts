@@ -30,18 +30,19 @@ const isEffectGenCall = (node: ts.Node): node is ts.CallExpression => {
 	const obj = expr.expression;
 	const prop = expr.name;
 
-	return ts.isIdentifier(obj) && obj.text === "Effect" && prop.text === "gen";
+	if (!ts.isIdentifier(obj)) return false;
+	if (obj.text !== "Effect") return false;
+	if (prop.text !== "gen") return false;
+
+	return true;
 };
 
 const findGenCallback = (
 	callExpr: ts.CallExpression,
 ): ts.FunctionExpression | undefined => {
-	for (const arg of callExpr.arguments) {
-		if (ts.isFunctionExpression(arg) && arg.asteriskToken) {
-			return arg;
-		}
-	}
-	return undefined;
+	// Effect.gen takes a generator function as its argument
+	// Can be Effect.gen(function* () { ... }) or Effect.gen(this, function* () { ... })
+	return callExpr.arguments.find((arg) => ts.isFunctionExpression(arg) && arg.asteriskToken) as ts.FunctionExpression | undefined;
 };
 
 const isYieldWithoutStar = (node: ts.Node): node is ts.YieldExpression => {
