@@ -27,16 +27,16 @@ const isEffectGenCall = (node: ts.Node): node is ts.CallExpression => {
 	if (!ts.isCallExpression(node)) return false;
 
 	const expr = node.expression;
-	if (ts.isPropertyAccessExpression(expr)) {
-		const obj = expr.expression;
-		const prop = expr.name;
+	if (!ts.isPropertyAccessExpression(expr)) return false;
 
-		if (ts.isIdentifier(obj) && obj.text === "Effect" && prop.text === "gen") {
-			return true;
-		}
-	}
+	const obj = expr.expression;
+	const prop = expr.name;
 
-	return false;
+	if (!ts.isIdentifier(obj)) return false;
+	if (obj.text !== "Effect") return false;
+	if (prop.text !== "gen") return false;
+
+	return true;
 };
 
 /**
