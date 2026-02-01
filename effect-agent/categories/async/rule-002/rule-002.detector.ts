@@ -12,7 +12,7 @@ import * as ts from "typescript";
 import {
 	SNIPPET_MAX_LENGTH,
 	type Violation,
-} from "../../../detectors/types.js";
+} from "../../../detectors/types";
 
 const meta = {
 	id: "rule-002",
