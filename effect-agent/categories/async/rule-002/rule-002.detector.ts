@@ -20,9 +20,6 @@ const meta = {
 	name: "generator-yield",
 };
 
-/**
- * Check if a node is an Effect.gen call expression
- */
 const isEffectGenCall = (node: ts.Node): node is ts.CallExpression => {
 	if (!ts.isCallExpression(node)) return false;
 
@@ -35,9 +32,6 @@ const isEffectGenCall = (node: ts.Node): node is ts.CallExpression => {
 	return ts.isIdentifier(obj) && obj.text === "Effect" && prop.text === "gen";
 };
 
-/**
- * Find the generator function callback inside Effect.gen(...)
- */
 const findGenCallback = (
 	callExpr: ts.CallExpression,
 ): ts.FunctionExpression | undefined => {
@@ -51,18 +45,10 @@ const findGenCallback = (
 	return undefined;
 };
 
-/**
- * Check if a yield expression is missing the * (delegate)
- * yield* expr -> has asteriskToken
- * yield expr -> no asteriskToken
- */
 const isYieldWithoutStar = (node: ts.Node): node is ts.YieldExpression => {
 	return ts.isYieldExpression(node) && !node.asteriskToken;
 };
 
-/**
- * Check if a node is an await expression
- */
 const isAwaitExpression = (node: ts.Node): node is ts.AwaitExpression => {
 	return ts.isAwaitExpression(node);
 };
