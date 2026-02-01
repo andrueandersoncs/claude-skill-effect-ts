@@ -91,6 +91,48 @@ const mutatingMethods: Record<string, { message: string; suggestion: string }> =
 		},
 	};
 
+// Helper: Check if expression is likely a string (not array)
+const isLikelyStringExpression = (node: ts.Expression): boolean => {
+	// String methods that return strings
+	const stringMethods = new Set([
+		"toLowerCase", "toUpperCase", "trim", "trimStart", "trimEnd",
+		"slice", "substring", "substr", "replace", "replaceAll",
+		"padStart", "padEnd", "repeat", "normalize", "charAt",
+		"concat", "split", "toString", "valueOf", "at",
+	]);
+
+	// Check for string literal
+	if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+		return true;
+	}
+
+	// Check for template expression
+	if (ts.isTemplateExpression(node)) {
+		return true;
+	}
+
+	// Check if it's a call to a string method
+	if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+		const methodName = node.expression.name.text;
+		if (stringMethods.has(methodName)) {
+			return true;
+		}
+	}
+
+	// Check if it's a property access that returns string (e.g., .name, .text)
+	if (ts.isPropertyAccessExpression(node)) {
+		const propName = node.name.text;
+		// Common string properties - be conservative here
+		if (propName === "text" || propName === "name" || propName === "message") {
+			// These could be strings but also could be other types, so don't assume
+			return false;
+		}
+	}
+
+	return false;
+};
+
+
 export const detect = (
 	filePath: string,
 	sourceFile: ts.SourceFile,
@@ -150,7 +192,7 @@ export const detect = (
 		}
 
 		// -------------------------------------------------------------------------
-		// Detect find/findIndex/includes/indexOf calls
+		// Detect find/findIndex/includes/indexOf calls (skip string methods)
 		// -------------------------------------------------------------------------
 		if (
 			ts.isCallExpression(node) &&
@@ -160,20 +202,26 @@ export const detect = (
 			const replacement = findMethods[method];
 
 			if (replacement) {
-				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-					node.getStart(),
-				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: replacement.message,
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion: replacement.suggestion,
-				});
+				// Skip if this is called on a string expression (e.g., str.includes())
+				const receiver = node.expression.expression;
+				if (method === "includes" && isLikelyStringExpression(receiver)) {
+					// String.prototype.includes() - not an array operation
+				} else {
+					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+						node.getStart(),
+					);
+					violations.push({
+						ruleId: meta.id,
+						category: meta.category,
+						message: replacement.message,
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion: replacement.suggestion,
+					});
+				}
 			}
 		}
 
