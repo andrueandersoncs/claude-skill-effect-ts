@@ -12,7 +12,7 @@ import * as ts from "typescript";
 import {
 	SNIPPET_MAX_LENGTH,
 	type Violation,
-} from "../../../detectors/types.js";
+} from "../../../detectors/types";
 
 const meta = {
 	id: "rule-002",
@@ -80,20 +80,23 @@ export const detect = (
 	filePath: string,
 	sourceFile: ts.SourceFile,
 ): Violation[] => {
-	const violations: Violation[] = [];
+	const collectViolations = (): Violation[] => {
+		let result: Violation[] = [];
 
 	const visit = (node: ts.Node) => {
 		// Look for Effect.gen calls
 		if (isEffectGenCall(node)) {
 			const genCallback = findGenCallback(node);
 			if (genCallback && genCallback.body) {
-				// Check for violations in the generator body
-				const checkForViolations = (node: ts.Node) => {
+				// Search within the generator body for yield without * or await
+				const visitGenBody = (innerNode: ts.Node): Violation[] => {
+					let violations: Violation[] = [];
+
 					// Check for yield without *
-					if (isYieldWithoutStar(node)) {
+					if (isYieldWithoutStar(innerNode)) {
 						const { line, character } =
-							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
+							sourceFile.getLineAndCharacterOfPosition(innerNode.getStart());
+						violations = violations.concat({
 							ruleId: meta.id,
 							category: meta.category,
 							message:
@@ -101,7 +104,7 @@ export const detect = (
 							filePath,
 							line: line + 1,
 							column: character + 1,
-							snippet: node
+							snippet: innerNode
 								.getText(sourceFile)
 								.slice(0, SNIPPET_MAX_LENGTH),
 							certainty: "definite",
@@ -111,10 +114,10 @@ export const detect = (
 					}
 
 					// Check for await expressions
-					if (isAwaitExpression(node)) {
+					if (isAwaitExpression(innerNode)) {
 						const { line, character } =
-							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
+							sourceFile.getLineAndCharacterOfPosition(innerNode.getStart());
+						violations = violations.concat({
 							ruleId: meta.id,
 							category: meta.category,
 							message:
@@ -122,7 +125,7 @@ export const detect = (
 							filePath,
 							line: line + 1,
 							column: character + 1,
-							snippet: node
+							snippet: innerNode
 								.getText(sourceFile)
 								.slice(0, SNIPPET_MAX_LENGTH),
 							certainty: "definite",
@@ -130,27 +133,33 @@ export const detect = (
 								"Replace 'await promise' with 'yield* Effect.promise(() => promise)' or convert the async operation to an Effect",
 						});
 					}
-				};
 
-				// Recursively visit all children except nested Effect.gen calls
-				const visitGenBody = (node: ts.Node) => {
-					checkForViolations(node);
-
-					// Recurse into children, skipping nested Effect.gen calls (they have their own scope)
-					// Use early return pattern: if it's an Effect.gen call, don't recurse
-					if (isEffectGenCall(node)) {
-						return;
+					// Don't recurse into nested Effect.gen calls - they have their own scope
+					if (!isEffectGenCall(innerNode)) {
+						let childViolations: Violation[] = [];
+						ts.forEachChild(innerNode, (child) => {
+							childViolations = childViolations.concat(visitGenBody(child));
+						});
+						violations = violations.concat(childViolations);
 					}
-					ts.forEachChild(node, visitGenBody);
+
+					return violations;
 				};
 
-				ts.forEachChild(genCallback.body, visitGenBody);
+				let genBodyViolations: Violation[] = [];
+				ts.forEachChild(genCallback.body, (child) => {
+					genBodyViolations = genBodyViolations.concat(visitGenBody(child));
+				});
+				result = result.concat(genBodyViolations);
 			}
 		}
 
 		ts.forEachChild(node, visit);
 	};
 
-	visit(sourceFile);
-	return violations;
+		visit(sourceFile);
+		return result;
+	};
+
+	return collectViolations();
 };
