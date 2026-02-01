@@ -41,8 +41,6 @@ const isEffectGenCall = (node: ts.Node): node is ts.CallExpression => {
 const findGenCallback = (
 	callExpr: ts.CallExpression,
 ): ts.FunctionExpression | undefined => {
-	// Effect.gen takes a generator function as its argument
-	// Can be Effect.gen(function* () { ... }) or Effect.gen(this, function* () { ... })
 	for (const arg of callExpr.arguments) {
 		if (ts.isFunctionExpression(arg) && arg.asteriskToken) {
 			return arg;
