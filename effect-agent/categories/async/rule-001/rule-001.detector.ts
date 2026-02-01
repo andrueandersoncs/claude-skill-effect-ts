@@ -179,31 +179,29 @@ const detectCallbackFunction = Effect.fn("detectCallbackFunction")(
 const collectViolations = Effect.fn("collectViolations")(
 	(sourceFile: ts.SourceFile, filePath: string): Effect.Effect<readonly Violation[]> =>
 		Effect.gen(function* () {
-			const allViolations: Violation[] = [];
-
-			const processNode = (node: ts.Node): Effect.Effect<void> =>
+			const processNode = (node: ts.Node): Effect.Effect<readonly Violation[]> =>
 				Effect.gen(function* () {
 					const promiseViolation = yield* detectNewPromise(node, sourceFile, filePath);
 					const callbackViolation = yield* detectCallbackFunction(node, sourceFile, filePath);
 
-					Option.match(promiseViolation, {
-						onSome: (v) => allViolations.push(v),
-						onNone: F.constVoid,
-					});
-
-					Option.match(callbackViolation, {
-						onSome: (v) => allViolations.push(v),
-						onNone: F.constVoid,
-					});
+					const nodeViolations = pipe(
+						[promiseViolation, callbackViolation],
+						A.filterMap(F.identity),
+					);
 
 					const children = node.getChildren(sourceFile);
-					yield* Effect.forEach(children, processNode, { discard: true });
+					const childViolations = yield* pipe(
+						children,
+						Effect.forEach((child) => processNode(child)),
+						Effect.map(A.flatten),
+					);
+
+					return pipe(nodeViolations, A.appendAll(childViolations));
 				});
 
-			yield* processNode(sourceFile);
-			return allViolations;
+			return yield* processNode(sourceFile);
 		}),
 );
 
 export const detect = (filePath: string, sourceFile: ts.SourceFile): Violation[] =>
-	Effect.runSync(collectViolations(sourceFile, filePath)) as Violation[];
+	[...Effect.runSync(collectViolations(sourceFile, filePath))];
