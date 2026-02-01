@@ -71,70 +71,86 @@ export const detect = (
 	filePath: string,
 	sourceFile: ts.SourceFile,
 ): Violation[] => {
-	const violations: Violation[] = [];
+	const collectViolations = (): Violation[] => {
+		let result: Violation[] = [];
 
-	const visit = (node: ts.Node) => {
-		// Look for Effect.gen calls
-		if (isEffectGenCall(node)) {
-			const genCallback = findGenCallback(node);
-			if (genCallback && genCallback.body) {
-				// Search within the generator body for yield without * or await
-				const visitGenBody = (innerNode: ts.Node) => {
-					// Check for yield without *
-					if (isYieldWithoutStar(innerNode)) {
-						const { line, character } =
-							sourceFile.getLineAndCharacterOfPosition(innerNode.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"Use yield* instead of yield in Effect.gen - yield without * returns the Effect itself, not its result",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: innerNode
-								.getText(sourceFile)
-								.slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "definite",
-							suggestion:
-								"Change 'yield effect' to 'yield* effect' to unwrap the Effect and get its value",
-						});
-					}
+		const visit = (node: ts.Node) => {
+			// Look for Effect.gen calls
+			if (isEffectGenCall(node)) {
+				const genCallback = findGenCallback(node);
+				if (genCallback && genCallback.body) {
+					// Search within the generator body for yield without * or await
+					const visitGenBody = (innerNode: ts.Node): Violation[] => {
+						let violations: Violation[] = [];
 
-					// Check for await expressions
-					if (isAwaitExpression(innerNode)) {
-						const { line, character } =
-							sourceFile.getLineAndCharacterOfPosition(innerNode.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"Do not use await in Effect.gen - use yield* instead to properly handle Effects",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: innerNode
-								.getText(sourceFile)
-								.slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "definite",
-							suggestion:
-								"Replace 'await promise' with 'yield* Effect.promise(() => promise)' or convert the async operation to an Effect",
-						});
-					}
+						// Check for yield without *
+						if (isYieldWithoutStar(innerNode)) {
+							const { line, character } =
+								sourceFile.getLineAndCharacterOfPosition(innerNode.getStart());
+							violations = violations.concat({
+								ruleId: meta.id,
+								category: meta.category,
+								message:
+									"Use yield* instead of yield in Effect.gen - yield without * returns the Effect itself, not its result",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: innerNode
+									.getText(sourceFile)
+									.slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "definite",
+								suggestion:
+									"Change 'yield effect' to 'yield* effect' to unwrap the Effect and get its value",
+							});
+						}
 
-					// Don't recurse into nested Effect.gen calls - they have their own scope
-					if (!isEffectGenCall(innerNode)) {
-						ts.forEachChild(innerNode, visitGenBody);
-					}
-				};
+						// Check for await expressions
+						if (isAwaitExpression(innerNode)) {
+							const { line, character } =
+								sourceFile.getLineAndCharacterOfPosition(innerNode.getStart());
+							violations = violations.concat({
+								ruleId: meta.id,
+								category: meta.category,
+								message:
+									"Do not use await in Effect.gen - use yield* instead to properly handle Effects",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: innerNode
+									.getText(sourceFile)
+									.slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "definite",
+								suggestion:
+									"Replace 'await promise' with 'yield* Effect.promise(() => promise)' or convert the async operation to an Effect",
+							});
+						}
 
-				ts.forEachChild(genCallback.body, visitGenBody);
+						// Don't recurse into nested Effect.gen calls - they have their own scope
+						if (!isEffectGenCall(innerNode)) {
+							let childViolations: Violation[] = [];
+							ts.forEachChild(innerNode, (child) => {
+								childViolations = childViolations.concat(visitGenBody(child));
+							});
+							violations = violations.concat(childViolations);
+						}
+
+						return violations;
+					};
+
+					let genBodyViolations: Violation[] = [];
+					ts.forEachChild(genCallback.body, (child) => {
+						genBodyViolations = genBodyViolations.concat(visitGenBody(child));
+					});
+					result = result.concat(genBodyViolations);
+				}
 			}
-		}
 
-		ts.forEachChild(node, visit);
+			ts.forEachChild(node, visit);
+		};
+
+		visit(sourceFile);
+		return result;
 	};
 
-	visit(sourceFile);
-	return violations;
+	return collectViolations();
 };
