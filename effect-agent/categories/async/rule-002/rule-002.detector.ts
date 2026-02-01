@@ -8,6 +8,7 @@
  * - await expressions inside Effect.gen callbacks
  */
 
+import { Array, Option } from "effect";
 import * as ts from "typescript";
 import {
 	SNIPPET_MAX_LENGTH,
