@@ -87,12 +87,12 @@ export const detect = (
 		if (isEffectGenCall(node)) {
 			const genCallback = findGenCallback(node);
 			if (genCallback && genCallback.body) {
-				// Search within the generator body for yield without * or await
-				const visitGenBody = (innerNode: ts.Node) => {
+				// Check for violations in the generator body
+				const checkForViolations = (node: ts.Node) => {
 					// Check for yield without *
-					if (isYieldWithoutStar(innerNode)) {
+					if (isYieldWithoutStar(node)) {
 						const { line, character } =
-							sourceFile.getLineAndCharacterOfPosition(innerNode.getStart());
+							sourceFile.getLineAndCharacterOfPosition(node.getStart());
 						violations.push({
 							ruleId: meta.id,
 							category: meta.category,
@@ -101,7 +101,7 @@ export const detect = (
 							filePath,
 							line: line + 1,
 							column: character + 1,
-							snippet: innerNode
+							snippet: node
 								.getText(sourceFile)
 								.slice(0, SNIPPET_MAX_LENGTH),
 							certainty: "definite",
@@ -111,9 +111,9 @@ export const detect = (
 					}
 
 					// Check for await expressions
-					if (isAwaitExpression(innerNode)) {
+					if (isAwaitExpression(node)) {
 						const { line, character } =
-							sourceFile.getLineAndCharacterOfPosition(innerNode.getStart());
+							sourceFile.getLineAndCharacterOfPosition(node.getStart());
 						violations.push({
 							ruleId: meta.id,
 							category: meta.category,
@@ -122,7 +122,7 @@ export const detect = (
 							filePath,
 							line: line + 1,
 							column: character + 1,
-							snippet: innerNode
+							snippet: node
 								.getText(sourceFile)
 								.slice(0, SNIPPET_MAX_LENGTH),
 							certainty: "definite",
@@ -130,11 +130,18 @@ export const detect = (
 								"Replace 'await promise' with 'yield* Effect.promise(() => promise)' or convert the async operation to an Effect",
 						});
 					}
+				};
 
-					// Don't recurse into nested Effect.gen calls - they have their own scope
-					if (!isEffectGenCall(innerNode)) {
-						ts.forEachChild(innerNode, visitGenBody);
+				// Recursively visit all children except nested Effect.gen calls
+				const visitGenBody = (node: ts.Node) => {
+					checkForViolations(node);
+
+					// Recurse into children, skipping nested Effect.gen calls (they have their own scope)
+					// Use early return pattern: if it's an Effect.gen call, don't recurse
+					if (isEffectGenCall(node)) {
+						return;
 					}
+					ts.forEachChild(node, visitGenBody);
 				};
 
 				ts.forEachChild(genCallback.body, visitGenBody);
