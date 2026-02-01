@@ -8,6 +8,7 @@
  * - await expressions inside Effect.gen callbacks
  */
 
+import { Array, Option } from "effect";
 import * as ts from "typescript";
 import {
 	SNIPPET_MAX_LENGTH,
@@ -43,12 +44,13 @@ const findGenCallback = (
 ): ts.FunctionExpression | undefined => {
 	// Effect.gen takes a generator function as its argument
 	// Can be Effect.gen(function* () { ... }) or Effect.gen(this, function* () { ... })
-	for (const arg of callExpr.arguments) {
-		if (ts.isFunctionExpression(arg) && arg.asteriskToken) {
-			return arg;
-		}
-	}
-	return undefined;
+	return Option.getOrUndefined(
+		Array.findFirst(callExpr.arguments, (arg) =>
+			ts.isFunctionExpression(arg) && arg.asteriskToken
+				? Option.some(arg)
+				: Option.none(),
+		),
+	);
 };
 
 /**
