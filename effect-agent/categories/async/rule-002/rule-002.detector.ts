@@ -60,9 +60,6 @@ const isYieldWithoutStar = (node: ts.Node): node is ts.YieldExpression => {
 	return ts.isYieldExpression(node) && !node.asteriskToken;
 };
 
-/**
- * Check if a node is an await expression
- */
 const isAwaitExpression = (node: ts.Node): node is ts.AwaitExpression => {
 	return ts.isAwaitExpression(node);
 };
