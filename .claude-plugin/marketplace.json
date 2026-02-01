@@ -1,43 +1,43 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "effect-ts",
-  "metadata": {
-    "description": "Effect-TS development tools and skills for Claude Code",
-    "version": "2.22.11"
-  },
-  "owner": {
-    "name": "Andrue Anderson"
-  },
-  "plugins": [
-    {
-      "name": "effect-ts",
-      "source": "./",
-      "description": "Comprehensive Effect-TS development assistance with skills for all major Effect domains, commands for common patterns, agents for code review and migration, and parallel rule-based compliance checking",
-      "version": "2.22.11",
-      "category": "development",
-      "author": {
-        "name": "Andrue Anderson"
-      },
-      "repository": "https://github.com/andrueandersoncs/claude-skill-effect-ts",
-      "license": "MIT",
-      "keywords": [
-        "effect",
-        "effect-ts",
-        "typescript",
-        "functional-programming",
-        "error-handling",
-        "concurrency",
-        "schema",
-        "dependency-injection",
-        "streams",
-        "observability"
-      ],
-      "tags": [
-        "typescript",
-        "functional",
-        "effect-system"
-      ]
-    }
-  ],
-  "version": "2.22.11"
+	"$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+	"name": "effect-ts",
+	"metadata": {
+		"description": "Effect-TS development tools and skills for Claude Code",
+		"version": "2.22.11"
+	},
+	"owner": {
+		"name": "Andrue Anderson"
+	},
+	"plugins": [
+		{
+			"name": "effect-ts",
+			"source": "./",
+			"description": "Comprehensive Effect-TS development assistance with skills for all major Effect domains, commands for common patterns, agents for code review and migration, and parallel rule-based compliance checking",
+			"version": "2.22.11",
+			"category": "development",
+			"author": {
+				"name": "Andrue Anderson"
+			},
+			"repository": "https://github.com/andrueandersoncs/claude-skill-effect-ts",
+			"license": "MIT",
+			"keywords": [
+				"effect",
+				"effect-ts",
+				"typescript",
+				"functional-programming",
+				"error-handling",
+				"concurrency",
+				"schema",
+				"dependency-injection",
+				"streams",
+				"observability"
+			],
+			"tags": [
+				"typescript",
+				"functional",
+				"effect-system"
+			]
+		}
+	],
+	"version": "2.22.12"
 }

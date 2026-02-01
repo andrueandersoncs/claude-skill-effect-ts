@@ -59,7 +59,7 @@ export const detect = (
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 						certainty: "potential",
 						suggestion:
-							"Use flow(Array.filter(pred), Array.map(fn)) from effect for composable, reusable pipelines",
+							"Use flow((arr: ReadonlyArray<T>) => arr, Array.filter(pred), Array.map(fn)) from effect for composable, reusable pipelines. The anonymous function as the first argument helps with type inference.",
 					});
 				}
 			}
@@ -100,7 +100,7 @@ export const detect = (
 						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
 						certainty: "potential",
 						suggestion:
-							"Use flow(h, g, f) from effect for composable, reusable pipelines",
+							"Use flow((x: T) => x, h, g, f) from effect for composable, reusable pipelines. The anonymous function as the first argument helps with type inference.",
 					});
 				}
 			}
