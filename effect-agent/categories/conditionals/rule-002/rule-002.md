@@ -77,6 +77,19 @@ const classify = Match.type<number>().pipe(
 );
 ```
 
+### Match.type for Type Narrowing
+
+```typescript
+// GOOD: Use Match.type with predicate for type narrowing
+const result = Match.type<ts.Node>().pipe(
+  Match.when(isFunctionLike, (funcNode) => {
+    // funcNode is narrowed to the function type
+    return funcNode.parameters;
+  }),
+  Match.orElse(() => []),
+);
+```
+
 ### Type Predicate Replacement
 
 ```typescript
@@ -94,6 +107,8 @@ const handleNode = (node: ts.Node) =>
 ```
 
 ## Bad Patterns
+
+- `Match.value(predicate(x)).pipe(Match.when(true, ...))` - Use Match.type<X>().pipe(Match.when(predicate, ...))
 
 - `if (x === "a" || x === "b")` - Use Schema.Literal union
 - `if (obj.prop1 && obj.prop2)` - Use Schema.Struct

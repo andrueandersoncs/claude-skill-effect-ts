@@ -377,6 +377,63 @@ export const detect = (
 			}
 		}
 
+
+		// =========================================================================
+		// Pattern 7: Match.value(predicate(x)) instead of Match.type<X>()
+		// =========================================================================
+		// Detects: Match.value(isFoo(x)).pipe(Match.when(true, ...))
+		// Should be: Match.type<X>().pipe(Match.when(isFoo, ...))
+		if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+			const methodName = node.expression.name.getText(sourceFile);
+			
+			// Check if this is a .pipe() call
+			if (methodName === 'pipe') {
+				const callee = node.expression.expression;
+				
+				// Check if callee is Match.value(...)
+				if (ts.isCallExpression(callee)) {
+					const calleeText = callee.expression.getText(sourceFile);
+					
+					if (calleeText === 'Match.value' && callee.arguments.length === 1) {
+						const valueArg = callee.arguments[0];
+						
+						// Check if Match.value argument is a function call (predicate)
+						if (ts.isCallExpression(valueArg)) {
+							// Check if pipe contains Match.when(true, ...) or Match.when(false, ...)
+							for (const pipeArg of node.arguments) {
+								if (ts.isCallExpression(pipeArg)) {
+									const pipeCallText = pipeArg.expression.getText(sourceFile);
+									if (pipeCallText === 'Match.when' && pipeArg.arguments.length >= 1) {
+										const firstWhenArg = pipeArg.arguments[0];
+										const whenArgText = firstWhenArg.getText(sourceFile);
+										if (whenArgText === 'true' || whenArgText === 'false') {
+											const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+												callee.getStart(),
+											);
+											violations.push({
+												ruleId: meta.id,
+												category: meta.category,
+												message:
+													'Match.value(predicate(x)) with boolean matching; use Match.type<X>() with predicate directly',
+												filePath,
+												line: line + 1,
+												column: character + 1,
+												snippet: callee.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+												certainty: 'potential',
+												suggestion:
+													'Use Match.type<X>().pipe(Match.when(predicate, (narrowedX) => ...), Match.orElse(...)) for type narrowing',
+											});
+											break;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
 		ts.forEachChild(node, visit);
 	};
 
