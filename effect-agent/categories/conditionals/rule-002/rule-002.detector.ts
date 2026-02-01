@@ -120,6 +120,27 @@ const getOrChainText = (
 	return "";
 };
 
+/**
+ * Check if a return statement is part of a function with a type predicate return type.
+ * Type guards must return boolean synchronously and cannot use Match/Option patterns.
+ */
+const isTypeGuardReturnStatement = (returnNode: ts.Node): boolean => {
+	let current: ts.Node | undefined = returnNode;
+	while (current) {
+		if (
+			ts.isFunctionDeclaration(current) ||
+			ts.isFunctionExpression(current) ||
+			ts.isArrowFunction(current) ||
+			ts.isMethodDeclaration(current)
+		) {
+			const returnType = current.type;
+			return isTypePredicateReturnType(returnType);
+		}
+		current = current.parent;
+	}
+	return false;
+};
+
 // =============================================================================
 // Main Detector
 // =============================================================================
@@ -306,7 +327,9 @@ export const detect = (
 					(ts.isVariableDeclaration(parent) ||
 						ts.isReturnStatement(parent) ||
 						ts.isPropertyAssignment(parent) ||
-						ts.isCallExpression(parent))
+						ts.isCallExpression(parent)) &&
+					// Exclude type guard return statements - they must return boolean synchronously
+					!(ts.isReturnStatement(parent) && isTypeGuardReturnStatement(parent))
 				) {
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
