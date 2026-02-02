@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	CodeStyleViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -28,18 +29,21 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "Angle bracket type assertion; use Schema validation instead",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion:
-					"Use Schema.decodeUnknown(MySchema)(value) for runtime validation instead of <Type>casting",
-			});
+			violations.push(
+				new CodeStyleViolation({
+					category: "code-style",
+					ruleId: meta.id,
+					message:
+						"Angle bracket type assertion; use Schema validation instead",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion:
+						"Use Schema.decodeUnknown(MySchema)(value) for runtime validation instead of <Type>casting",
+				}),
+			);
 		}
 
 		// Detect 'as' expressions
@@ -51,18 +55,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "'as any' bypasses type safety; fix the type or use Schema",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion:
-						"Define a Schema for the data shape and use Schema.decodeUnknown for validation",
-				});
+				violations.push(
+					new CodeStyleViolation({
+						category: "code-style",
+						ruleId: meta.id,
+						message:
+							"'as any' bypasses type safety; fix the type or use Schema",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion:
+							"Define a Schema for the data shape and use Schema.decodeUnknown for validation",
+					}),
+				);
 			}
 
 			// Detect 'as unknown'
@@ -70,18 +77,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"'as unknown' assertion should be replaced with Schema validation",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion: "Use Schema.decodeUnknown() for type-safe validation",
-				});
+				violations.push(
+					new CodeStyleViolation({
+						category: "code-style",
+						ruleId: meta.id,
+						message:
+							"'as unknown' assertion should be replaced with Schema validation",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion: "Use Schema.decodeUnknown() for type-safe validation",
+					}),
+				);
 			}
 
 			// Detect 'as unknown as T' pattern (double assertion)
@@ -91,19 +100,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"'as unknown as T' double assertion; use Schema validation",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion:
-							"Use Schema.decodeUnknown(TargetSchema)(value) for proper type validation",
-					});
+					violations.push(
+						new CodeStyleViolation({
+							category: "code-style",
+							ruleId: meta.id,
+							message:
+								"'as unknown as T' double assertion; use Schema validation",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion:
+								"Use Schema.decodeUnknown(TargetSchema)(value) for proper type validation",
+						}),
+					);
 				}
 			}
 
@@ -131,18 +142,20 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `Type casting API response as ${typeText}; use Schema.decodeUnknown`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use Schema.decodeUnknown(ResponseSchema)(data) for runtime validation of API responses",
-					});
+					violations.push(
+						new CodeStyleViolation({
+							category: "code-style",
+							ruleId: meta.id,
+							message: `Type casting API response as ${typeText}; use Schema.decodeUnknown`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use Schema.decodeUnknown(ResponseSchema)(data) for runtime validation of API responses",
+						}),
+					);
 				}
 			}
 		}
@@ -173,19 +186,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						".json() response without Schema validation; validate external data",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Pipe .json() result through Schema.decodeUnknown(ResponseSchema) for type-safe validation",
-				});
+				violations.push(
+					new CodeStyleViolation({
+						category: "code-style",
+						ruleId: meta.id,
+						message:
+							".json() response without Schema validation; validate external data",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Pipe .json() result through Schema.decodeUnknown(ResponseSchema) for type-safe validation",
+					}),
+				);
 			}
 		}
 

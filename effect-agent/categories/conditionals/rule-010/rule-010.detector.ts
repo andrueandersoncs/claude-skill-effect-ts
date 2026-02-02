@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ConditionalsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -44,17 +45,19 @@ export const detect = (
 				return;
 			}
 
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "Use Match module or Option instead of ternary operators",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion: "Replace with Match.value() + Match.when() or pipe",
-			});
+			violations.push(
+				new ConditionalsViolation({
+					category: "conditionals",
+					ruleId: meta.id,
+					message: "Use Match module or Option instead of ternary operators",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion: "Replace with Match.value() + Match.when() or pipe",
+				}),
+			);
 		}
 
 		ts.forEachChild(node, visit);

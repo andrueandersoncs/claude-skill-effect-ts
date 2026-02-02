@@ -7,6 +7,7 @@
 import * as ts from "typescript";
 import {
 	SNIPPET_MAX_LENGTH,
+	TestingViolation,
 	type Violation,
 } from "../../../detectors/types.js";
 
@@ -63,19 +64,23 @@ export const detect = (
 						if (needsRealTime) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message:
-									"it.effect with real time operations; consider it.live for real clock",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								certainty: "potential",
-								suggestion:
-									"Use it.live() when testing with real time/clock instead of it.effect() which uses TestClock",
-							});
+							violations.push(
+								new TestingViolation({
+									category: "testing",
+									ruleId: meta.id,
+									message:
+										"it.effect with real time operations; consider it.live for real clock",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
+									certainty: "potential",
+									suggestion:
+										"Use it.live() when testing with real time/clock instead of it.effect() which uses TestClock",
+								}),
+							);
 						}
 					}
 				}

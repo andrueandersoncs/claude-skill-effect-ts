@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ConditionalsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -45,21 +46,23 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Result/error flag check; use Effect.match or Either.match",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.expression
-							.getText(sourceFile)
-							.slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use Effect.match({ onSuccess: ..., onFailure: ... }) or Either.match({ onLeft: ..., onRight: ... })",
-					});
+					violations.push(
+						new ConditionalsViolation({
+							category: "conditionals",
+							ruleId: meta.id,
+							message:
+								"Result/error flag check; use Effect.match or Either.match",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.expression
+								.getText(sourceFile)
+								.slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use Effect.match({ onSuccess: ..., onFailure: ... }) or Either.match({ onLeft: ..., onRight: ... })",
+						}),
+					);
 					break;
 				}
 			}
@@ -77,19 +80,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Ternary with result flag check; use Effect.match or Either.match",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Use Effect.match({ onSuccess: ..., onFailure: ... }) for declarative handling",
-				});
+				violations.push(
+					new ConditionalsViolation({
+						category: "conditionals",
+						ruleId: meta.id,
+						message:
+							"Ternary with result flag check; use Effect.match or Either.match",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use Effect.match({ onSuccess: ..., onFailure: ... }) for declarative handling",
+					}),
+				);
 			}
 		}
 
@@ -115,19 +120,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Try/catch with status flag pattern; use Effect.match or Either.match instead",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Use Effect.match({ onSuccess: ..., onFailure: ... }) instead of try/catch with status flags",
-				});
+				violations.push(
+					new ConditionalsViolation({
+						category: "conditionals",
+						ruleId: meta.id,
+						message:
+							"Try/catch with status flag pattern; use Effect.match or Either.match instead",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use Effect.match({ onSuccess: ..., onFailure: ... }) instead of try/catch with status flags",
+					}),
+				);
 			}
 		}
 

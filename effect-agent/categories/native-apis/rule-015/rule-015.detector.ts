@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	NativeApisViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -35,17 +36,19 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `Tuple index [${index}]; use Tuple.${accessor}`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion: `Use Tuple.${accessor}(tuple) for type-safe tuple access`,
-					});
+					violations.push(
+						new NativeApisViolation({
+							category: "native-apis",
+							ruleId: meta.id,
+							message: `Tuple index [${index}]; use Tuple.${accessor}`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion: `Use Tuple.${accessor}(tuple) for type-safe tuple access`,
+						}),
+					);
 				}
 			}
 		}

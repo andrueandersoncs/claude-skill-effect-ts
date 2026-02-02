@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ErrorsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -34,18 +35,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "Catch and rethrow transformed error; use Effect.mapError",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Use effect.pipe(Effect.mapError(e => new DomainError(e))) instead of catch-and-rethrow",
-				});
+				violations.push(
+					new ErrorsViolation({
+						category: "errors",
+						ruleId: meta.id,
+						message: "Catch and rethrow transformed error; use Effect.mapError",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use effect.pipe(Effect.mapError(e => new DomainError(e))) instead of catch-and-rethrow",
+					}),
+				);
 			}
 		}
 
@@ -65,19 +68,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Promise .catch() rethrows transformed error; use Effect.mapError",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use Effect.tryPromise with Effect.mapError instead of .catch() that rethrows",
-					});
+					violations.push(
+						new ErrorsViolation({
+							category: "errors",
+							ruleId: meta.id,
+							message:
+								"Promise .catch() rethrows transformed error; use Effect.mapError",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use Effect.tryPromise with Effect.mapError instead of .catch() that rethrows",
+						}),
+					);
 				}
 			}
 		}
@@ -100,19 +105,21 @@ export const detect = (
 					) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"catchAll/catchTag that only fails; use mapError instead",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Use Effect.mapError(e => new TransformedError(e)) when just transforming error types",
-						});
+						violations.push(
+							new ErrorsViolation({
+								category: "errors",
+								ruleId: meta.id,
+								message:
+									"catchAll/catchTag that only fails; use mapError instead",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Use Effect.mapError(e => new TransformedError(e)) when just transforming error types",
+							}),
+						);
 					}
 				}
 			}

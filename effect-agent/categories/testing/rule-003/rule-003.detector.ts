@@ -7,6 +7,7 @@
 import * as ts from "typescript";
 import {
 	SNIPPET_MAX_LENGTH,
+	TestingViolation,
 	type Violation,
 } from "../../../detectors/types.js";
 
@@ -54,19 +55,21 @@ export const detect = (
 					) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"Exit comparisons should use Effect/Exit matchers from @effect/vitest",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Use Exit.isSuccess/isFailure or it.effect with proper assertions",
-						});
+						violations.push(
+							new TestingViolation({
+								category: "testing",
+								ruleId: meta.id,
+								message:
+									"Exit comparisons should use Effect/Exit matchers from @effect/vitest",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Use Exit.isSuccess/isFailure or it.effect with proper assertions",
+							}),
+						);
 					}
 				}
 			}
@@ -92,19 +95,21 @@ export const detect = (
 					) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"Using try/catch for error assertions; use Effect.exit instead",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "definite",
-							suggestion:
-								"Use Effect.exit to get the Exit value and assert on it with Exit.isFailure/Exit.match",
-						});
+						violations.push(
+							new TestingViolation({
+								category: "testing",
+								ruleId: meta.id,
+								message:
+									"Using try/catch for error assertions; use Effect.exit instead",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "definite",
+								suggestion:
+									"Use Effect.exit to get the Exit value and assert on it with Exit.isFailure/Exit.match",
+							}),
+						);
 					}
 				}
 			}

@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	DiscriminatedUnionsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -38,18 +39,20 @@ export const detect = (
 					if (argText.includes("._tag")) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message: `${methodName} by ._tag may miss cases; use Schema.is(Variant)`,
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Use Schema.is(MyVariant) as predicate for type-safe narrowing",
-						});
+						violations.push(
+							new DiscriminatedUnionsViolation({
+								category: "discriminated-unions",
+								ruleId: meta.id,
+								message: `${methodName} by ._tag may miss cases; use Schema.is(Variant)`,
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Use Schema.is(MyVariant) as predicate for type-safe narrowing",
+							}),
+						);
 					}
 				}
 			}

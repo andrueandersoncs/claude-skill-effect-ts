@@ -2,11 +2,13 @@
  * rule-001: self-documenting-code
  *
  * Rule: Never add comments that merely restate what the code already expresses;
- * Effect-TS code is self-documenting through types, pipelines, and clear naming
+ * Effect-TS code is self-documenting through types, pipelines, and clear naming.
+ * Comments should be a LAST RESORT and only explain WHY, never WHAT.
  */
 
 import * as ts from "typescript";
 import {
+	CommentsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -17,6 +19,115 @@ const meta = {
 	name: "self-documenting-code",
 };
 
+// ============================================================
+// Utility: Check if comment text is just an identifier expanded to prose
+// ============================================================
+const identifierToWords = (identifier: string): string[] => {
+	// Convert camelCase/PascalCase to words: "ruleId" -> ["rule", "id"]
+	return identifier
+		.replace(/([A-Z])/g, " $1")
+		.toLowerCase()
+		.trim()
+		.split(/\s+/)
+		.filter((w) => w.length > 0);
+};
+
+const isExpandedIdentifier = (
+	comment: string,
+	identifier: string,
+	contextWords: string[] = [],
+): boolean => {
+	// Normalize comment: remove articles, punctuation, lowercase
+	const normalized = comment
+		.toLowerCase()
+		.replace(/[/*@{}[\]().,;:!?'"]/g, " ")
+		.replace(
+			/\b(a|an|the|of|to|for|that|which|is|are|was|were|be|been|being|it|its|this|these|those)\b/g,
+			" ",
+		)
+		.replace(/\s+/g, " ")
+		.trim();
+
+	const commentWords = normalized.split(" ").filter((w) => w.length > 1);
+	const idWords = identifierToWords(identifier);
+
+	// All identifier words present in comment?
+	const idWordsInComment = idWords.filter((w) =>
+		commentWords.some((cw) => cw.includes(w) || w.includes(cw)),
+	);
+
+	// If comment is mostly identifier words + context words, it's redundant
+	const meaningfulWords = commentWords.filter(
+		(w) =>
+			!idWords.some((iw) => w.includes(iw) || iw.includes(w)) &&
+			!contextWords.some((cw) => w.includes(cw) || cw.includes(w)) &&
+			![
+				"number",
+				"string",
+				"boolean",
+				"value",
+				"property",
+				"field",
+				"param",
+				"parameter",
+				"returns",
+				"return",
+				"type",
+				"where",
+				"when",
+				"found",
+				"index",
+				"indexed",
+			].includes(w),
+	);
+
+	// If most identifier words are present and few meaningful words remain, it's redundant
+	return (
+		idWordsInComment.length >= idWords.length * 0.6 &&
+		meaningfulWords.length <= 2
+	);
+};
+
+// ============================================================
+// Utility: Extract context words from scope
+// ============================================================
+const getContextWords = (
+	node: ts.Node,
+	sourceFile: ts.SourceFile,
+): string[] => {
+	const words: string[] = [];
+	let current: ts.Node | undefined = node;
+
+	while (current) {
+		if (
+			ts.isFunctionDeclaration(current) ||
+			ts.isMethodDeclaration(current) ||
+			ts.isArrowFunction(current)
+		) {
+			const name =
+				ts.isFunctionDeclaration(current) || ts.isMethodDeclaration(current)
+					? current.name?.getText(sourceFile)
+					: undefined;
+			if (name) words.push(...identifierToWords(name));
+		}
+		if (ts.isVariableDeclaration(current) && ts.isIdentifier(current.name)) {
+			words.push(...identifierToWords(current.name.text));
+		}
+		if (ts.isClassDeclaration(current) && current.name) {
+			words.push(...identifierToWords(current.name.text));
+		}
+		if (ts.isInterfaceDeclaration(current)) {
+			words.push(...identifierToWords(current.name.text));
+		}
+		if (ts.isTypeAliasDeclaration(current)) {
+			words.push(...identifierToWords(current.name.text));
+		}
+		current = current.parent;
+	}
+
+	return words;
+};
+
 export const detect = (
 	filePath: string,
 	sourceFile: ts.SourceFile,
@@ -24,261 +135,126 @@ export const detect = (
 	const violations: Violation[] = [];
 	const fullText = sourceFile.getFullText();
 
-	// ============================================================
-	// Pattern 1: Branded type definitions with redundant JSDoc
-	// ============================================================
-	const checkBrandedTypeJSDoc = (
-		_node: ts.Node,
-		typeName: string,
-		comment: ts.CommentRange,
+	const addViolation = (
+		pos: number,
+		message: string,
+		snippet: string,
+		suggestion: string,
 	) => {
-		const commentText = fullText.slice(comment.pos, comment.end);
-
-		if (commentText.startsWith("/**")) {
-			const typeNameLower = typeName.toLowerCase();
-
-			const redundantPatterns = [
-				new RegExp(`@description\\s+${typeNameLower}`, "i"),
-				new RegExp(`represents\\s+(a\\s+)?${typeNameLower}`, "i"),
-				new RegExp(`the\\s+${typeNameLower}\\s+type`, "i"),
-				new RegExp(`a\\s+${typeNameLower}\\s+value`, "i"),
-				/^\/\*\*\s*\n\s*\*\s*\w+\s*\n\s*\*\/$/m,
-				/branded\s+type\s+(for|of)\s+/i,
-				/(type|interface)\s+(for|of)\s+/i,
-			];
-
-			const isRedundant = redundantPatterns.some((p) => p.test(commentText));
-
-			if (isRedundant) {
-				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-					comment.pos,
-				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"JSDoc comment restates type definition; types are self-documenting",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Remove redundant JSDoc; branded types and interfaces are self-documenting",
-				});
-			}
-		}
+		const { line, character } = sourceFile.getLineAndCharacterOfPosition(pos);
+		violations.push(
+			new CommentsViolation({
+				category: "comments",
+				ruleId: meta.id,
+				message,
+				filePath,
+				line: line + 1,
+				column: character + 1,
+				snippet: snippet.slice(0, SNIPPET_MAX_LENGTH),
+				certainty: "potential",
+				suggestion,
+			}),
+		);
 	};
 
 	// ============================================================
-	// Pattern 2: Effect pipeline comments
-	// ============================================================
-	const effectPatternsNoComment = [
-		/\/\/\s*pipe\s+/i,
-		/\/\/\s*map\s+(the\s+)?/i,
-		/\/\/\s*flatMap\s+/i,
-		/\/\/\s*Effect\.gen/i,
-		/\/\/\s*yield\*/i,
-		/\/\/\s*Effect\.(succeed|fail|sync|async)/i,
-		/\/\/\s*get\s+(the\s+)?\w+/i,
-		/\/\/\s*fetch\s+(the\s+)?\w+/i,
-		/\/\/\s*validate\s+(it|the|this)/i,
-		/\/\/\s*transform\s+(the\s+)?(result|data|response|it)/i,
-		/\/\/\s*handle\s+(the\s+)?(error|result)/i,
-		/\/\/\s*process\s+(the\s+)?\w+/i,
-		/\/\/\s*save\s+(the\s+)?\w+/i,
-		/\/\/\s*update\s+(the\s+)?\w+/i,
-		/\/\/\s*delete\s+(the\s+)?\w+/i,
-		/\/\/\s*create\s+(a\s+|the\s+)?\w+/i,
-	];
-
-	// ============================================================
-	// Pattern 3: WHAT comments (describing what code does)
+	// Pattern: WHAT comments in any format
 	// ============================================================
 	const whatPatterns = [
-		/\/\/\s*(get|set|create|make|build|return|call|invoke|execute|run|do|perform)\s+(the|a|an)?\s*\w+/i,
-		/\/\/\s*(increment|decrement|add|subtract|multiply|divide)\s+(the|a)?\s*\w+/i,
-		/\/\/\s*(loop|iterate|map|filter|reduce)\s+(through|over|the)\s*/i,
-		/\/\/\s*(check|validate|verify)\s+(if|that|the)\s*/i,
-		/\/\/\s*(assign|set)\s+\w+\s+to\s+/i,
-		/\/\/\s*(initialize|init)\s+(the|a)?\s*\w+/i,
-		/\/\/\s*(update|modify|change)\s+(the|a)?\s*\w+/i,
-		/\/\/\s*(save|store|persist)\s+(the|a)?\s*\w+/i,
-		/\/\/\s*(load|fetch|retrieve|read)\s+(the|a)?\s*\w+/i,
-		/\/\/\s*(convert|transform|parse)\s+(the|a)?\s*\w+/i,
+		/^\/\/\s*(get|set|create|make|build|return|call|invoke|execute|run|do|perform|fetch|load|save|store|read|write)\s+(the|a|an)?\s*\w*/i,
+		/^\/\/\s*(increment|decrement|add|subtract|multiply|divide)\s+(the|a)?\s*\w*/i,
+		/^\/\/\s*(loop|iterate|map|filter|reduce)\s+(through|over|the)\s*/i,
+		/^\/\/\s*(check|validate|verify|test)\s+(if|that|the|whether)\s*/i,
+		/^\/\/\s*(assign|set)\s+\w+\s+to\s+/i,
+		/^\/\/\s*(initialize|init)\s+(the|a)?\s*\w*/i,
+		/^\/\/\s*(update|modify|change)\s+(the|a)?\s*\w*/i,
+		/^\/\/\s*(convert|transform|parse|process)\s+(the|a)?\s*\w*/i,
+		/^\/\/\s*(calculate|compute|determine)\s+(the|a)?\s*\w*/i,
+		/^\/\/\s*(handle|process)\s+(the|a)?\s*(error|result|response|request)/i,
 	];
 
+	// Patterns for multi-line /* */ comments
+	const whatPatternsMultiLine = [
+		/(get|set|create|make|build|return|fetch|load|save|store|read|write)s?\s+(the|a|an)?\s*\w+/i,
+		/(loop|iterate|map|filter|reduce)s?\s+(through|over|the)/i,
+		/(check|validate|verify|test)s?\s+(if|that|the|whether)/i,
+		/(calculate|compute|determine)s?\s+(the|a)?\s*\w+/i,
+		/(initialize|init|setup|set up)s?\s+(the|a)?\s*\w+/i,
+		/(update|modify|change)s?\s+(the|a)?\s*\w+/i,
+		/(convert|transform|parse|process)s?\s+(the|a)?\s*\w+/i,
+	];
+
+	const isWhatComment = (commentText: string): boolean => {
+		// Single line //
+		if (commentText.startsWith("//")) {
+			return whatPatterns.some((p) => p.test(commentText));
+		}
+		// Multi-line /* */ or JSDoc /** */
+		if (commentText.startsWith("/*")) {
+			const content = commentText
+				.replace(/^\/\*+|\*+\/$|^\s*\*\s*/gm, " ")
+				.trim();
+			// Short descriptions that match WHAT patterns
+			if (content.length < 150) {
+				return whatPatternsMultiLine.some((p) => p.test(content));
+			}
+		}
+		return false;
+	};
+
 	// ============================================================
-	// Pattern 4: Redundant @param/@returns JSDoc
+	// Check comments on any node
 	// ============================================================
-	const checkRedundantFunctionJSDoc = (
-		node: ts.Node,
-		funcName: string | undefined,
-	) => {
+	const checkNodeComments = (node: ts.Node, identifier?: string) => {
 		const comments = ts.getLeadingCommentRanges(fullText, node.getFullStart());
 		if (!comments) return;
 
+		const contextWords = getContextWords(node, sourceFile);
+
 		for (const comment of comments) {
 			const commentText = fullText.slice(comment.pos, comment.end);
-			if (!commentText.startsWith("/**")) continue;
 
-			// Check @param tags
-			const paramMatches = commentText.matchAll(
-				/@param\s+(\w+)\s*-?\s*([^\n@]*)/g,
-			);
-			for (const match of paramMatches) {
-				const paramName = match[1].toLowerCase();
-				const paramDesc = match[2].toLowerCase().trim();
-
-				if (
-					paramDesc === `the ${paramName}` ||
-					paramDesc === `a ${paramName}` ||
-					paramDesc === `the ${paramName} parameter` ||
-					paramDesc === paramName ||
-					new RegExp(`^the\\s+${paramName}\\s+of\\s+the\\s+\\w+$`).test(
-						paramDesc,
-					)
-				) {
-					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-						comment.pos,
-					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `@param ${match[1]} just restates parameter name; add meaningful description or remove`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: match[0].trim().slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Document what the parameter is used for, constraints, or examples",
-					});
-				}
+			// Skip legitimate WHY indicators
+			if (
+				/\b(because|since|workaround|hack|todo|fixme|note|warning|legacy|required by|must be|cannot|due to|reason|why)\b/i.test(
+					commentText,
+				)
+			) {
+				continue;
 			}
 
-			// Check @returns
-			const returnsMatch = commentText.match(/@returns?\s+([^\n@]*)/);
-			if (returnsMatch) {
-				const returnsDesc = returnsMatch[1].toLowerCase().trim();
-				if (
-					/^the\s+(created|returned|result|value|data|response)\s*\w*$/.test(
-						returnsDesc,
-					) ||
-					/^(a|the)\s+\w+$/.test(returnsDesc)
-				) {
-					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-						comment.pos,
-					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"@returns just restates return type; add meaningful description or remove",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: returnsMatch[0].trim().slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Document what conditions affect the return value or its structure",
-					});
-				}
-			}
-
-			// Check if main description restates function name
-			if (funcName) {
-				const mainDescMatch = commentText.match(
-					/\/\*\*\s*\n?\s*\*?\s*([^@\n][^\n@]*)/,
+			// Check WHAT patterns
+			if (isWhatComment(commentText)) {
+				addViolation(
+					comment.pos,
+					"Comment describes WHAT code does; code should be self-documenting",
+					commentText,
+					"Remove comment; improve naming or structure so the code explains itself",
 				);
-				if (mainDescMatch) {
-					const mainDesc = mainDescMatch[1].trim().toLowerCase();
-					const descWords = mainDesc.replace(/[^a-z\s]/g, "").split(/\s+/);
-					const nameWords = funcName
-						.replace(/([A-Z])/g, " $1")
-						.toLowerCase()
-						.trim()
-						.split(/\s+/);
+				continue;
+			}
 
-					const overlap = descWords.filter((w) =>
-						nameWords.some((nw) => nw.includes(w) || w.includes(nw)),
+			// Check if JSDoc/comment just expands an identifier
+			if (identifier && commentText.startsWith("/*")) {
+				const content = commentText
+					.replace(/^\/\*+|\*+\/$|^\s*\*\s*/gm, " ")
+					.trim();
+
+				// Skip @param, @returns style docs for now (handled separately)
+				if (/@(param|returns?|throws?|example|see|deprecated)/i.test(content)) {
+					continue;
+				}
+
+				if (
+					content.length < 200 &&
+					isExpandedIdentifier(content, identifier, contextWords)
+				) {
+					addViolation(
+						comment.pos,
+						`Comment restates what '${identifier}' already expresses; code is self-documenting`,
+						commentText,
+						"Remove redundant comment; the identifier and context are sufficient",
 					);
-					if (overlap.length >= nameWords.length - 1 && mainDesc.length < 50) {
-						const { line, character } =
-							sourceFile.getLineAndCharacterOfPosition(comment.pos);
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"JSDoc description just restates function name; document the 'why', not 'what'",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: mainDesc.slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Document purpose, edge cases, or business context instead",
-						});
-					}
-				}
-			}
-		}
-	};
-
-	// ============================================================
-	// Scan for inline comments (Effect pipelines and WHAT comments)
-	// ============================================================
-	const scanInlineComments = (pos: number) => {
-		const comments = [
-			...(ts.getLeadingCommentRanges(fullText, pos) || []),
-			...(ts.getTrailingCommentRanges(fullText, pos) || []),
-		];
-
-		for (const comment of comments) {
-			const commentText = fullText.slice(comment.pos, comment.end);
-			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-				comment.pos,
-			);
-
-			// Check Effect pipeline patterns
-			for (const pattern of effectPatternsNoComment) {
-				if (pattern.test(commentText)) {
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Effect patterns are self-documenting; comment may be unnecessary",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Effect pipelines express intent clearly; remove redundant comments",
-					});
-					return; // Only one violation per comment
-				}
-			}
-
-			// Check WHAT patterns (only for single-line comments)
-			if (comment.kind === ts.SyntaxKind.SingleLineCommentTrivia) {
-				for (const pattern of whatPatterns) {
-					if (pattern.test(commentText)) {
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"Comment describes WHAT code does; code should be self-documenting",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Remove comment; use clear naming so the code explains itself",
-						});
-						return; // Only one violation per comment
-					}
 				}
 			}
 		}
@@ -288,56 +264,100 @@ export const detect = (
 	// AST Visitor
 	// ============================================================
 	const visit = (node: ts.Node) => {
-		// Check type aliases and interfaces for redundant JSDoc (branded types)
-		if (ts.isTypeAliasDeclaration(node) || ts.isInterfaceDeclaration(node)) {
-			const comments = ts.getLeadingCommentRanges(
-				fullText,
-				node.getFullStart(),
-			);
-			if (comments) {
-				for (const comment of comments) {
-					checkBrandedTypeJSDoc(node, node.name.text, comment);
-				}
-			}
+		// Object literal properties: { /** comment */ propName: value }
+		if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name)) {
+			checkNodeComments(node, node.name.text);
 		}
 
-		// Check variable declarations for branded types
-		if (ts.isVariableStatement(node)) {
-			const comments = ts.getLeadingCommentRanges(
-				fullText,
-				node.getFullStart(),
-			);
-			if (comments) {
-				for (const decl of node.declarationList.declarations) {
-					if (ts.isIdentifier(decl.name)) {
-						for (const comment of comments) {
-							checkBrandedTypeJSDoc(node, decl.name.text, comment);
-						}
-					}
-				}
-			}
+		// Shorthand properties: { /** comment */ propName }
+		if (ts.isShorthandPropertyAssignment(node)) {
+			checkNodeComments(node, node.name.text);
 		}
 
-		// Check function declarations and methods for redundant JSDoc
-		if (ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)) {
-			checkRedundantFunctionJSDoc(node, node.name?.getText(sourceFile));
+		// Interface/type properties: interface X { /** comment */ prop: Type }
+		if (ts.isPropertySignature(node) && ts.isIdentifier(node.name)) {
+			checkNodeComments(node, node.name.text);
 		}
 
-		// Check variable statements with arrow functions
+		// Class properties
+		if (ts.isPropertyDeclaration(node) && ts.isIdentifier(node.name)) {
+			checkNodeComments(node, node.name.text);
+		}
+
+		// Variable declarations: /** comment */ const x = ...
 		if (ts.isVariableStatement(node)) {
 			for (const decl of node.declarationList.declarations) {
-				if (
-					ts.isIdentifier(decl.name) &&
-					decl.initializer &&
-					ts.isArrowFunction(decl.initializer)
-				) {
-					checkRedundantFunctionJSDoc(node, decl.name.getText(sourceFile));
+				if (ts.isIdentifier(decl.name)) {
+					checkNodeComments(node, decl.name.text);
 				}
 			}
 		}
 
-		// Scan for inline comments
-		scanInlineComments(node.getFullStart());
+		// Function declarations: /** comment */ function name() {}
+		if (ts.isFunctionDeclaration(node) && node.name) {
+			checkNodeComments(node, node.name.text);
+		}
+
+		// Type alias: /** comment */ type X = ...
+		if (ts.isTypeAliasDeclaration(node)) {
+			checkNodeComments(node, node.name.text);
+		}
+
+		// Interface: /** comment */ interface X {}
+		if (ts.isInterfaceDeclaration(node)) {
+			checkNodeComments(node, node.name.text);
+		}
+
+		// Class: /** comment */ class X {}
+		if (ts.isClassDeclaration(node) && node.name) {
+			checkNodeComments(node, node.name.text);
+		}
+
+		// Method declarations
+		if (
+			ts.isMethodDeclaration(node) &&
+			node.name &&
+			ts.isIdentifier(node.name)
+		) {
+			checkNodeComments(node, node.name.text);
+		}
+
+		// Any other node - check for standalone WHAT comments
+		const comments = ts.getLeadingCommentRanges(fullText, node.getFullStart());
+		if (comments) {
+			for (const comment of comments) {
+				const commentText = fullText.slice(comment.pos, comment.end);
+
+				// Skip if we already would have checked this via a more specific pattern
+				if (
+					ts.isPropertyAssignment(node) ||
+					ts.isPropertySignature(node) ||
+					ts.isVariableStatement(node) ||
+					ts.isFunctionDeclaration(node) ||
+					ts.isMethodDeclaration(node)
+				) {
+					continue;
+				}
+
+				// Skip WHY indicators
+				if (
+					/\b(because|since|workaround|hack|todo|fixme|note|warning|legacy|required by|must be|cannot|due to|reason|why)\b/i.test(
+						commentText,
+					)
+				) {
+					continue;
+				}
+
+				if (isWhatComment(commentText)) {
+					addViolation(
+						comment.pos,
+						"Comment describes WHAT code does; code should be self-documenting",
+						commentText,
+						"Remove comment; improve naming or structure so the code explains itself",
+					);
+				}
+			}
+		}
 
 		ts.forEachChild(node, visit);
 	};

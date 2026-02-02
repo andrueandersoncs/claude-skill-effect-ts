@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	DiscriminatedUnionsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -33,17 +34,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "'_tag' in check should use Schema.is() type guard",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile),
-					certainty: "potential",
-					suggestion: "Use Schema.is(MyTaggedClass) for type-safe narrowing",
-				});
+				violations.push(
+					new DiscriminatedUnionsViolation({
+						category: "discriminated-unions",
+						ruleId: meta.id,
+						message: "'_tag' in check should use Schema.is() type guard",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile),
+						certainty: "potential",
+						suggestion: "Use Schema.is(MyTaggedClass) for type-safe narrowing",
+					}),
+				);
 			}
 		}
 
@@ -58,17 +61,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "typeof check with _tag should use Schema.is()",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion: "Use Schema.is(MyTaggedClass) for type-safe validation",
-				});
+				violations.push(
+					new DiscriminatedUnionsViolation({
+						category: "discriminated-unions",
+						ruleId: meta.id,
+						message: "typeof check with _tag should use Schema.is()",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion: "Use Schema.is(MyTaggedClass) for type-safe validation",
+					}),
+				);
 			}
 		}
 
@@ -87,19 +92,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Type assertion to access _tag on unknown; use Schema.is() for validation",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Use Schema.is(MyTaggedClass)(input) for type-safe validation of unknown data",
-				});
+				violations.push(
+					new DiscriminatedUnionsViolation({
+						category: "discriminated-unions",
+						ruleId: meta.id,
+						message:
+							"Type assertion to access _tag on unknown; use Schema.is() for validation",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use Schema.is(MyTaggedClass)(input) for type-safe validation of unknown data",
+					}),
+				);
 			}
 		}
 

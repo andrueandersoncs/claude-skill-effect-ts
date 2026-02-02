@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ImperativeViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -28,17 +29,20 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "Use Effect.forEach or Array methods instead of for loops",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion: "Replace with Effect.forEach() or Array.map/filter/reduce",
-			});
+			violations.push(
+				new ImperativeViolation({
+					category: "imperative",
+					ruleId: meta.id,
+					message: "Use Effect.forEach or Array methods instead of for loops",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion:
+						"Replace with Effect.forEach() or Array.map/filter/reduce",
+				}),
+			);
 		}
 
 		// Detect for...of loops
@@ -46,18 +50,21 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message:
-					"Use Effect.forEach or Array methods instead of for...of loops",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion: "Replace with Effect.forEach() or Array.map/filter/reduce",
-			});
+			violations.push(
+				new ImperativeViolation({
+					category: "imperative",
+					ruleId: meta.id,
+					message:
+						"Use Effect.forEach or Array methods instead of for...of loops",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion:
+						"Replace with Effect.forEach() or Array.map/filter/reduce",
+				}),
+			);
 		}
 
 		// Detect for...in loops
@@ -65,18 +72,20 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message:
-					"Use Record.toEntries or Object methods instead of for...in loops",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion: "Replace with Record.toEntries() or Record.keys()",
-			});
+			violations.push(
+				new ImperativeViolation({
+					category: "imperative",
+					ruleId: meta.id,
+					message:
+						"Use Record.toEntries or Object methods instead of for...in loops",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion: "Replace with Record.toEntries() or Record.keys()",
+				}),
+			);
 		}
 
 		// Detect while loops
@@ -84,18 +93,20 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message:
-					"Use Effect.loop, Effect.iterate, or recursion instead of while loops",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion: "Replace with Effect.loop() or recursive Effect.gen()",
-			});
+			violations.push(
+				new ImperativeViolation({
+					category: "imperative",
+					ruleId: meta.id,
+					message:
+						"Use Effect.loop, Effect.iterate, or recursion instead of while loops",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion: "Replace with Effect.loop() or recursive Effect.gen()",
+				}),
+			);
 		}
 
 		// Detect do...while loops
@@ -103,17 +114,19 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "Use Effect.loop or recursion instead of do...while loops",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion: "Replace with Effect.loop() or recursive Effect.gen()",
-			});
+			violations.push(
+				new ImperativeViolation({
+					category: "imperative",
+					ruleId: meta.id,
+					message: "Use Effect.loop or recursion instead of do...while loops",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion: "Replace with Effect.loop() or recursive Effect.gen()",
+				}),
+			);
 		}
 
 		ts.forEachChild(node, visit);

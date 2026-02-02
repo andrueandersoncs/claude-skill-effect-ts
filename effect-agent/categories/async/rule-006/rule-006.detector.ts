@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	AsyncViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -37,29 +38,33 @@ export const detect = (
 				);
 
 				if (method === "race") {
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: "Promise.race() should be replaced with Effect.race()",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion: "Use Effect.race()",
-					});
+					violations.push(
+						new AsyncViolation({
+							category: "async",
+							ruleId: meta.id,
+							message: "Promise.race() should be replaced with Effect.race()",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion: "Use Effect.race()",
+						}),
+					);
 				} else if (method === "any") {
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: "Promise.any() should be replaced with Effect.raceAll()",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion: "Use Effect.raceAll()",
-					});
+					violations.push(
+						new AsyncViolation({
+							category: "async",
+							ruleId: meta.id,
+							message: "Promise.any() should be replaced with Effect.raceAll()",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion: "Use Effect.raceAll()",
+						}),
+					);
 				}
 			}
 		}

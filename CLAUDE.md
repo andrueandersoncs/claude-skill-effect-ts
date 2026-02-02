@@ -202,3 +202,26 @@ From `effect-agent/`:
 11. **YOU MUST NOT mark something "done" without a test proving it can't be improved.**
 
 12. **YOU MUST** write a smaller test to isolate problems when stuck.
+
+
+## Fix Philosophy
+
+**REQUIRED: Proper fix over minimal fix.**
+
+- **YOU MUST** prefer architecturally correct solutions over localized workarounds
+- **YOU MUST** make sweeping changes when that's what correctness requires
+- **YOU MUST NOT** ask permission to do the right thing - just do it and show results
+- **YOU MUST NOT** treat "affects many files" as a reason to ask permission
+- **YOU MUST NOT** suggest workarounds when proper fixes exist
+- **YOU MUST NOT** present options when one is clearly correct - just do the correct one
+
+**Git is the safety net.** Changes can be reverted. Err on the side of action.
+
+**The user hired you to fix problems properly**, not to minimize diff size or avoid touching files.
+
+**VIOLATION Examples:**
+- "This would require changes to 15 files, should I proceed?" → Just do it
+- "Option 1: Proper fix (big change). Option 2: Workaround (small change)." → Do option 1
+- "Would you like me to convert X to Schema.Class?" → Just convert it
+- "This is a larger change that affects..." → Irrelevant, do the right thing
+

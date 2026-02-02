@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ErrorsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -39,18 +40,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "Manual retry loop; use Effect.retry with Schedule",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Use effect.pipe(Effect.retry(Schedule.exponential('100 millis').pipe(Schedule.jittered, Schedule.compose(Schedule.recurs(5)))))",
-				});
+				violations.push(
+					new ErrorsViolation({
+						category: "errors",
+						ruleId: meta.id,
+						message: "Manual retry loop; use Effect.retry with Schedule",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use effect.pipe(Effect.retry(Schedule.exponential('100 millis').pipe(Schedule.jittered, Schedule.compose(Schedule.recurs(5)))))",
+					}),
+				);
 			}
 		}
 
@@ -66,18 +69,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "Recursive retry function; use Effect.retry with Schedule",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: `function ${node.name.text}(...)`,
-					certainty: "potential",
-					suggestion:
-						"Use Effect.retry(Schedule.recurs(n)) for simple retries or Schedule.exponential for backoff",
-				});
+				violations.push(
+					new ErrorsViolation({
+						category: "errors",
+						ruleId: meta.id,
+						message: "Recursive retry function; use Effect.retry with Schedule",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: `function ${node.name.text}(...)`,
+						certainty: "potential",
+						suggestion:
+							"Use Effect.retry(Schedule.recurs(n)) for simple retries or Schedule.exponential for backoff",
+					}),
+				);
 			}
 		}
 
@@ -93,18 +98,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "Manual retry counter; use Effect.retry with Schedule",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile),
-					certainty: "potential",
-					suggestion:
-						"Effect.retry handles retry counting automatically with Schedule combinators",
-				});
+				violations.push(
+					new ErrorsViolation({
+						category: "errors",
+						ruleId: meta.id,
+						message: "Manual retry counter; use Effect.retry with Schedule",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile),
+						certainty: "potential",
+						suggestion:
+							"Effect.retry handles retry counting automatically with Schedule combinators",
+					}),
+				);
 			}
 		}
 

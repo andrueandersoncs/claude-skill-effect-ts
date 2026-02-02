@@ -5,10 +5,7 @@
  */
 
 import * as ts from "typescript";
-import {
-	SNIPPET_MAX_LENGTH,
-	type Violation,
-} from "../../../detectors/types.js";
+import { TestingViolation, type Violation } from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-004",
@@ -60,19 +57,21 @@ export const detect = (
 		const hasEffectUsage =
 			sourceCode.includes("Effect.") || sourceCode.includes("yield*");
 		if (hasEffectUsage) {
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message:
-					"Test file uses Effect but imports from 'vitest' instead of '@effect/vitest'",
-				filePath,
-				line: 1,
-				column: 1,
-				snippet: "import { ... } from 'vitest'",
-				certainty: "potential",
-				suggestion:
-					"Replace 'vitest' import with '@effect/vitest' for Effect test utilities",
-			});
+			violations.push(
+				new TestingViolation({
+					category: "testing",
+					ruleId: meta.id,
+					message:
+						"Test file uses Effect but imports from 'vitest' instead of '@effect/vitest'",
+					filePath,
+					line: 1,
+					column: 1,
+					snippet: "import { ... } from 'vitest'",
+					certainty: "potential",
+					suggestion:
+						"Replace 'vitest' import with '@effect/vitest' for Effect test utilities",
+				}),
+			);
 		}
 	}
 

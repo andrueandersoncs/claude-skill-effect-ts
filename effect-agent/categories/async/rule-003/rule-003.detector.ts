@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	AsyncViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -54,18 +55,20 @@ export const detect = (
 					if (!isBoundary) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message: `Effect.${method}() should only be used at application boundaries`,
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Keep Effect.run* at entry points (main, handlers, routes); compose Effects instead of running them mid-flow",
-						});
+						violations.push(
+							new AsyncViolation({
+								category: "async",
+								ruleId: meta.id,
+								message: `Effect.${method}() should only be used at application boundaries`,
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Keep Effect.run* at entry points (main, handlers, routes); compose Effects instead of running them mid-flow",
+							}),
+						);
 					}
 				}
 			}

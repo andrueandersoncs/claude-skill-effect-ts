@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	CommentsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -63,18 +64,20 @@ export const detect = (
 
 			for (const pattern of namingCommentPatterns) {
 				if (pattern.test(commentText)) {
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Comment describes obvious code behavior; code should be self-documenting",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion: "Use clear naming instead of explanatory comments",
-					});
+					violations.push(
+						new CommentsViolation({
+							category: "comments",
+							ruleId: meta.id,
+							message:
+								"Comment describes obvious code behavior; code should be self-documenting",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion: "Use clear naming instead of explanatory comments",
+						}),
+					);
 					break;
 				}
 			}

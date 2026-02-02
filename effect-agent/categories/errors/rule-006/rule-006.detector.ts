@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ErrorsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -28,18 +29,20 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "try/catch blocks should be replaced with Effect.try()",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion:
-					"Use Effect.try() for sync operations or Effect.tryPromise() for async",
-			});
+			violations.push(
+				new ErrorsViolation({
+					category: "errors",
+					ruleId: meta.id,
+					message: "try/catch blocks should be replaced with Effect.try()",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion:
+						"Use Effect.try() for sync operations or Effect.tryPromise() for async",
+				}),
+			);
 		}
 
 		// Detect catch clauses with untyped error parameter
@@ -57,20 +60,22 @@ export const detect = (
 				hasTypedError = typeText !== "any" && typeText !== "unknown";
 			}
 
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: hasTypedError
-					? "catch clause should be replaced with Effect error handling"
-					: "catch clause has untyped error parameter",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion:
-					"Use Effect.catchTag() or Effect.catchAll() with typed errors",
-			});
+			violations.push(
+				new ErrorsViolation({
+					category: "errors",
+					ruleId: meta.id,
+					message: hasTypedError
+						? "catch clause should be replaced with Effect error handling"
+						: "catch clause has untyped error parameter",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion:
+						"Use Effect.catchTag() or Effect.catchAll() with typed errors",
+				}),
+			);
 		}
 
 		ts.forEachChild(node, visit);

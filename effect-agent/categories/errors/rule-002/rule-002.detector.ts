@@ -13,6 +13,7 @@
 
 import * as ts from "typescript";
 import {
+	ErrorsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -42,17 +43,19 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: "Manual _tag checking should use Effect.catchTag",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: parent.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion: "Use Effect.catchTag() for type-safe error handling",
-					});
+					violations.push(
+						new ErrorsViolation({
+							category: "errors",
+							ruleId: meta.id,
+							message: "Manual _tag checking should use Effect.catchTag",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: parent.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion: "Use Effect.catchTag() for type-safe error handling",
+						}),
+					);
 					break;
 				}
 				parent = parent.parent;
@@ -66,18 +69,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "switch on error._tag should use Effect.catchTags",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion:
-						"Use Effect.catchTags() for handling multiple error types",
-				});
+				violations.push(
+					new ErrorsViolation({
+						category: "errors",
+						ruleId: meta.id,
+						message: "switch on error._tag should use Effect.catchTags",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion:
+							"Use Effect.catchTags() for handling multiple error types",
+					}),
+				);
 			}
 		}
 
@@ -97,19 +102,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Data.TaggedError; use Schema.TaggedError for full Schema compatibility",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion:
-						"Use class MyError extends Schema.TaggedError<MyError>()('MyError', { ... }) for encoding/decoding support",
-				});
+				violations.push(
+					new ErrorsViolation({
+						category: "errors",
+						ruleId: meta.id,
+						message:
+							"Data.TaggedError; use Schema.TaggedError for full Schema compatibility",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion:
+							"Use class MyError extends Schema.TaggedError<MyError>()('MyError', { ... }) for encoding/decoding support",
+					}),
+				);
 			}
 
 			// Detection: Promise.reject (from rule-012)
@@ -121,17 +128,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "Promise.reject() should be replaced with Effect.fail()",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion: "Use Effect.fail() with a typed error",
-				});
+				violations.push(
+					new ErrorsViolation({
+						category: "errors",
+						ruleId: meta.id,
+						message: "Promise.reject() should be replaced with Effect.fail()",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion: "Use Effect.fail() with a typed error",
+					}),
+				);
 			}
 
 			// Detection: console.error (from rule-012)
@@ -143,17 +152,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "console.error may indicate unstructured error handling",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion: "Use Effect.log or structured error types instead",
-				});
+				violations.push(
+					new ErrorsViolation({
+						category: "errors",
+						ruleId: meta.id,
+						message: "console.error may indicate unstructured error handling",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion: "Use Effect.log or structured error types instead",
+					}),
+				);
 			}
 		}
 
@@ -168,19 +179,21 @@ export const detect = (
 						if (typeText.includes("Data.TaggedError")) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message:
-									"Class extends Data.TaggedError; use Schema.TaggedError",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: `class ${node.name?.text || "..."} extends Data.TaggedError`,
-								certainty: "definite",
-								suggestion:
-									"Use class MyError extends Schema.TaggedError<MyError>()('MyError', { ... }) for Schema integration",
-							});
+							violations.push(
+								new ErrorsViolation({
+									category: "errors",
+									ruleId: meta.id,
+									message:
+										"Class extends Data.TaggedError; use Schema.TaggedError",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: `class ${node.name?.text || "..."} extends Data.TaggedError`,
+									certainty: "definite",
+									suggestion:
+										"Use class MyError extends Schema.TaggedError<MyError>()('MyError', { ... }) for Schema integration",
+								}),
+							);
 						}
 
 						// Native Error types (from rule-012)
@@ -191,18 +204,22 @@ export const detect = (
 						) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message: `Class extending ${typeText} should use Schema.TaggedError instead`,
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								certainty: "definite",
-								suggestion:
-									"Use Schema.TaggedError() or Data.TaggedError() for typed errors",
-							});
+							violations.push(
+								new ErrorsViolation({
+									category: "errors",
+									ruleId: meta.id,
+									message: `Class extending ${typeText} should use Schema.TaggedError instead`,
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
+									certainty: "definite",
+									suggestion:
+										"Use Schema.TaggedError() or Data.TaggedError() for typed errors",
+								}),
+							);
 						}
 					}
 				}
@@ -230,17 +247,19 @@ export const detect = (
 				}
 			}
 
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "throw statements should be replaced with Effect.fail()",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion,
-			});
+			violations.push(
+				new ErrorsViolation({
+					category: "errors",
+					ruleId: meta.id,
+					message: "throw statements should be replaced with Effect.fail()",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion,
+				}),
+			);
 		}
 
 		// === Detection 6: new Error() without throw (from rule-012) ===
@@ -268,17 +287,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "new Error() should be replaced with Schema.TaggedError",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion: "Define typed errors using Schema.TaggedError class",
-				});
+				violations.push(
+					new ErrorsViolation({
+						category: "errors",
+						ruleId: meta.id,
+						message: "new Error() should be replaced with Schema.TaggedError",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion: "Define typed errors using Schema.TaggedError class",
+					}),
+				);
 			}
 		}
 

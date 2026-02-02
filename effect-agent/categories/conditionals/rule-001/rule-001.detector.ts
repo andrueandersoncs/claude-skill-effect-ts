@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ConditionalsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -31,18 +32,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Array length check should use Array.match or Array.isEmptyArray",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion: "Use Array.match() or Array.isEmptyArray()",
-				});
+				violations.push(
+					new ConditionalsViolation({
+						category: "conditionals",
+						ruleId: meta.id,
+						message:
+							"Array length check should use Array.match or Array.isEmptyArray",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion: "Use Array.match() or Array.isEmptyArray()",
+					}),
+				);
 			}
 		}
 
@@ -54,18 +57,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Array length check in ternary should use Array.match or Array.isEmptyArray",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion: "Use Array.match() or Array.isEmptyArray()",
-				});
+				violations.push(
+					new ConditionalsViolation({
+						category: "conditionals",
+						ruleId: meta.id,
+						message:
+							"Array length check in ternary should use Array.match or Array.isEmptyArray",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion: "Use Array.match() or Array.isEmptyArray()",
+					}),
+				);
 			}
 		}
 

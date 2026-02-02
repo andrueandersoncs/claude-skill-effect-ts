@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	AsyncViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -32,18 +33,20 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message:
-					"setTimeout should be replaced with Effect.sleep or Effect.delay",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion: "Use Effect.sleep() or Effect.delay()",
-			});
+			violations.push(
+				new AsyncViolation({
+					category: "async",
+					ruleId: meta.id,
+					message:
+						"setTimeout should be replaced with Effect.sleep or Effect.delay",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion: "Use Effect.sleep() or Effect.delay()",
+				}),
+			);
 		}
 
 		// Detect setInterval
@@ -55,17 +58,20 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "setInterval should be replaced with Effect.repeat + Schedule",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion: "Use Effect.repeat() with Schedule.spaced()",
-			});
+			violations.push(
+				new AsyncViolation({
+					category: "async",
+					ruleId: meta.id,
+					message:
+						"setInterval should be replaced with Effect.repeat + Schedule",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion: "Use Effect.repeat() with Schedule.spaced()",
+				}),
+			);
 		}
 
 		ts.forEachChild(node, visit);

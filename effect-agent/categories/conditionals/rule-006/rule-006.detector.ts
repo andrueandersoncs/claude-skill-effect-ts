@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ConditionalsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -40,17 +41,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "Null/undefined checks should use Option.match",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion: "Use Option.match() for nullable handling",
-				});
+				violations.push(
+					new ConditionalsViolation({
+						category: "conditionals",
+						ruleId: meta.id,
+						message: "Null/undefined checks should use Option.match",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion: "Use Option.match() for nullable handling",
+					}),
+				);
 			}
 		}
 
@@ -69,18 +72,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Null check ternary should use Option.match or Option.getOrElse",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion: "Use Option.match() or Option.getOrElse()",
-				});
+				violations.push(
+					new ConditionalsViolation({
+						category: "conditionals",
+						ruleId: meta.id,
+						message:
+							"Null check ternary should use Option.match or Option.getOrElse",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion: "Use Option.match() or Option.getOrElse()",
+					}),
+				);
 			}
 		}
 
@@ -91,17 +96,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "Nullish coalescing (??) can be replaced with Option",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion: "Consider Option.fromNullable() + Option.getOrElse()",
-				});
+				violations.push(
+					new ConditionalsViolation({
+						category: "conditionals",
+						ruleId: meta.id,
+						message: "Nullish coalescing (??) can be replaced with Option",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion: "Consider Option.fromNullable() + Option.getOrElse()",
+					}),
+				);
 			}
 		}
 

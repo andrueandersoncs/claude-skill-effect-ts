@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ImperativeViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -44,19 +45,21 @@ export const detect = (
 					) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"Promise.all inside loop for concurrency; use Effect.all with concurrency option",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Use Effect.all(effects, { concurrency: n }) or Effect.forEach with concurrency",
-						});
+						violations.push(
+							new ImperativeViolation({
+								category: "imperative",
+								ruleId: meta.id,
+								message:
+									"Promise.all inside loop for concurrency; use Effect.all with concurrency option",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Use Effect.all(effects, { concurrency: n }) or Effect.forEach with concurrency",
+							}),
+						);
 						break;
 					}
 					parent = parent.parent;
@@ -84,19 +87,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Manual concurrency tracking; use Effect.all with concurrency option",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use Effect.all(effects, { concurrency: n }) for built-in concurrency control",
-					});
+					violations.push(
+						new ImperativeViolation({
+							category: "imperative",
+							ruleId: meta.id,
+							message:
+								"Manual concurrency tracking; use Effect.all with concurrency option",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use Effect.all(effects, { concurrency: n }) for built-in concurrency control",
+						}),
+					);
 				}
 			}
 		}

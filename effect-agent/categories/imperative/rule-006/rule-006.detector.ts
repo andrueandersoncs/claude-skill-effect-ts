@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ImperativeViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -51,17 +52,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "Nested loops should use Array.flatMap or Effect.flatMap",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion: "Use Array.flatMap() to flatten nested iterations",
-				});
+				violations.push(
+					new ImperativeViolation({
+						category: "imperative",
+						ruleId: meta.id,
+						message: "Nested loops should use Array.flatMap or Effect.flatMap",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion: "Use Array.flatMap() to flatten nested iterations",
+					}),
+				);
 			}
 		}
 

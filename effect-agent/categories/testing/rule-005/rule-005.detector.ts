@@ -5,10 +5,7 @@
  */
 
 import * as ts from "typescript";
-import {
-	SNIPPET_MAX_LENGTH,
-	type Violation,
-} from "../../../detectors/types.js";
+import { TestingViolation, type Violation } from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-005",
@@ -63,19 +60,21 @@ export const detect = (
 		visit(sourceFile);
 
 		if (!hasAddEqualityTestersCall) {
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message:
-					"Test uses Effect types with toEqual() but missing addEqualityTesters() call",
-				filePath,
-				line: 1,
-				column: 1,
-				snippet: "Missing addEqualityTesters() for Effect type equality",
-				certainty: "potential",
-				suggestion:
-					"Add: import { addEqualityTesters } from '@effect/vitest'; addEqualityTesters();",
-			});
+			violations.push(
+				new TestingViolation({
+					category: "testing",
+					ruleId: meta.id,
+					message:
+						"Test uses Effect types with toEqual() but missing addEqualityTesters() call",
+					filePath,
+					line: 1,
+					column: 1,
+					snippet: "Missing addEqualityTesters() for Effect type equality",
+					certainty: "potential",
+					suggestion:
+						"Add: import { addEqualityTesters } from '@effect/vitest'; addEqualityTesters();",
+				}),
+			);
 		}
 	}
 

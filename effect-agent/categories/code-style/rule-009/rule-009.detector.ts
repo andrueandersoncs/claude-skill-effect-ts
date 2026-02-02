@@ -16,6 +16,7 @@
 
 import type * as ts from "typescript";
 import {
+	CodeStyleViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -93,18 +94,20 @@ export const detect = (
 				.slice(lineStart, lineEnd === -1 ? undefined : lineEnd)
 				.trim();
 
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: `Type error suppression '${ignoreMatch[0]}' hides type mismatch; fix the types instead`,
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: lineText.slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion:
-					"Fix the underlying type error: use Schema.decodeUnknown for unknown data, narrow types with guards, or correct the type annotations",
-			});
+			violations.push(
+				new CodeStyleViolation({
+					category: "code-style",
+					ruleId: meta.id,
+					message: `Type error suppression '${ignoreMatch[0]}' hides type mismatch; fix the types instead`,
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: lineText.slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion:
+						"Fix the underlying type error: use Schema.decodeUnknown for unknown data, narrow types with guards, or correct the type annotations",
+				}),
+			);
 		}
 		ignoreMatch = tsIgnoreRegex.exec(fullText);
 	}
@@ -117,17 +120,20 @@ export const detect = (
 		const pos = nocheckMatch.index;
 		const { line, character } = sourceFile.getLineAndCharacterOfPosition(pos);
 
-		violations.push({
-			ruleId: meta.id,
-			category: meta.category,
-			message: "@ts-nocheck disables all type checking; fix the types instead",
-			filePath,
-			line: line + 1,
-			column: character + 1,
-			snippet: "@ts-nocheck",
-			certainty: "definite",
-			suggestion: "Remove @ts-nocheck and fix all type errors in this file",
-		});
+		violations.push(
+			new CodeStyleViolation({
+				category: "code-style",
+				ruleId: meta.id,
+				message:
+					"@ts-nocheck disables all type checking; fix the types instead",
+				filePath,
+				line: line + 1,
+				column: character + 1,
+				snippet: "@ts-nocheck",
+				certainty: "definite",
+				suggestion: "Remove @ts-nocheck and fix all type errors in this file",
+			}),
+		);
 		nocheckMatch = tsNocheckRegex.exec(fullText);
 	}
 

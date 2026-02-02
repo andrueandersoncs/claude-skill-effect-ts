@@ -12,6 +12,7 @@
 
 import * as ts from "typescript";
 import {
+	ServicesViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -64,18 +65,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "fetch() should be wrapped in an HttpClient service",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion:
-						"Create a Context.Tag HttpClient service with Live/Test layers",
-				});
+				violations.push(
+					new ServicesViolation({
+						category: "services",
+						ruleId: meta.id,
+						message: "fetch() should be wrapped in an HttpClient service",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion:
+							"Create a Context.Tag HttpClient service with Live/Test layers",
+					}),
+				);
 			}
 
 			// axios calls
@@ -83,18 +86,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "axios should be wrapped in an HttpClient service",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion:
-						"Create a Context.Tag service wrapping axios with Live/Test layers",
-				});
+				violations.push(
+					new ServicesViolation({
+						category: "services",
+						ruleId: meta.id,
+						message: "axios should be wrapped in an HttpClient service",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion:
+							"Create a Context.Tag service wrapping axios with Live/Test layers",
+					}),
+				);
 			}
 		}
 
@@ -108,18 +113,20 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `${moduleName} should be wrapped in an Http service`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile),
-						certainty: "potential",
-						suggestion:
-							"Use @effect/platform HttpClient or create a Context.Tag service",
-					});
+					violations.push(
+						new ServicesViolation({
+							category: "services",
+							ruleId: meta.id,
+							message: `${moduleName} should be wrapped in an Http service`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile),
+							certainty: "potential",
+							suggestion:
+								"Use @effect/platform HttpClient or create a Context.Tag service",
+						}),
+					);
 				}
 
 				// ========================================
@@ -134,18 +141,20 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `${moduleName} should be wrapped in a FileSystem service`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile),
-						certainty: "potential",
-						suggestion:
-							"Use @effect/platform FileSystem or create a Context.Tag service",
-					});
+					violations.push(
+						new ServicesViolation({
+							category: "services",
+							ruleId: meta.id,
+							message: `${moduleName} should be wrapped in a FileSystem service`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile),
+							certainty: "potential",
+							suggestion:
+								"Use @effect/platform FileSystem or create a Context.Tag service",
+						}),
+					);
 				}
 			}
 		}
@@ -169,18 +178,20 @@ export const detect = (
 					if (message) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message,
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "definite",
-							suggestion:
-								"Use @effect/platform FileSystem or create a Context.Tag service",
-						});
+						violations.push(
+							new ServicesViolation({
+								category: "services",
+								ruleId: meta.id,
+								message,
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "definite",
+								suggestion:
+									"Use @effect/platform FileSystem or create a Context.Tag service",
+							}),
+						);
 					}
 				}
 			}
@@ -207,18 +218,20 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `Database .${method}() should be in a Repository service`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: fullCallText.slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Create a Context.Tag Repository service with Live/Test layers",
-					});
+					violations.push(
+						new ServicesViolation({
+							category: "services",
+							ruleId: meta.id,
+							message: `Database .${method}() should be in a Repository service`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: fullCallText.slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Create a Context.Tag Repository service with Live/Test layers",
+						}),
+					);
 				}
 			}
 		}
@@ -241,17 +254,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: `process.env.${node.name.text} should use Effect Config`,
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile),
-					certainty: "potential",
-					suggestion: `Use Config.string('${node.name.text}') with ConfigProvider`,
-				});
+				violations.push(
+					new ServicesViolation({
+						category: "services",
+						ruleId: meta.id,
+						message: `process.env.${node.name.text} should use Effect Config`,
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile),
+						certainty: "potential",
+						suggestion: `Use Config.string('${node.name.text}') with ConfigProvider`,
+					}),
+				);
 			}
 		}
 
@@ -270,17 +285,19 @@ export const detect = (
 					node.getStart(),
 				);
 				const keyText = node.argumentExpression.getText(sourceFile);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: `process.env[${keyText}] should use Effect Config`,
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile),
-					certainty: "potential",
-					suggestion: `Use Config.string(${keyText}) with ConfigProvider`,
-				});
+				violations.push(
+					new ServicesViolation({
+						category: "services",
+						ruleId: meta.id,
+						message: `process.env[${keyText}] should use Effect Config`,
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile),
+						certainty: "potential",
+						suggestion: `Use Config.string(${keyText}) with ConfigProvider`,
+					}),
+				);
 			}
 		}
 

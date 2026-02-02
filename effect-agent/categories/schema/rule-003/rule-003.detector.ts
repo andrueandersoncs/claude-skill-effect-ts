@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	SchemaViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -35,18 +36,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "JSON.parse() should be replaced with Schema.parseJson()",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion:
-						"Use Schema.parseJson(MySchema) for type-safe JSON parsing",
-				});
+				violations.push(
+					new SchemaViolation({
+						category: "schema",
+						ruleId: meta.id,
+						message: "JSON.parse() should be replaced with Schema.parseJson()",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion:
+							"Use Schema.parseJson(MySchema) for type-safe JSON parsing",
+					}),
+				);
 			}
 		}
 

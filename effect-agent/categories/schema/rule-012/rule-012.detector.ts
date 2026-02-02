@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	SchemaViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -82,20 +83,22 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `Schema.${propName} used; ensure this is genuinely unconstrained data`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet:
-							node.parent?.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH) ||
-							"",
-						certainty: "potential",
-						suggestion:
-							"Schema.Unknown is appropriate for error causes and truly dynamic data; otherwise define a proper schema",
-					});
+					violations.push(
+						new SchemaViolation({
+							category: "schema",
+							ruleId: meta.id,
+							message: `Schema.${propName} used; ensure this is genuinely unconstrained data`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet:
+								node.parent?.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH) ||
+								"",
+							certainty: "potential",
+							suggestion:
+								"Schema.Unknown is appropriate for error causes and truly dynamic data; otherwise define a proper schema",
+						}),
+					);
 				}
 			}
 		}

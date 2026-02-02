@@ -9,6 +9,7 @@
 
 import * as ts from "typescript";
 import {
+	CommentsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -56,19 +57,21 @@ export const detect = (
 					if (pattern.test(commentText)) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(comment.pos);
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"Comment describes 'what' not 'why'; comments should explain non-obvious reasons",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Either remove comment or add specific context (e.g., link to issue, specific constraint)",
-						});
+						violations.push(
+							new CommentsViolation({
+								category: "comments",
+								ruleId: meta.id,
+								message:
+									"Comment describes 'what' not 'why'; comments should explain non-obvious reasons",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Either remove comment or add specific context (e.g., link to issue, specific constraint)",
+							}),
+						);
 						break;
 					}
 				}

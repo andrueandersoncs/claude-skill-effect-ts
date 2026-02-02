@@ -7,6 +7,7 @@
 import * as ts from "typescript";
 import {
 	SNIPPET_MAX_LENGTH,
+	TestingViolation,
 	type Violation,
 } from "../../../detectors/types.js";
 
@@ -63,19 +64,23 @@ export const detect = (
 						if (hasManualResource) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message:
-									"it.effect with manual resource management; use it.scoped",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								certainty: "potential",
-								suggestion:
-									"Use it.scoped() for tests with acquireRelease resources - it handles Scope automatically",
-							});
+							violations.push(
+								new TestingViolation({
+									category: "testing",
+									ruleId: meta.id,
+									message:
+										"it.effect with manual resource management; use it.scoped",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
+									certainty: "potential",
+									suggestion:
+										"Use it.scoped() for tests with acquireRelease resources - it handles Scope automatically",
+								}),
+							);
 						}
 					}
 				}

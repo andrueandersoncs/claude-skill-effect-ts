@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	AsyncViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -37,30 +38,34 @@ export const detect = (
 				);
 
 				if (method === "all") {
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: "Promise.all() should be replaced with Effect.all()",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion: "Use Effect.all()",
-					});
+					violations.push(
+						new AsyncViolation({
+							category: "async",
+							ruleId: meta.id,
+							message: "Promise.all() should be replaced with Effect.all()",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion: "Use Effect.all()",
+						}),
+					);
 				} else if (method === "allSettled") {
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Promise.allSettled() should be replaced with Effect.all({ mode: 'either' })",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion: "Use Effect.all({ mode: 'either' })",
-					});
+					violations.push(
+						new AsyncViolation({
+							category: "async",
+							ruleId: meta.id,
+							message:
+								"Promise.allSettled() should be replaced with Effect.all({ mode: 'either' })",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion: "Use Effect.all({ mode: 'either' })",
+						}),
+					);
 				}
 			}
 		}

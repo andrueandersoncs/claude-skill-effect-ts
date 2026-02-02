@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	SchemaViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -36,18 +37,20 @@ export const detect = (
 						) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message: `Class extends ${typeText}; use Schema.TaggedError instead`,
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: `class ${node.name?.text || "anonymous"} extends ${typeText}`,
-								certainty: "definite",
-								suggestion:
-									"Use class MyError extends Schema.TaggedError<MyError>()('MyError', { ... }) for typed errors",
-							});
+							violations.push(
+								new SchemaViolation({
+									category: "schema",
+									ruleId: meta.id,
+									message: `Class extends ${typeText}; use Schema.TaggedError instead`,
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: `class ${node.name?.text || "anonymous"} extends ${typeText}`,
+									certainty: "definite",
+									suggestion:
+										"Use class MyError extends Schema.TaggedError<MyError>()('MyError', { ... }) for typed errors",
+								}),
+							);
 						}
 					}
 				}
@@ -61,18 +64,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "new Error(); use Schema.TaggedError for domain errors",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Define error types with Schema.TaggedError for typed error handling with Effect",
-				});
+				violations.push(
+					new SchemaViolation({
+						category: "schema",
+						ruleId: meta.id,
+						message: "new Error(); use Schema.TaggedError for domain errors",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Define error types with Schema.TaggedError for typed error handling with Effect",
+					}),
+				);
 			}
 		}
 

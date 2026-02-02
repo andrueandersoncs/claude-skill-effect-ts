@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	AsyncViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -29,18 +30,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "async function declaration; use Effect.gen instead",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: `async function ${node.name?.text || "anonymous"}(...)`,
-					certainty: "definite",
-					suggestion:
-						"Replace async function with Effect.gen(function* () { ... yield* Effect.tryPromise(...) })",
-				});
+				violations.push(
+					new AsyncViolation({
+						category: "async",
+						ruleId: meta.id,
+						message: "async function declaration; use Effect.gen instead",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: `async function ${node.name?.text || "anonymous"}(...)`,
+						certainty: "definite",
+						suggestion:
+							"Replace async function with Effect.gen(function* () { ... yield* Effect.tryPromise(...) })",
+					}),
+				);
 			}
 		}
 
@@ -50,18 +53,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "async arrow function; use Effect.gen instead",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion:
-						"Replace async arrow with Effect.gen(function* () { ... yield* Effect.tryPromise(...) })",
-				});
+				violations.push(
+					new AsyncViolation({
+						category: "async",
+						ruleId: meta.id,
+						message: "async arrow function; use Effect.gen instead",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion:
+							"Replace async arrow with Effect.gen(function* () { ... yield* Effect.tryPromise(...) })",
+					}),
+				);
 			}
 		}
 
@@ -71,18 +76,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "async method; use Effect.gen instead",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: `async ${node.name?.getText(sourceFile) || "method"}(...)`,
-					certainty: "definite",
-					suggestion:
-						"Replace async method with method returning Effect.gen(function* () { ... })",
-				});
+				violations.push(
+					new AsyncViolation({
+						category: "async",
+						ruleId: meta.id,
+						message: "async method; use Effect.gen instead",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: `async ${node.name?.getText(sourceFile) || "method"}(...)`,
+						certainty: "definite",
+						suggestion:
+							"Replace async method with method returning Effect.gen(function* () { ... })",
+					}),
+				);
 			}
 		}
 

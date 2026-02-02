@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	NativeApisViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -48,19 +49,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Chained method calls; consider flow for reusable pipeline",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use flow((arr: ReadonlyArray<T>) => arr, Array.filter(pred), Array.map(fn)) from effect for composable, reusable pipelines. The anonymous function as the first argument helps with type inference.",
-					});
+					violations.push(
+						new NativeApisViolation({
+							category: "native-apis",
+							ruleId: meta.id,
+							message:
+								"Chained method calls; consider flow for reusable pipeline",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use flow((arr: ReadonlyArray<T>) => arr, Array.filter(pred), Array.map(fn)) from effect for composable, reusable pipelines. The anonymous function as the first argument helps with type inference.",
+						}),
+					);
 				}
 			}
 
@@ -89,19 +92,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Nested function composition; use flow for reusable pipeline",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use flow((x: T) => x, h, g, f) from effect for composable, reusable pipelines. The anonymous function as the first argument helps with type inference.",
-					});
+					violations.push(
+						new NativeApisViolation({
+							category: "native-apis",
+							ruleId: meta.id,
+							message:
+								"Nested function composition; use flow for reusable pipeline",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use flow((x: T) => x, h, g, f) from effect for composable, reusable pipelines. The anonymous function as the first argument helps with type inference.",
+						}),
+					);
 				}
 			}
 		}

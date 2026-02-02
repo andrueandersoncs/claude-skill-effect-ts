@@ -9,6 +9,7 @@
 
 import * as ts from "typescript";
 import {
+	SchemaViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -297,17 +298,19 @@ export const detect = (
 				// Report on the second (later) schema definition
 				const suggestion = getSuggestion(schema1, schema2);
 
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: `Schema '${schema2.name}' duplicates ${overlapCount} fields from '${schema1.name}': ${overlapFields.slice(0, SNIPPET_MAX_LENGTH).join(", ")}${overlapFields.length > 5 ? "..." : ""}`,
-					filePath,
-					line: schema2.line,
-					column: schema2.column,
-					snippet: `${schema2.type}: ${schema2.name} shares ${overlapCount}/${schema2.fields.size} fields with ${schema1.name}`,
-					certainty: "potential",
-					suggestion,
-				});
+				violations.push(
+					new SchemaViolation({
+						category: "schema",
+						ruleId: meta.id,
+						message: `Schema '${schema2.name}' duplicates ${overlapCount} fields from '${schema1.name}': ${overlapFields.slice(0, SNIPPET_MAX_LENGTH).join(", ")}${overlapFields.length > 5 ? "..." : ""}`,
+						filePath,
+						line: schema2.line,
+						column: schema2.column,
+						snippet: `${schema2.type}: ${schema2.name} shares ${overlapCount}/${schema2.fields.size} fields with ${schema1.name}`,
+						certainty: "potential",
+						suggestion,
+					}),
+				);
 			}
 		}
 	}

@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	SchemaViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -50,18 +51,20 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: "Manual conversion function; consider Schema.transform",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use Schema.transform(FromSchema, ToSchema, { decode: ..., encode: ... }) for bidirectional conversions",
-					});
+					violations.push(
+						new SchemaViolation({
+							category: "schema",
+							ruleId: meta.id,
+							message: "Manual conversion function; consider Schema.transform",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use Schema.transform(FromSchema, ToSchema, { decode: ..., encode: ... }) for bidirectional conversions",
+						}),
+					);
 					break;
 				}
 			}
@@ -95,18 +98,20 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: "Manual unit conversion; consider Schema.transform",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Encapsulate unit conversions in Schema.transform for type-safe bidirectional conversion",
-					});
+					violations.push(
+						new SchemaViolation({
+							category: "schema",
+							ruleId: meta.id,
+							message: "Manual unit conversion; consider Schema.transform",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Encapsulate unit conversions in Schema.transform for type-safe bidirectional conversion",
+						}),
+					);
 				}
 			}
 		}

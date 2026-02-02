@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ErrorsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -42,19 +43,21 @@ export const detect = (
 					) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"catchAll returning succeed; use Effect.orElse for fallbacks",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Use Effect.orElse(() => fallbackEffect) or Effect.orElseSucceed(() => defaultValue)",
-						});
+						violations.push(
+							new ErrorsViolation({
+								category: "errors",
+								ruleId: meta.id,
+								message:
+									"catchAll returning succeed; use Effect.orElse for fallbacks",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Use Effect.orElse(() => fallbackEffect) or Effect.orElseSucceed(() => defaultValue)",
+							}),
+						);
 					}
 
 					// Check if catchAll ignores the error and just calls another Effect (fallback pattern)
@@ -76,19 +79,23 @@ export const detect = (
 						) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message:
-									"catchAll ignoring error for fallback; use Effect.orElse",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								certainty: "potential",
-								suggestion:
-									"Use Effect.orElse(() => fallbackEffect) when ignoring error for fallback",
-							});
+							violations.push(
+								new ErrorsViolation({
+									category: "errors",
+									ruleId: meta.id,
+									message:
+										"catchAll ignoring error for fallback; use Effect.orElse",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
+									certainty: "potential",
+									suggestion:
+										"Use Effect.orElse(() => fallbackEffect) when ignoring error for fallback",
+								}),
+							);
 						}
 					}
 				}
@@ -108,18 +115,20 @@ export const detect = (
 					if (!returnText.includes("throw") && !returnText.includes("Error")) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message: "try/catch with fallback return; use Effect.orElse",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Use effect.pipe(Effect.orElseSucceed(() => fallbackValue)) for fallback handling",
-						});
+						violations.push(
+							new ErrorsViolation({
+								category: "errors",
+								ruleId: meta.id,
+								message: "try/catch with fallback return; use Effect.orElse",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Use effect.pipe(Effect.orElseSucceed(() => fallbackValue)) for fallback handling",
+							}),
+						);
 					}
 				}
 			}

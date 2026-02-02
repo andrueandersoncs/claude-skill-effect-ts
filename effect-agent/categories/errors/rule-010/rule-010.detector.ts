@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ErrorsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -36,19 +37,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"try/catch around Effect run; use Effect.sandbox and catchTags",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Use effect.pipe(Effect.sandbox, Effect.catchTags({ _tag: ... })) to handle both defects and errors",
-				});
+				violations.push(
+					new ErrorsViolation({
+						category: "errors",
+						ruleId: meta.id,
+						message:
+							"try/catch around Effect run; use Effect.sandbox and catchTags",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use effect.pipe(Effect.sandbox, Effect.catchTags({ _tag: ... }) to handle both defects and errors",
+					}),
+				);
 			}
 		}
 
@@ -63,19 +66,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"instanceof checks in catch; use Effect.catchTags for type-safe error handling",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Use Effect.catchTags({ ErrorA: (e) => ..., ErrorB: (e) => ... }) for exhaustive error handling",
-				});
+				violations.push(
+					new ErrorsViolation({
+						category: "errors",
+						ruleId: meta.id,
+						message:
+							"instanceof checks in catch; use Effect.catchTags for type-safe error handling",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use Effect.catchTags({ ErrorA: (e) => ..., ErrorB: (e) => ... }) for exhaustive error handling",
+					}),
+				);
 			}
 		}
 

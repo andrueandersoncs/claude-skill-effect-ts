@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	SchemaViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -28,17 +29,19 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: `Enum '${node.name.text}' should be replaced with Schema.Literal union`,
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "potential",
-				suggestion: "Convert to Schema.Literal('value1', 'value2', ...)",
-			});
+			violations.push(
+				new SchemaViolation({
+					category: "schema",
+					ruleId: meta.id,
+					message: `Enum '${node.name.text}' should be replaced with Schema.Literal union`,
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "potential",
+					suggestion: "Convert to Schema.Literal('value1', 'value2', ...)",
+				}),
+			);
 		}
 
 		// Detect type aliases with literal types
@@ -51,17 +54,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: `Type alias '${node.name.text}' with literal types should use Schema.Literal`,
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion: "Convert to Schema.Literal() for runtime validation",
-				});
+				violations.push(
+					new SchemaViolation({
+						category: "schema",
+						ruleId: meta.id,
+						message: `Type alias '${node.name.text}' with literal types should use Schema.Literal`,
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion: "Convert to Schema.Literal() for runtime validation",
+					}),
+				);
 			}
 		}
 

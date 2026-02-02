@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ImperativeViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -30,19 +31,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Prefer const over let; use immutable patterns or Ref for mutable state",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Use const with immutable operations, or Effect Ref for state",
-				});
+				violations.push(
+					new ImperativeViolation({
+						category: "imperative",
+						ruleId: meta.id,
+						message:
+							"Prefer const over let; use immutable patterns or Ref for mutable state",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use const with immutable operations, or Effect Ref for state",
+					}),
+				);
 			}
 		}
 
@@ -56,17 +59,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "Mutation operators (++/--) violate immutability",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile),
-					certainty: "definite",
-					suggestion: "Use immutable operations or Ref.update()",
-				});
+				violations.push(
+					new ImperativeViolation({
+						category: "imperative",
+						ruleId: meta.id,
+						message: "Mutation operators (++/--) violate immutability",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile),
+						certainty: "definite",
+						suggestion: "Use immutable operations or Ref.update()",
+					}),
+				);
 			}
 		}
 
@@ -88,17 +93,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "Compound assignment operators violate immutability",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile),
-					certainty: "definite",
-					suggestion: "Use immutable operations or Ref.update()",
-				});
+				violations.push(
+					new ImperativeViolation({
+						category: "imperative",
+						ruleId: meta.id,
+						message: "Compound assignment operators violate immutability",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile),
+						certainty: "definite",
+						suggestion: "Use immutable operations or Ref.update()",
+					}),
+				);
 			}
 
 			// Detect indexed/property assignment (obj[key] = value or obj.prop = value)
@@ -109,19 +116,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Indexed assignment mutates object; use immutable patterns",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use Record.set or spread syntax to create new object: { ...obj, [key]: value }",
-					});
+					violations.push(
+						new ImperativeViolation({
+							category: "imperative",
+							ruleId: meta.id,
+							message:
+								"Indexed assignment mutates object; use immutable patterns",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use Record.set or spread syntax to create new object: { ...obj, [key]: value }",
+						}),
+					);
 				}
 			}
 		}

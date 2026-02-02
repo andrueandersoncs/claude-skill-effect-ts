@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	SchemaViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -36,17 +37,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "Objects with _tag should be Schema.TaggedClass instances",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion: "Define a Schema.TaggedClass and use its constructor",
-				});
+				violations.push(
+					new SchemaViolation({
+						category: "schema",
+						ruleId: meta.id,
+						message: "Objects with _tag should be Schema.TaggedClass instances",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion: "Define a Schema.TaggedClass and use its constructor",
+					}),
+				);
 			}
 		}
 
@@ -98,18 +101,20 @@ export const detect = (
 					if (stateOptionalFields.length >= 2) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message: `Schema.Struct with multiple state-related optional fields (${stateOptionalFields.join(", ")}); consider using tagged union`,
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Use Schema.Union with tagged variants like PendingOrder, ShippedOrder, DeliveredOrder for type-safe state transitions",
-						});
+						violations.push(
+							new SchemaViolation({
+								category: "schema",
+								ruleId: meta.id,
+								message: `Schema.Struct with multiple state-related optional fields (${stateOptionalFields.join(", ")}); consider using tagged union`,
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Use Schema.Union with tagged variants like PendingOrder, ShippedOrder, DeliveredOrder for type-safe state transitions",
+							}),
+						);
 					}
 				}
 			}

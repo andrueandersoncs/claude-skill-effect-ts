@@ -1,19 +1,19 @@
 {
-	"name": "effect-ts",
-	"version": "2.22.13",
-	"description": "Comprehensive Effect-TS development assistance with skills for all major Effect domains, commands for common patterns, agents for code review and migration, and parallel rule-based compliance checking. Strong emphasis on service-oriented testing for 100% coverage.",
-	"author": {
-		"name": "Andrue Anderson"
-	},
-	"repository": "https://github.com/andrueandersoncs/claude-skill-effect-ts",
-	"keywords": [
-		"effect",
-		"effect-ts",
-		"typescript",
-		"functional-programming",
-		"error-handling",
-		"concurrency",
-		"schema",
-		"dependency-injection"
-	]
+  "name": "effect-ts",
+  "version": "2.22.14",
+  "description": "Comprehensive Effect-TS development assistance with skills for all major Effect domains, commands for common patterns, agents for code review and migration, and parallel rule-based compliance checking. Strong emphasis on service-oriented testing for 100% coverage.",
+  "author": {
+    "name": "Andrue Anderson"
+  },
+  "repository": "https://github.com/andrueandersoncs/claude-skill-effect-ts",
+  "keywords": [
+    "effect",
+    "effect-ts",
+    "typescript",
+    "functional-programming",
+    "error-handling",
+    "concurrency",
+    "schema",
+    "dependency-injection"
+  ]
 }

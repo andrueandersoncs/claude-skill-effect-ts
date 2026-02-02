@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	DiscriminatedUnionsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -50,19 +51,23 @@ export const detect = (
 						) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message:
-									"Match.tag with method calls; consider Schema.is() for class instances",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								certainty: "potential",
-								suggestion:
-									"Use Match.when(Schema.is(MyClass), (instance) => instance.method()) for Schema.Class instances",
-							});
+							violations.push(
+								new DiscriminatedUnionsViolation({
+									category: "discriminated-unions",
+									ruleId: meta.id,
+									message:
+										"Match.tag with method calls; consider Schema.is() for class instances",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
+									certainty: "potential",
+									suggestion:
+										"Use Match.when(Schema.is(MyClass), (instance) => instance.method()) for Schema.Class instances",
+								}),
+							);
 						}
 					}
 				}

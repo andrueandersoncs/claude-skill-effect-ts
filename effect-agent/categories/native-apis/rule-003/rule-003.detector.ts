@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	NativeApisViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -56,17 +57,19 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: replacement.message,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion: replacement.suggestion,
-					});
+					violations.push(
+						new NativeApisViolation({
+							category: "native-apis",
+							ruleId: meta.id,
+							message: replacement.message,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion: replacement.suggestion,
+						}),
+					);
 				}
 			}
 		}

@@ -9,6 +9,7 @@
 
 import * as ts from "typescript";
 import {
+	CodeStyleViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -40,19 +41,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Import with .js extension; consider importing .ts directly",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Import from .ts files directly if your bundler/runtime supports it, or use extensionless imports",
-					});
+					violations.push(
+						new CodeStyleViolation({
+							category: "code-style",
+							ruleId: meta.id,
+							message:
+								"Import with .js extension; consider importing .ts directly",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Import from .ts files directly if your bundler/runtime supports it, or use extensionless imports",
+						}),
+					);
 				}
 			}
 		}

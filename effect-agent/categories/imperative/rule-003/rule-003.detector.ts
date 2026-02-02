@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ImperativeViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -45,19 +46,21 @@ export const detect = (
 					) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"Manual batching with slice; consider using Stream.grouped or Stream.chunks",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Use Stream.fromIterable(data).pipe(Stream.grouped(batchSize)) for chunked processing",
-						});
+						violations.push(
+							new ImperativeViolation({
+								category: "imperative",
+								ruleId: meta.id,
+								message:
+									"Manual batching with slice; consider using Stream.grouped or Stream.chunks",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Use Stream.fromIterable(data).pipe(Stream.grouped(batchSize)) for chunked processing",
+							}),
+						);
 					}
 				}
 			}
@@ -74,18 +77,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "While loop for batching; use Stream for chunked processing",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Use Stream.fromIterable(data).pipe(Stream.grouped(n), Stream.mapEffect(processBatch))",
-				});
+				violations.push(
+					new ImperativeViolation({
+						category: "imperative",
+						ruleId: meta.id,
+						message:
+							"While loop for batching; use Stream for chunked processing",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use Stream.fromIterable(data).pipe(Stream.grouped(n), Stream.mapEffect(processBatch))",
+					}),
+				);
 			}
 		}
 

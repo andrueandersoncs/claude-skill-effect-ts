@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	CommentsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -44,19 +45,21 @@ export const detect = (
 
 			for (const pattern of sectionMarkerPatterns) {
 				if (pattern.test(commentText)) {
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Section marker comments should be avoided; use file organization and clear naming instead",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Remove section markers; organize code into separate files or use clear naming conventions",
-					});
+					violations.push(
+						new CommentsViolation({
+							category: "comments",
+							ruleId: meta.id,
+							message:
+								"Section marker comments should be avoided; use file organization and clear naming instead",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Remove section markers; organize code into separate files or use clear naming conventions",
+						}),
+					);
 					break;
 				}
 			}

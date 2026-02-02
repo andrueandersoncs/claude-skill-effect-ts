@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	CommentsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -40,19 +41,21 @@ export const detect = (
 
 			// Check for TODO/FIXME comments
 			if (todoPattern.test(commentText)) {
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"TODO/FIXME comments should be tracked in issue tracker, not code",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion:
-						"Create an issue/ticket and remove the comment, or fix the issue now",
-				});
+				violations.push(
+					new CommentsViolation({
+						category: "comments",
+						ruleId: meta.id,
+						message:
+							"TODO/FIXME comments should be tracked in issue tracker, not code",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion:
+							"Create an issue/ticket and remove the comment, or fix the issue now",
+					}),
+				);
 			}
 		}
 	};

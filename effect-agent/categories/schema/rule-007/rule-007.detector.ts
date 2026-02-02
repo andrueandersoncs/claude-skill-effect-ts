@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	SchemaViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -28,17 +29,19 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "typeof checks should use Schema.is() type guards",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "potential",
-				suggestion: "Use Schema.is(MySchema) for type-safe runtime checks",
-			});
+			violations.push(
+				new SchemaViolation({
+					category: "schema",
+					ruleId: meta.id,
+					message: "typeof checks should use Schema.is() type guards",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "potential",
+					suggestion: "Use Schema.is(MySchema) for type-safe runtime checks",
+				}),
+			);
 		}
 
 		// Detect instanceof checks (should use Schema.is for Schema classes)
@@ -49,18 +52,21 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message:
-					"instanceof checks may be replaced with Schema.is() for Schema classes",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "potential",
-				suggestion: "If checking Schema.Class, use Schema.is(MyClass) instead",
-			});
+			violations.push(
+				new SchemaViolation({
+					category: "schema",
+					ruleId: meta.id,
+					message:
+						"instanceof checks may be replaced with Schema.is() for Schema classes",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "potential",
+					suggestion:
+						"If checking Schema.Class, use Schema.is(MyClass) instead",
+				}),
+			);
 		}
 
 		// Detect manual validation functions that throw
@@ -83,19 +89,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Manual validation function with throw; use Schema.filter instead",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Use Schema.String.pipe(Schema.filter((s) => s.includes('@') || 'Invalid email')) for declarative validation",
-				});
+				violations.push(
+					new SchemaViolation({
+						category: "schema",
+						ruleId: meta.id,
+						message:
+							"Manual validation function with throw; use Schema.filter instead",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use Schema.String.pipe(Schema.filter((s) => s.includes('@') || 'Invalid email')) for declarative validation",
+					}),
+				);
 			}
 		}
 
@@ -117,19 +125,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Manual validation function with throw; use Schema.filter instead",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use Schema.String.pipe(Schema.filter(...)) for declarative validation",
-					});
+					violations.push(
+						new SchemaViolation({
+							category: "schema",
+							ruleId: meta.id,
+							message:
+								"Manual validation function with throw; use Schema.filter instead",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use Schema.String.pipe(Schema.filter(...)) for declarative validation",
+						}),
+					);
 				}
 			}
 		}

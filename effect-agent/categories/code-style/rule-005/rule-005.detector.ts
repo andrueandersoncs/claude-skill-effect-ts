@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	CodeStyleViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -87,18 +88,20 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				startNode.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: `Plain function '${funcName}'; consider Effect.fn() for traceability`,
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: startNode.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "potential",
-				suggestion:
-					"Use Effect.fn('functionName')((...args) => result) for traced pure transformations",
-			});
+			violations.push(
+				new CodeStyleViolation({
+					category: "code-style",
+					ruleId: meta.id,
+					message: `Plain function '${funcName}'; consider Effect.fn() for traceability`,
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: startNode.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "potential",
+					suggestion:
+						"Use Effect.fn('functionName')((...args) => result) for traced pure transformations",
+				}),
+			);
 		}
 	};
 

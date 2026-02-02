@@ -7,6 +7,7 @@
 import * as ts from "typescript";
 import {
 	SNIPPET_MAX_LENGTH,
+	TestingViolation,
 	type Violation,
 } from "../../../detectors/types.js";
 
@@ -50,19 +51,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Layer provision in tests; consider it.layer for test suite setup",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use it.layer() or describe.layer() for suite-wide layer provision",
-					});
+					violations.push(
+						new TestingViolation({
+							category: "testing",
+							ruleId: meta.id,
+							message:
+								"Layer provision in tests; consider it.layer for test suite setup",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use it.layer() or describe.layer() for suite-wide layer provision",
+						}),
+					);
 				}
 			}
 		}

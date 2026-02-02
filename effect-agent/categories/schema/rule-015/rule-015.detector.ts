@@ -11,6 +11,7 @@
 
 import * as ts from "typescript";
 import {
+	SchemaViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -76,19 +77,21 @@ export const detect = (
 						node.getStart(),
 					);
 
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: isExported
-							? `Exported Schema.Struct '${varName}' should be a Schema.Class`
-							: `Schema.Struct assigned to '${varName}' should be a Schema.Class`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion: `Convert to: class ${varName} extends Schema.Class<${varName}>("${varName}")({...})`,
-					});
+					violations.push(
+						new SchemaViolation({
+							category: "schema",
+							ruleId: meta.id,
+							message: isExported
+								? `Exported Schema.Struct '${varName}' should be a Schema.Class`
+								: `Schema.Struct assigned to '${varName}' should be a Schema.Class`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion: `Convert to: class ${varName} extends Schema.Class<${varName}>("${varName}")({...})`,
+						}),
+					);
 				}
 			}
 		}

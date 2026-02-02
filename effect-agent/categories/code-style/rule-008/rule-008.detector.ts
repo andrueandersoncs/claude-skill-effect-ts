@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	CodeStyleViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -28,17 +29,19 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "Function declarations should use arrow function syntax",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "potential",
-				suggestion: `Convert to: const ${node.name.text} = (...) => { ... }`,
-			});
+			violations.push(
+				new CodeStyleViolation({
+					category: "code-style",
+					ruleId: meta.id,
+					message: "Function declarations should use arrow function syntax",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "potential",
+					suggestion: `Convert to: const ${node.name.text} = (...) => { ... }`,
+				}),
+			);
 		}
 
 		// Detect function expressions (should use arrow functions)
@@ -46,17 +49,19 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "Function expressions should use arrow function syntax",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "potential",
-				suggestion: "Convert to arrow function: (...) => { ... }",
-			});
+			violations.push(
+				new CodeStyleViolation({
+					category: "code-style",
+					ruleId: meta.id,
+					message: "Function expressions should use arrow function syntax",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "potential",
+					suggestion: "Convert to arrow function: (...) => { ... }",
+				}),
+			);
 		}
 
 		ts.forEachChild(node, visit);

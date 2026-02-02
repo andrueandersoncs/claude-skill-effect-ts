@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	SchemaViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -35,37 +36,45 @@ export const detect = (
 						if (typeName === "Error") {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message: "Error classes should extend Schema.TaggedError",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								certainty: "definite",
-								suggestion:
-									"Use Schema.TaggedError('ErrorName')({ fields }) pattern",
-							});
+							violations.push(
+								new SchemaViolation({
+									category: "schema",
+									ruleId: meta.id,
+									message: "Error classes should extend Schema.TaggedError",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
+									certainty: "definite",
+									suggestion:
+										"Use Schema.TaggedError('ErrorName')({ fields }) pattern",
+								}),
+							);
 						}
 
 						// Check for Data.TaggedError (should use Schema.TaggedError)
 						if (typeText.includes("Data.TaggedError")) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message:
-									"Data.TaggedError should be replaced with Schema.TaggedError for serialization support",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								certainty: "potential",
-								suggestion:
-									"Use class MyError extends Schema.TaggedError<MyError>()('MyError', { fields }) {} for serializable errors",
-							});
+							violations.push(
+								new SchemaViolation({
+									category: "schema",
+									ruleId: meta.id,
+									message:
+										"Data.TaggedError should be replaced with Schema.TaggedError for serialization support",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
+									certainty: "potential",
+									suggestion:
+										"Use class MyError extends Schema.TaggedError<MyError>()('MyError', { fields }) {} for serializable errors",
+								}),
+							);
 						}
 					}
 				}

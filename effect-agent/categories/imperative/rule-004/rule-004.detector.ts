@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ImperativeViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -28,18 +29,20 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "for...of loop; use Array module functions instead",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion:
-					"Use Array.map, Array.filter, Array.reduce, Array.forEach, or Effect.forEach",
-			});
+			violations.push(
+				new ImperativeViolation({
+					category: "imperative",
+					ruleId: meta.id,
+					message: "for...of loop; use Array module functions instead",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion:
+						"Use Array.map, Array.filter, Array.reduce, Array.forEach, or Effect.forEach",
+				}),
+			);
 		}
 
 		// Detect for...in statements
@@ -47,18 +50,20 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "for...in loop; use Record module functions instead",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion:
-					"Use Record.map, Record.filter, Object.entries with Array functions, or Record.toEntries",
-			});
+			violations.push(
+				new ImperativeViolation({
+					category: "imperative",
+					ruleId: meta.id,
+					message: "for...in loop; use Record module functions instead",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion:
+						"Use Record.map, Record.filter, Object.entries with Array functions, or Record.toEntries",
+				}),
+			);
 		}
 
 		ts.forEachChild(node, visit);

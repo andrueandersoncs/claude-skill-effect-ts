@@ -9,6 +9,7 @@
 
 import * as ts from "typescript";
 import {
+	SchemaViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -77,17 +78,19 @@ export const detect = (
 				node.getStart(),
 			);
 
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: `Interface '${node.name.text}' should be defined as Schema.Class for runtime validation`,
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "potential",
-				suggestion: `Convert to: class ${node.name.text} extends Schema.Class<${node.name.text}>()({...})`,
-			});
+			violations.push(
+				new SchemaViolation({
+					category: "schema",
+					ruleId: meta.id,
+					message: `Interface '${node.name.text}' should be defined as Schema.Class for runtime validation`,
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "potential",
+					suggestion: `Convert to: class ${node.name.text} extends Schema.Class<${node.name.text}>()({...})`,
+				}),
+			);
 		}
 
 		// ===== Detection 2: Type aliases with object types should be Schema.Class =====
@@ -95,18 +98,20 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: `Type alias '${node.name.text}' should use Schema.Struct or Schema.Class`,
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "potential",
-				suggestion:
-					"Convert to Schema.Struct() or Schema.Class() for runtime validation",
-			});
+			violations.push(
+				new SchemaViolation({
+					category: "schema",
+					ruleId: meta.id,
+					message: `Type alias '${node.name.text}' should use Schema.Struct or Schema.Class`,
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "potential",
+					suggestion:
+						"Convert to Schema.Struct() or Schema.Class() for runtime validation",
+				}),
+			);
 		}
 
 		// ===== Detection 3: Schema.Struct with methods added separately =====
@@ -127,19 +132,21 @@ export const detect = (
 					if (pattern.test(fullText)) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"Schema.Struct with methods added separately; use Schema.Class",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Use class Entity extends Schema.Class<Entity>('Entity')({ ... }) { methods() { ... } }",
-						});
+						violations.push(
+							new SchemaViolation({
+								category: "schema",
+								ruleId: meta.id,
+								message:
+									"Schema.Struct with methods added separately; use Schema.Class",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Use class Entity extends Schema.Class<Entity>('Entity')({ ... }) { methods() { ... } }",
+							}),
+						);
 						break;
 					}
 				}
@@ -155,18 +162,20 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `Function operates on Schema.Struct type '${typeText}'; consider using Schema.Class with methods`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use class Entity extends Schema.Class<Entity>('Entity')({ ... }) { method() { ... } }",
-					});
+					violations.push(
+						new SchemaViolation({
+							category: "schema",
+							ruleId: meta.id,
+							message: `Function operates on Schema.Struct type '${typeText}'; consider using Schema.Class with methods`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use class Entity extends Schema.Class<Entity>('Entity')({ ... }) { method() { ... } }",
+						}),
+					);
 				}
 			}
 		}
@@ -185,18 +194,22 @@ export const detect = (
 						if (schemaStructs.has(typeText)) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message: `Function operates on Schema.Struct type '${typeText}'; consider using Schema.Class with methods`,
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								certainty: "potential",
-								suggestion:
-									"Use class Entity extends Schema.Class<Entity>('Entity')({ ... }) { method() { ... } }",
-							});
+							violations.push(
+								new SchemaViolation({
+									category: "schema",
+									ruleId: meta.id,
+									message: `Function operates on Schema.Struct type '${typeText}'; consider using Schema.Class with methods`,
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
+									certainty: "potential",
+									suggestion:
+										"Use class Entity extends Schema.Class<Entity>('Entity')({ ... }) { method() { ... } }",
+								}),
+							);
 						}
 					}
 				}
@@ -213,17 +226,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: `Object literal cast as ${typeText}; use Schema class constructor`,
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion: `Use new ${typeText}({ ... }) or ${typeText}.make({ ... }) instead of casting`,
-				});
+				violations.push(
+					new SchemaViolation({
+						category: "schema",
+						ruleId: meta.id,
+						message: `Object literal cast as ${typeText}; use Schema class constructor`,
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion: `Use new ${typeText}({ ... }) or ${typeText}.make({ ... }) instead of casting`,
+					}),
+				);
 			}
 		}
 
@@ -235,32 +250,36 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `Object literal satisfies ${typeText}; use Schema class constructor`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion: `Use new ${typeText}({ ... }) for validation and branded type creation`,
-					});
+					violations.push(
+						new SchemaViolation({
+							category: "schema",
+							ruleId: meta.id,
+							message: `Object literal satisfies ${typeText}; use Schema class constructor`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion: `Use new ${typeText}({ ... }) for validation and branded type creation`,
+						}),
+					);
 				} else if (domainTypes.has(typeText)) {
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `Object literal satisfies ${typeText}; consider using Schema for runtime validation`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion: `Define a Schema.Class or Schema.Struct for ${typeText} to get runtime validation`,
-					});
+					violations.push(
+						new SchemaViolation({
+							category: "schema",
+							ruleId: meta.id,
+							message: `Object literal satisfies ${typeText}; consider using Schema for runtime validation`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion: `Define a Schema.Class or Schema.Struct for ${typeText} to get runtime validation`,
+						}),
+					);
 				}
 			}
 		}
@@ -273,17 +292,19 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `Object literal typed as ${typeText}; consider using Schema for runtime validation`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion: `Define a Schema.Class for ${typeText} and use new ${typeText}({ ... })`,
-					});
+					violations.push(
+						new SchemaViolation({
+							category: "schema",
+							ruleId: meta.id,
+							message: `Object literal typed as ${typeText}; consider using Schema for runtime validation`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion: `Define a Schema.Class for ${typeText} and use new ${typeText}({ ... })`,
+						}),
+					);
 				}
 			}
 		}

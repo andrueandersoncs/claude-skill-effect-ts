@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	CodeStyleViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -66,18 +67,20 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						comment.pos,
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `eslint-disable for ${rule}; use Schema.decodeUnknown instead of any`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion:
-							"Use Schema.decodeUnknown() to safely parse unknown data with type validation instead of disabling any-type checks",
-					});
+					violations.push(
+						new CodeStyleViolation({
+							category: "code-style",
+							ruleId: meta.id,
+							message: `eslint-disable for ${rule}; use Schema.decodeUnknown instead of any`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion:
+								"Use Schema.decodeUnknown() to safely parse unknown data with type validation instead of disabling any-type checks",
+						}),
+					);
 					break; // Only report once per comment even if multiple rules are disabled
 				}
 			}

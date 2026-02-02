@@ -15,6 +15,7 @@
 
 import * as ts from "typescript";
 import {
+	ConditionalsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -168,19 +169,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Multiple OR conditions comparing literals; use Schema.Literal union with Match",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: conditionText.slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Define Schema.Literal('a', 'b', ...) and use Match.when(Schema.is(union), ...)",
-					});
+					violations.push(
+						new ConditionalsViolation({
+							category: "conditionals",
+							ruleId: meta.id,
+							message:
+								"Multiple OR conditions comparing literals; use Schema.Literal union with Match",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: conditionText.slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Define Schema.Literal('a', 'b', ...) and use Match.when(Schema.is(union), ...)",
+						}),
+					);
 				}
 			}
 
@@ -194,19 +197,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Multiple AND conditions; consider Schema.Struct with Match.when",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: conditionText.slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Define Schema.Struct({ prop1: Schema.filter(...), prop2: ... }) and use Match.when(Schema.is(struct), ...)",
-				});
+				violations.push(
+					new ConditionalsViolation({
+						category: "conditionals",
+						ruleId: meta.id,
+						message:
+							"Multiple AND conditions; consider Schema.Struct with Match.when",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: conditionText.slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Define Schema.Struct({ prop1: Schema.filter(...), prop2: ... }) and use Match.when(Schema.is(struct), ...)",
+					}),
+				);
 			}
 
 			// =========================================================================
@@ -218,19 +223,23 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Negated condition in if statement; prefer positive conditions with Match",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: condition.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Define positive Schema types for each case and use Match.when with Schema.is",
-					});
+					violations.push(
+						new ConditionalsViolation({
+							category: "conditionals",
+							ruleId: meta.id,
+							message:
+								"Negated condition in if statement; prefer positive conditions with Match",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: condition
+								.getText(sourceFile)
+								.slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Define positive Schema types for each case and use Match.when with Schema.is",
+						}),
+					);
 				}
 			}
 
@@ -246,19 +255,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Numeric range classification with if/else chain; use Schema with Match",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: condText.slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Define Schema.Number.pipe(Schema.filter(n => ...)) for each range and use Match.when(Schema.is(range), ...)",
-				});
+				violations.push(
+					new ConditionalsViolation({
+						category: "conditionals",
+						ruleId: meta.id,
+						message:
+							"Numeric range classification with if/else chain; use Schema with Match",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: condText.slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Define Schema.Number.pipe(Schema.filter(n => ...)) for each range and use Match.when(Schema.is(range), ...)",
+					}),
+				);
 			}
 		}
 
@@ -292,19 +303,21 @@ export const detect = (
 							) {
 								const { line, character } =
 									sourceFile.getLineAndCharacterOfPosition(node.getStart());
-								violations.push({
-									ruleId: meta.id,
-									category: meta.category,
-									message:
-										"Variable with conditional reassignment; use Match.value for declarative assignment",
-									filePath,
-									line: line + 1,
-									column: character + 1,
-									snippet: `let ${varName} = ... followed by if/else assignment`,
-									certainty: "potential",
-									suggestion:
-										"Use Match.value(input).pipe(Match.when(..., () => value1), Match.when(..., () => value2), Match.exhaustive)",
-								});
+								violations.push(
+									new ConditionalsViolation({
+										category: "conditionals",
+										ruleId: meta.id,
+										message:
+											"Variable with conditional reassignment; use Match.value for declarative assignment",
+										filePath,
+										line: line + 1,
+										column: character + 1,
+										snippet: `let ${varName} = ... followed by if/else assignment`,
+										certainty: "potential",
+										suggestion:
+											"Use Match.value(input).pipe(Match.when(..., () => value1), Match.when(..., () => value2), Match.exhaustive)",
+									}),
+								);
 							}
 						}
 					}
@@ -334,19 +347,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Short-circuit evaluation may be clearer with Match or Option",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Consider Match.value() or Option.getOrElse() for clarity",
-					});
+					violations.push(
+						new ConditionalsViolation({
+							category: "conditionals",
+							ruleId: meta.id,
+							message:
+								"Short-circuit evaluation may be clearer with Match or Option",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Consider Match.value() or Option.getOrElse() for clarity",
+						}),
+					);
 				}
 			}
 		}
@@ -384,68 +399,80 @@ export const detect = (
 						functionName = node.parent.name.getText(sourceFile);
 					}
 
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `Type predicate function '${functionName}' uses || chain; define a Schema.Union and use Match.when with Schema.is`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: orChainText.slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Define Schema.Union(Schema.declare(...), ...) for each type guard and use Match.when(Schema.is(union), ...) for pattern matching",
-					});
+					violations.push(
+						new ConditionalsViolation({
+							category: "conditionals",
+							ruleId: meta.id,
+							message: `Type predicate function '${functionName}' uses || chain; define a Schema.Union and use Match.when with Schema.is`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: orChainText.slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Define Schema.Union(Schema.declare(...), ...) for each type guard and use Match.when(Schema.is(union), ...) for pattern matching",
+						}),
+					);
 				}
 			}
 		}
-
 
 		// =========================================================================
 		// Pattern 7: Match.value(predicate(x)) instead of Match.type<X>()
 		// =========================================================================
 		// Detects: Match.value(isFoo(x)).pipe(Match.when(true, ...))
 		// Should be: Match.type<X>().pipe(Match.when(isFoo, ...))
-		if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+		if (
+			ts.isCallExpression(node) &&
+			ts.isPropertyAccessExpression(node.expression)
+		) {
 			const methodName = node.expression.name.getText(sourceFile);
-			
+
 			// Check if this is a .pipe() call
-			if (methodName === 'pipe') {
+			if (methodName === "pipe") {
 				const callee = node.expression.expression;
-				
+
 				// Check if callee is Match.value(...)
 				if (ts.isCallExpression(callee)) {
 					const calleeText = callee.expression.getText(sourceFile);
-					
-					if (calleeText === 'Match.value' && callee.arguments.length === 1) {
+
+					if (calleeText === "Match.value" && callee.arguments.length === 1) {
 						const valueArg = callee.arguments[0];
-						
+
 						// Check if Match.value argument is a function call (predicate)
 						if (ts.isCallExpression(valueArg)) {
 							// Check if pipe contains Match.when(true, ...) or Match.when(false, ...)
 							for (const pipeArg of node.arguments) {
 								if (ts.isCallExpression(pipeArg)) {
 									const pipeCallText = pipeArg.expression.getText(sourceFile);
-									if (pipeCallText === 'Match.when' && pipeArg.arguments.length >= 1) {
+									if (
+										pipeCallText === "Match.when" &&
+										pipeArg.arguments.length >= 1
+									) {
 										const firstWhenArg = pipeArg.arguments[0];
 										const whenArgText = firstWhenArg.getText(sourceFile);
-										if (whenArgText === 'true' || whenArgText === 'false') {
-											const { line, character } = sourceFile.getLineAndCharacterOfPosition(
-												callee.getStart(),
+										if (whenArgText === "true" || whenArgText === "false") {
+											const { line, character } =
+												sourceFile.getLineAndCharacterOfPosition(
+													callee.getStart(),
+												);
+											violations.push(
+												new ConditionalsViolation({
+													category: "conditionals",
+													ruleId: meta.id,
+													message:
+														"Match.value(predicate(x)) with boolean matching; use Match.type<X>() with predicate directly",
+													filePath,
+													line: line + 1,
+													column: character + 1,
+													snippet: callee
+														.getText(sourceFile)
+														.slice(0, SNIPPET_MAX_LENGTH),
+													certainty: "potential",
+													suggestion:
+														"Use Match.type<X>().pipe(Match.when(predicate, (narrowedX) => ...), Match.orElse(...)) for type narrowing",
+												}),
 											);
-											violations.push({
-												ruleId: meta.id,
-												category: meta.category,
-												message:
-													'Match.value(predicate(x)) with boolean matching; use Match.type<X>() with predicate directly',
-												filePath,
-												line: line + 1,
-												column: character + 1,
-												snippet: callee.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-												certainty: 'potential',
-												suggestion:
-													'Use Match.type<X>().pipe(Match.when(predicate, (narrowedX) => ...), Match.orElse(...)) for type narrowing',
-											});
 											break;
 										}
 									}

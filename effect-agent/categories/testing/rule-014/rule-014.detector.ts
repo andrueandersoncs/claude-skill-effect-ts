@@ -7,6 +7,7 @@
 import * as ts from "typescript";
 import {
 	SNIPPET_MAX_LENGTH,
+	TestingViolation,
 	type Violation,
 } from "../../../detectors/types.js";
 
@@ -49,19 +50,21 @@ export const detect = (
 					if (ts.isIdentifier(obj) && obj.text === "fc") {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								".filter() on fast-check arbitrary; use Schema constraints instead",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Define constraints in Schema: Schema.Number.pipe(Schema.positive(), Schema.lessThan(100)) instead of fc.integer().filter(...)",
-						});
+						violations.push(
+							new TestingViolation({
+								category: "testing",
+								ruleId: meta.id,
+								message:
+									".filter() on fast-check arbitrary; use Schema constraints instead",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Define constraints in Schema: Schema.Number.pipe(Schema.positive(), Schema.lessThan(100)) instead of fc.integer().filter(...)",
+							}),
+						);
 						break;
 					}
 					current = current.expression.expression;

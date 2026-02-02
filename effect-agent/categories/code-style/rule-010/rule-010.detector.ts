@@ -6,7 +6,7 @@
 
 import * as ts from "typescript";
 import {
-	SNIPPET_MAX_LENGTH,
+	CodeStyleViolation,
 	type Violation,
 } from "../../../detectors/types.js";
 
@@ -28,19 +28,21 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message:
-					"Non-null assertion (!) should be replaced with Option or Effect",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile),
-				certainty: "definite",
-				suggestion:
-					"Use Option.fromNullable() with Option.match() or Effect error handling",
-			});
+			violations.push(
+				new CodeStyleViolation({
+					category: "code-style",
+					ruleId: meta.id,
+					message:
+						"Non-null assertion (!) should be replaced with Option or Effect",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile),
+					certainty: "definite",
+					suggestion:
+						"Use Option.fromNullable() with Option.match() or Effect error handling",
+				}),
+			);
 		}
 
 		ts.forEachChild(node, visit);

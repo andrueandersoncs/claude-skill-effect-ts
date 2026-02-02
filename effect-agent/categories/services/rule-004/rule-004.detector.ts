@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ServicesViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -39,19 +40,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Multiple .provide() calls; compose layers with Layer.mergeAll",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Use Layer.mergeAll(Layer1, Layer2, ...) then single .provide(composedLayer)",
-				});
+				violations.push(
+					new ServicesViolation({
+						category: "services",
+						ruleId: meta.id,
+						message:
+							"Multiple .provide() calls; compose layers with Layer.mergeAll",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use Layer.mergeAll(Layer1, Layer2, ...) then single .provide(composedLayer)",
+					}),
+				);
 			}
 		}
 
@@ -71,19 +74,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Effect.provideService for ad-hoc provision; use Layer composition",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Create a Layer with Layer.succeed(Service, impl) and compose with other layers",
-				});
+				violations.push(
+					new ServicesViolation({
+						category: "services",
+						ruleId: meta.id,
+						message:
+							"Effect.provideService for ad-hoc provision; use Layer composition",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Create a Layer with Layer.succeed(Service, impl) and compose with other layers",
+					}),
+				);
 			}
 		}
 

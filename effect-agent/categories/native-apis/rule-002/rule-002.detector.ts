@@ -6,7 +6,7 @@
 
 import * as ts from "typescript";
 import {
-	SNIPPET_MAX_LENGTH,
+	NativeApisViolation,
 	type Violation,
 } from "../../../detectors/types.js";
 
@@ -36,18 +36,20 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: "Identity function (x) => x; use Function.identity",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile),
-						certainty: "definite",
-						suggestion:
-							"Import and use Function.identity from effect for clarity",
-					});
+					violations.push(
+						new NativeApisViolation({
+							category: "native-apis",
+							ruleId: meta.id,
+							message: "Identity function (x) => x; use Function.identity",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile),
+							certainty: "definite",
+							suggestion:
+								"Import and use Function.identity from effect for clarity",
+						}),
+					);
 				}
 			}
 		}

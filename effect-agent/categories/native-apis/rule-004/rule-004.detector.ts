@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	NativeApisViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -59,19 +60,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Chained native array methods; use pipe with Effect Array module",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use pipe(array, Array.map(...), Array.filter(...)) from effect for better composition",
-					});
+					violations.push(
+						new NativeApisViolation({
+							category: "native-apis",
+							ruleId: meta.id,
+							message:
+								"Chained native array methods; use pipe with Effect Array module",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use pipe(array, Array.map(...), Array.filter(...)) from effect for better composition",
+						}),
+					);
 				}
 			}
 		}

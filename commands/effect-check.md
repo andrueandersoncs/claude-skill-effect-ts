@@ -1,107 +1,123 @@
 ---
 name: effect-check
-description: Run Effect-TS compliance checks
+description: Run Effect-TS compliance checks - diagnose root causes, then fix grouped violations
 argument-hint: "<file-path> [--fix]"
 allowed-tools:
   - Bash
   - Read
   - Write
+  - Edit
 ---
 
 # Effect-TS Compliance Checker
 
-## Without --fix
-`cd effect-agent && bun run detect:all <path>`
+Run detectors on TypeScript files and optionally fix violations using the diagnosis-first approach.
 
-## With --fix
+## Usage
 
-### Process
-1. Run `cd effect-agent && bun run detect:all <path>` to see all violations
-2. Read the entire file
-3. **Rewrite the entire file once** with all fixable violations addressed
-4. Use Write tool to replace the file completely
-5. Verify: `cd effect-agent && bun run detect:all <path>`
-6. Report before/after counts
-
-### Transformations
-- `if (x === null) {...}` → `Option.fromNullable(x).pipe(Option.match({onNone: ..., onSome: ...}))`
-- `for (let i = 0; i < n; i++)` → `Array.from({length: n}, (_, i) => i).forEach(...)` or `Effect.forEach`
-- `x ? a : b` → `Match.value(x).pipe(Match.when(...), Match.orElse(...))`
-- `console.log` → `Effect.log`
-
-### CRITICAL RULES
-1. **ONE rewrite only** - Read file, transform all at once, write file. No multiple edits.
-2. **Delete old code** - When replacing a pattern, REMOVE the original. Never keep both versions.
-3. **Merge imports** - Add Effect imports to existing import statements. Don't duplicate.
-4. **No suppressions** - NEVER add eslint-disable, @ts-ignore, etc.
-5. **Preserve functionality** - Transformed code must do the same thing as original.
-6. **Skip unfixable** - Some patterns can't be converted. Skip these and list them.
-7. **Report what was fixed** - List each fix applied with line numbers.
-
-### Unfixable Patterns (skip these, don't attempt to fix)
-- Type predicates (`function isFoo(x): x is Foo`) - must return boolean synchronously
-- `Schema.declare` callbacks - must be synchronous
-- CLI tool fs operations that need sync behavior for exit codes
-- Type guards in conditionals where caller expects sync boolean
-- Test setup/teardown that needs sync behavior
-
-When you encounter unfixable patterns:
-- Leave the code UNCHANGED
-- Document why in your report (e.g., "Line 45: Type predicate must return boolean, skipped")
-
-### Example
-
-Before:
-```typescript
-const x = getValue();
-if (x === null) {
-  console.log("error");
-}
+```
+/effect-check <path>           # Report violations only
+/effect-check <path> --fix     # Diagnose root causes and fix violations
 ```
 
-After (CORRECT - old code removed):
-```typescript
-import { Effect, Option } from "effect";
+## Detection Mode (no --fix)
 
-const x = getValue();
-Option.fromNullable(x).pipe(
-  Option.match({
-    onNone: () => Effect.log("error"),
-    onSome: () => Effect.void
-  })
-);
+Run detectors and report:
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:all <path>
 ```
 
-WRONG (keeping both):
-```typescript
-if (x === null) { ... }  // DO NOT KEEP THIS
-Option.fromNullable(x)... // alongside this
+Report the violations grouped by category and rule.
+
+## Fix Mode (--fix flag)
+
+### Phase 1: Diagnosis
+
+**CRITICAL: Diagnose BEFORE fixing.** Run the diagnosis script to understand root causes:
+
+```bash
+bun ${CLAUDE_PLUGIN_ROOT}/scripts/effect-diagnose/diagnose-v0.4.ts <path>
 ```
 
-### Report Format
+This outputs:
+- **Root causes** grouped by category (LOCAL_FIX, RESTRUCTURE, EXCEPTION)
+- **Fix plan** showing what to do for each root cause
+- **Violation counts** per root cause
+
+### Phase 2: Review Diagnosis
+
+Understand the diagnosis output:
+
+| Category | Meaning | Action |
+|----------|---------|--------|
+| LOCAL_FIX | Can fix without restructuring | Apply the suggested fix |
+| RESTRUCTURE | Needs design change | Apply if clear, otherwise ask user |
+| EXCEPTION | Cannot be fixed (type predicates, etc.) | Document and skip |
+
+### Phase 3: Apply Fixes
+
+Run with --apply to execute the fixes:
+
+```bash
+bun ${CLAUDE_PLUGIN_ROOT}/scripts/effect-diagnose/diagnose-v0.4.ts <path> --apply
+```
+
+If the script fails or produces suboptimal results, fall back to manual fixes:
+1. Read the file
+2. For each ROOT CAUSE (not each violation):
+   - Apply the suggested alternative from diagnosis
+   - Verify each fix: `cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run detect:all <path>`
+3. After all fixes, verify no type errors: `cd ${CLAUDE_PLUGIN_ROOT}/effect-agent && bun run check`
+
+### Phase 4: Report
+
+Show before/after comparison:
 
 ```markdown
 ## Effect-TS Compliance Report
 
 **File:** [path]
-**Mode:** Fix
+**Mode:** Fix (diagnosis-first)
 
-### Before
+### Diagnosis Summary
 - Total violations: N
-- By category: ...
+- Root causes: M
+  - LOCAL_FIX: X
+  - RESTRUCTURE: Y
+  - EXCEPTION: Z
 
 ### Fixes Applied
-1. Line X: [what was changed]
-2. Line Y: [what was changed]
+1. Root cause: [title]
+   - Violations fixed: [list]
+   - Change: [what was done]
 
-### Skipped (Unfixable)
-1. Line Z: [reason - e.g., "type predicate"]
+### Skipped (EXCEPTION)
+1. [title]: [reason - e.g., "type predicate must return boolean"]
 
-### After
-- Total violations: M
-- Change: N → M (X fixed)
-
-### Verification
+### Results
+- Violations: N → M (X% reduction)
+- Type errors: 0 ✅
 - Suppression comments: 0 ✅
-- Type errors introduced: 0 ✅
 ```
+
+## Why Diagnosis-First?
+
+The old approach (fix each violation independently) often makes things worse:
+- Workers fight each other
+- Suppression comments get added
+- Duplicate code appears
+
+Diagnosis-first treats **violations as symptoms**, not problems. Multiple violations often share a single root cause. Fixing the root cause fixes all related violations at once.
+
+**Evidence (from experiments):**
+| Approach | Violations | Type Errors |
+|----------|------------|-------------|
+| Per-violation (old) | 20 → 20+ | 3 → 6+ (worse) |
+| Diagnosis-first | 20 → 5 | 3 → 0 |
+
+## Constraints
+
+- **No suppression comments** - NEVER add eslint-disable, @ts-ignore, etc.
+- **No dangerous assertions** - NEVER use `as any` or `as unknown as X`
+- **Delete don't duplicate** - When fixing, remove the old code entirely
+- **Document exceptions** - Explain why EXCEPTION patterns can't be fixed

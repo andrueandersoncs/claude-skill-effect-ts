@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	SchemaViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -35,18 +36,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Branded types should use Schema.brand() for runtime validation",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion: "Use Schema.String.pipe(Schema.brand('BrandName'))",
-				});
+				violations.push(
+					new SchemaViolation({
+						category: "schema",
+						ruleId: meta.id,
+						message:
+							"Branded types should use Schema.brand() for runtime validation",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion: "Use Schema.String.pipe(Schema.brand('BrandName'))",
+					}),
+				);
 			}
 		}
 
@@ -70,20 +73,22 @@ export const detect = (
 								) {
 									const { line, character } =
 										sourceFile.getLineAndCharacterOfPosition(prop.getStart());
-									violations.push({
-										ruleId: meta.id,
-										category: meta.category,
-										message: `ID field '${prop.name.text}' uses raw primitive; should use Schema.brand`,
-										filePath,
-										line: line + 1,
-										column: character + 1,
-										snippet: prop
-											.getText(sourceFile)
-											.slice(0, SNIPPET_MAX_LENGTH),
-										certainty: "potential",
-										suggestion:
-											"Use Schema.String.pipe(Schema.brand('UserId')) for type-safe IDs",
-									});
+									violations.push(
+										new SchemaViolation({
+											category: "schema",
+											ruleId: meta.id,
+											message: `ID field '${prop.name.text}' uses raw primitive; should use Schema.brand`,
+											filePath,
+											line: line + 1,
+											column: character + 1,
+											snippet: prop
+												.getText(sourceFile)
+												.slice(0, SNIPPET_MAX_LENGTH),
+											certainty: "potential",
+											suggestion:
+												"Use Schema.String.pipe(Schema.brand('UserId')) for type-safe IDs",
+										}),
+									);
 								}
 							}
 						}

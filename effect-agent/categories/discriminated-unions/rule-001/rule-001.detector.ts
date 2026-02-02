@@ -12,6 +12,7 @@
 
 import * as ts from "typescript";
 import {
+	DiscriminatedUnionsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -42,19 +43,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"switch on ._tag should use Match.tag() for exhaustive matching",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion:
-						"Replace with Match.type<UnionType>().pipe(Match.tag('Tag1', ...), ...)",
-				});
+				violations.push(
+					new DiscriminatedUnionsViolation({
+						category: "discriminated-unions",
+						ruleId: meta.id,
+						message:
+							"switch on ._tag should use Match.tag() for exhaustive matching",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion:
+							"Replace with Match.type<UnionType>().pipe(Match.tag('Tag1', ...), ...)",
+					}),
+				);
 			}
 		}
 
@@ -68,18 +71,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "if statement checking ._tag should use Match.tag()",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion:
-						"Replace with Match.tag() for exhaustive pattern matching",
-				});
+				violations.push(
+					new DiscriminatedUnionsViolation({
+						category: "discriminated-unions",
+						ruleId: meta.id,
+						message: "if statement checking ._tag should use Match.tag()",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion:
+							"Replace with Match.tag() for exhaustive pattern matching",
+					}),
+				);
 			}
 		}
 
@@ -124,20 +129,22 @@ export const detect = (
 					node.getStart(),
 				);
 
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Direct ._tag access; use Match.tag() or Schema.is() instead",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet:
-						node.parent?.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH) ||
-						node.getText(sourceFile),
-					certainty: "definite",
-					suggestion: "Use Match.tag() for exhaustive pattern matching",
-				});
+				violations.push(
+					new DiscriminatedUnionsViolation({
+						category: "discriminated-unions",
+						ruleId: meta.id,
+						message:
+							"Direct ._tag access; use Match.tag() or Schema.is() instead",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet:
+							node.parent?.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH) ||
+							node.getText(sourceFile),
+						certainty: "definite",
+						suggestion: "Use Match.tag() for exhaustive pattern matching",
+					}),
+				);
 			}
 		}
 
@@ -162,18 +169,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: `Tagged union type '${node.name.text}' should use Schema.Union of Schema.TaggedClass`,
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Define each variant as Schema.TaggedClass and combine with Schema.Union",
-				});
+				violations.push(
+					new DiscriminatedUnionsViolation({
+						category: "discriminated-unions",
+						ruleId: meta.id,
+						message: `Tagged union type '${node.name.text}' should use Schema.Union of Schema.TaggedClass`,
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Define each variant as Schema.TaggedClass and combine with Schema.Union",
+					}),
+				);
 			}
 		}
 
@@ -193,18 +202,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: `Type '${node.name.text}' extracts _tag; use the union type directly instead`,
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Pass the full union type to functions instead of just the _tag string",
-				});
+				violations.push(
+					new DiscriminatedUnionsViolation({
+						category: "discriminated-unions",
+						ruleId: meta.id,
+						message: `Type '${node.name.text}' extracts _tag; use the union type directly instead`,
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Pass the full union type to functions instead of just the _tag string",
+					}),
+				);
 			}
 		}
 

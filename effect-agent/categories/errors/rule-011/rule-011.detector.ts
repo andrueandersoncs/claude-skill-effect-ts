@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ErrorsViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -52,17 +53,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "setTimeout for timeout handling should use Effect.timeout",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion: "Use Effect.timeout() or Effect.timeoutFail()",
-				});
+				violations.push(
+					new ErrorsViolation({
+						category: "errors",
+						ruleId: meta.id,
+						message:
+							"setTimeout for timeout handling should use Effect.timeout",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion: "Use Effect.timeout() or Effect.timeoutFail()",
+					}),
+				);
 			}
 		}
 

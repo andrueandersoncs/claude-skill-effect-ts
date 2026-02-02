@@ -13,6 +13,7 @@
 
 import * as ts from "typescript";
 import {
+	NativeApisViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -95,10 +96,26 @@ const mutatingMethods: Record<string, { message: string; suggestion: string }> =
 const isLikelyStringExpression = (node: ts.Expression): boolean => {
 	// String methods that return strings
 	const stringMethods = new Set([
-		"toLowerCase", "toUpperCase", "trim", "trimStart", "trimEnd",
-		"slice", "substring", "substr", "replace", "replaceAll",
-		"padStart", "padEnd", "repeat", "normalize", "charAt",
-		"concat", "split", "toString", "valueOf", "at",
+		"toLowerCase",
+		"toUpperCase",
+		"trim",
+		"trimStart",
+		"trimEnd",
+		"slice",
+		"substring",
+		"substr",
+		"replace",
+		"replaceAll",
+		"padStart",
+		"padEnd",
+		"repeat",
+		"normalize",
+		"charAt",
+		"concat",
+		"split",
+		"toString",
+		"valueOf",
+		"at",
 	]);
 
 	// Check for string literal
@@ -112,7 +129,10 @@ const isLikelyStringExpression = (node: ts.Expression): boolean => {
 	}
 
 	// Check if it's a call to a string method
-	if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+	if (
+		ts.isCallExpression(node) &&
+		ts.isPropertyAccessExpression(node.expression)
+	) {
 		const methodName = node.expression.name.text;
 		if (stringMethods.has(methodName)) {
 			return true;
@@ -131,7 +151,6 @@ const isLikelyStringExpression = (node: ts.Expression): boolean => {
 
 	return false;
 };
-
 
 export const detect = (
 	filePath: string,
@@ -174,19 +193,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"filter() then map() chain; use Array.filterMap for single pass",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion:
-							"Use Array.filterMap(array, (item) => predicate(item) ? Option.some(transform(item)) : Option.none())",
-					});
+					violations.push(
+						new NativeApisViolation({
+							category: "native-apis",
+							ruleId: meta.id,
+							message:
+								"filter() then map() chain; use Array.filterMap for single pass",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion:
+								"Use Array.filterMap(array, (item) => predicate(item) ? Option.some(transform(item)) : Option.none())",
+						}),
+					);
 				}
 			}
 		}
@@ -210,17 +231,19 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: replacement.message,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion: replacement.suggestion,
-					});
+					violations.push(
+						new NativeApisViolation({
+							category: "native-apis",
+							ruleId: meta.id,
+							message: replacement.message,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion: replacement.suggestion,
+						}),
+					);
 				}
 			}
 		}
@@ -257,18 +280,20 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: "Manual grouping with for loop; use Array.groupBy",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use Array.groupBy(array, item => item.key) for cleaner grouping",
-					});
+					violations.push(
+						new NativeApisViolation({
+							category: "native-apis",
+							ruleId: meta.id,
+							message: "Manual grouping with for loop; use Array.groupBy",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use Array.groupBy(array, item => item.key) for cleaner grouping",
+						}),
+					);
 					break;
 				}
 			}
@@ -285,17 +310,19 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "new Map() may be replaced with HashMap from Effect",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "potential",
-				suggestion: "Consider HashMap from effect for map operations",
-			});
+			violations.push(
+				new NativeApisViolation({
+					category: "native-apis",
+					ruleId: meta.id,
+					message: "new Map() may be replaced with HashMap from Effect",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "potential",
+					suggestion: "Consider HashMap from effect for map operations",
+				}),
+			);
 		}
 
 		// -------------------------------------------------------------------------
@@ -310,33 +337,37 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"array[0] may return undefined; use Array.head() for Option<T>",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile),
-					certainty: "potential",
-					suggestion: "Use Array.head() which returns Option<T>",
-				});
+				violations.push(
+					new NativeApisViolation({
+						category: "native-apis",
+						ruleId: meta.id,
+						message:
+							"array[0] may return undefined; use Array.head() for Option<T>",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile),
+						certainty: "potential",
+						suggestion: "Use Array.head() which returns Option<T>",
+					}),
+				);
 			} else if (index === "-1" || parseInt(index, 10) < 0) {
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "Negative array index; use Array.last() for Option<T>",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile),
-					certainty: "potential",
-					suggestion: "Use Array.last() which returns Option<T>",
-				});
+				violations.push(
+					new NativeApisViolation({
+						category: "native-apis",
+						ruleId: meta.id,
+						message: "Negative array index; use Array.last() for Option<T>",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile),
+						certainty: "potential",
+						suggestion: "Use Array.last() which returns Option<T>",
+					}),
+				);
 			}
 		}
 
@@ -351,19 +382,21 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message:
-					".length comparison should use Array.isEmptyArray() or Array.match()",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile),
-				certainty: "potential",
-				suggestion:
-					"Use Array.isEmptyArray() or Array.isNonEmptyArray() predicates",
-			});
+			violations.push(
+				new NativeApisViolation({
+					category: "native-apis",
+					ruleId: meta.id,
+					message:
+						".length comparison should use Array.isEmptyArray() or Array.match()",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile),
+					certainty: "potential",
+					suggestion:
+						"Use Array.isEmptyArray() or Array.isNonEmptyArray() predicates",
+				}),
+			);
 		}
 
 		// -------------------------------------------------------------------------
@@ -379,17 +412,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "[...new Set()] should be replaced with Array.dedupe()",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.parent.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion: "Use Array.dedupe() from effect",
-				});
+				violations.push(
+					new NativeApisViolation({
+						category: "native-apis",
+						ruleId: meta.id,
+						message: "[...new Set()] should be replaced with Array.dedupe()",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.parent
+							.getText(sourceFile)
+							.slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion: "Use Array.dedupe() from effect",
+					}),
+				);
 			}
 		}
 
@@ -404,17 +441,19 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "new Set() may be replaced with HashSet from Effect",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "potential",
-				suggestion: "Consider HashSet from effect for set operations",
-			});
+			violations.push(
+				new NativeApisViolation({
+					category: "native-apis",
+					ruleId: meta.id,
+					message: "new Set() may be replaced with HashSet from Effect",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "potential",
+					suggestion: "Consider HashSet from effect for set operations",
+				}),
+			);
 		}
 
 		// -------------------------------------------------------------------------
@@ -431,17 +470,19 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: replacement.message,
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion: replacement.suggestion,
-				});
+				violations.push(
+					new NativeApisViolation({
+						category: "native-apis",
+						ruleId: meta.id,
+						message: replacement.message,
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion: replacement.suggestion,
+					}),
+				);
 			}
 		}
 
@@ -484,18 +525,22 @@ export const detect = (
 						if (isOpposite) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message:
-									"Filtering same array twice with opposite conditions; use Array.partition",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								certainty: "potential",
-								suggestion: `Use Array.partition(${arrayName}, predicate) to split into [matching, nonMatching] in one pass`,
-							});
+							violations.push(
+								new NativeApisViolation({
+									category: "native-apis",
+									ruleId: meta.id,
+									message:
+										"Filtering same array twice with opposite conditions; use Array.partition",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
+									certainty: "potential",
+									suggestion: `Use Array.partition(${arrayName}, predicate) to split into [matching, nonMatching] in one pass`,
+								}),
+							);
 						}
 					}
 				}

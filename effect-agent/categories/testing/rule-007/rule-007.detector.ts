@@ -7,6 +7,7 @@
 import * as ts from "typescript";
 import {
 	SNIPPET_MAX_LENGTH,
+	TestingViolation,
 	type Violation,
 } from "../../../detectors/types.js";
 
@@ -51,18 +52,20 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `Effect.${method}() in tests should use it.effect() from @effect/vitest`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion:
-							"Use it.effect('test name', () => Effect.gen(...)) from @effect/vitest",
-					});
+					violations.push(
+						new TestingViolation({
+							category: "testing",
+							ruleId: meta.id,
+							message: `Effect.${method}() in tests should use it.effect() from @effect/vitest`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion:
+								"Use it.effect('test name', () => Effect.gen(...)) from @effect/vitest",
+						}),
+					);
 				}
 			}
 		}
@@ -86,18 +89,22 @@ export const detect = (
 						) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message:
-									"Tests with Effects should use it.effect() from @effect/vitest",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								certainty: "potential",
-								suggestion: `Replace ${funcName}() with it.effect() for Effect-based tests`,
-							});
+							violations.push(
+								new TestingViolation({
+									category: "testing",
+									ruleId: meta.id,
+									message:
+										"Tests with Effects should use it.effect() from @effect/vitest",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
+									certainty: "potential",
+									suggestion: `Replace ${funcName}() with it.effect() for Effect-based tests`,
+								}),
+							);
 						}
 					}
 				}

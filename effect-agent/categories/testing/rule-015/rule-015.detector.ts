@@ -5,10 +5,7 @@
  */
 
 import * as ts from "typescript";
-import {
-	SNIPPET_MAX_LENGTH,
-	type Violation,
-} from "../../../detectors/types.js";
+import { TestingViolation, type Violation } from "../../../detectors/types.js";
 
 const meta = {
 	id: "rule-015",
@@ -51,19 +48,21 @@ export const detect = (
 						if (isTestClockLayer(arg)) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message:
-									"Manual TestClock.layer provision detected; it.effect includes it automatically",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile),
-								certainty: "definite",
-								suggestion:
-									"Remove TestClock.layer provision; use it.effect which provides TestClock automatically",
-							});
+							violations.push(
+								new TestingViolation({
+									category: "testing",
+									ruleId: meta.id,
+									message:
+										"Manual TestClock.layer provision detected; it.effect includes it automatically",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node.getText(sourceFile),
+									certainty: "definite",
+									suggestion:
+										"Remove TestClock.layer provision; use it.effect which provides TestClock automatically",
+								}),
+							);
 						}
 					}
 				}

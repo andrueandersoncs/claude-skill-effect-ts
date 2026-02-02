@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	AsyncViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -34,17 +35,20 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: "Async functions should be converted to Effect",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion: "Convert to Effect.gen() or wrap with Effect.tryPromise()",
-			});
+			violations.push(
+				new AsyncViolation({
+					category: "async",
+					ruleId: meta.id,
+					message: "Async functions should be converted to Effect",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion:
+						"Convert to Effect.gen() or wrap with Effect.tryPromise()",
+				}),
+			);
 		}
 
 		// Detect await expressions
@@ -52,18 +56,21 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message:
-					"Await expressions should be replaced with Effect.flatMap or yield*",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion: "Use yield* in Effect.gen() or pipe with Effect.flatMap()",
-			});
+			violations.push(
+				new AsyncViolation({
+					category: "async",
+					ruleId: meta.id,
+					message:
+						"Await expressions should be replaced with Effect.flatMap or yield*",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion:
+						"Use yield* in Effect.gen() or pipe with Effect.flatMap()",
+				}),
+			);
 		}
 
 		// Detect .then() chains
@@ -75,17 +82,19 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: ".then() chains should be replaced with Effect.map/flatMap",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "definite",
-				suggestion: "Use pipe() with Effect.map() or Effect.flatMap()",
-			});
+			violations.push(
+				new AsyncViolation({
+					category: "async",
+					ruleId: meta.id,
+					message: ".then() chains should be replaced with Effect.map/flatMap",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "definite",
+					suggestion: "Use pipe() with Effect.map() or Effect.flatMap()",
+				}),
+			);
 		}
 
 		// Detect .catch() chains
@@ -97,18 +106,20 @@ export const detect = (
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 				node.getStart(),
 			);
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: ".catch() may be a Promise pattern; use Effect.catchAll",
-				filePath,
-				line: line + 1,
-				column: character + 1,
-				snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-				certainty: "potential",
-				suggestion:
-					"If this is Promise.catch(), use Effect.catchAll() or Effect.catchTag()",
-			});
+			violations.push(
+				new AsyncViolation({
+					category: "async",
+					ruleId: meta.id,
+					message: ".catch() may be a Promise pattern; use Effect.catchAll",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "potential",
+					suggestion:
+						"If this is Promise.catch(), use Effect.catchAll() or Effect.catchTag()",
+				}),
+			);
 		}
 
 		// Detect Promise.resolve/reject
@@ -123,30 +134,34 @@ export const detect = (
 					node.getStart(),
 				);
 				if (method === "resolve") {
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Promise.resolve() should be replaced with Effect.succeed()",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion: "Use Effect.succeed()",
-					});
+					violations.push(
+						new AsyncViolation({
+							category: "async",
+							ruleId: meta.id,
+							message:
+								"Promise.resolve() should be replaced with Effect.succeed()",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion: "Use Effect.succeed()",
+						}),
+					);
 				} else if (method === "reject") {
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: "Promise.reject() should be replaced with Effect.fail()",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion: "Use Effect.fail()",
-					});
+					violations.push(
+						new AsyncViolation({
+							category: "async",
+							ruleId: meta.id,
+							message: "Promise.reject() should be replaced with Effect.fail()",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion: "Use Effect.fail()",
+						}),
+					);
 				}
 			}
 		}

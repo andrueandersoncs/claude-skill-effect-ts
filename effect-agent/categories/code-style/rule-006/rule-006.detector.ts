@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	CodeStyleViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -67,18 +68,20 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message: "Long Effect chain; consider Effect.gen() for readability",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Use Effect.gen(function* () { const a = yield* step1; const b = yield* step2; ... }) for multi-step operations",
-				});
+				violations.push(
+					new CodeStyleViolation({
+						category: "code-style",
+						ruleId: meta.id,
+						message: "Long Effect chain; consider Effect.gen() for readability",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use Effect.gen(function* () { const a = yield* step1; const b = yield* step2; ... }) for multi-step operations",
+					}),
+				);
 			}
 		}
 
@@ -116,18 +119,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: "Long Effect chain; consider Effect.gen() for readability",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use Effect.gen(function* () { const a = yield* step1; const b = yield* step2; ... }) for multi-step operations",
-					});
+					violations.push(
+						new CodeStyleViolation({
+							category: "code-style",
+							ruleId: meta.id,
+							message:
+								"Long Effect chain; consider Effect.gen() for readability",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use Effect.gen(function* () { const a = yield* step1; const b = yield* step2; ... }) for multi-step operations",
+						}),
+					);
 				}
 			}
 		}

@@ -11,6 +11,7 @@
 
 import * as ts from "typescript";
 import {
+	ServicesViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -54,19 +55,23 @@ export const detect = (
 						if (methodPattern.test(genBody)) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message:
-									"Inline service creation; use Layer.effect or Layer.succeed",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								certainty: "potential",
-								suggestion:
-									"Use Layer.effect(ServiceTag, Effect.gen(function* () { ... })) for services with dependencies",
-							});
+							violations.push(
+								new ServicesViolation({
+									category: "services",
+									ruleId: meta.id,
+									message:
+										"Inline service creation; use Layer.effect or Layer.succeed",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
+									certainty: "potential",
+									suggestion:
+										"Use Layer.effect(ServiceTag, Effect.gen(function* () { ... }) for services with dependencies",
+								}),
+							);
 						}
 					}
 				}
@@ -109,29 +114,33 @@ export const detect = (
 		const hasTest = testLayerFor.has(service);
 
 		if (hasLive && !hasTest) {
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: `Service ${service} has Live layer but no Test layer`,
-				filePath,
-				line: 1,
-				column: 1,
-				snippet: `${service}Live exists but ${service}Test is missing`,
-				certainty: "potential",
-				suggestion: `Create ${service}Test layer for testing with mocked/in-memory implementation`,
-			});
+			violations.push(
+				new ServicesViolation({
+					category: "services",
+					ruleId: meta.id,
+					message: `Service ${service} has Live layer but no Test layer`,
+					filePath,
+					line: 1,
+					column: 1,
+					snippet: `${service}Live exists but ${service}Test is missing`,
+					certainty: "potential",
+					suggestion: `Create ${service}Test layer for testing with mocked/in-memory implementation`,
+				}),
+			);
 		} else if (!hasLive && hasTest) {
-			violations.push({
-				ruleId: meta.id,
-				category: meta.category,
-				message: `Service ${service} has Test layer but no Live layer`,
-				filePath,
-				line: 1,
-				column: 1,
-				snippet: `${service}Test exists but ${service}Live is missing`,
-				certainty: "potential",
-				suggestion: `Create ${service}Live layer with real implementation`,
-			});
+			violations.push(
+				new ServicesViolation({
+					category: "services",
+					ruleId: meta.id,
+					message: `Service ${service} has Test layer but no Live layer`,
+					filePath,
+					line: 1,
+					column: 1,
+					snippet: `${service}Test exists but ${service}Live is missing`,
+					certainty: "potential",
+					suggestion: `Create ${service}Live layer with real implementation`,
+				}),
+			);
 		}
 	}
 
@@ -168,21 +177,23 @@ export const detect = (
 							if (!argText.includes("Ref") && !argText.includes("ref")) {
 								const { line, character } =
 									sourceFile.getLineAndCharacterOfPosition(node.getStart());
-								violations.push({
-									ruleId: meta.id,
-									category: meta.category,
-									message:
-										"Test layer with Layer.succeed (stateless); consider Layer.effect with Ref",
-									filePath,
-									line: line + 1,
-									column: character + 1,
-									snippet: node
-										.getText(sourceFile)
-										.slice(0, SNIPPET_MAX_LENGTH),
-									certainty: "potential",
-									suggestion:
-										"Use Layer.effect(Tag, Effect.gen(function* () { const state = yield* Ref.make(...); return { ... } })) for stateful test mocks",
-								});
+								violations.push(
+									new ServicesViolation({
+										category: "services",
+										ruleId: meta.id,
+										message:
+											"Test layer with Layer.succeed (stateless); consider Layer.effect with Ref",
+										filePath,
+										line: line + 1,
+										column: character + 1,
+										snippet: node
+											.getText(sourceFile)
+											.slice(0, SNIPPET_MAX_LENGTH),
+										certainty: "potential",
+										suggestion:
+											"Use Layer.effect(Tag, Effect.gen(function* () { const state = yield* Ref.make(...); return { ... } }) for stateful test mocks",
+									}),
+								);
 							}
 							break;
 						}

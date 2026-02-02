@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	NativeApisViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -42,18 +43,20 @@ export const detect = (
 					const omittedFields = nonRestElements
 						.map((e) => e.name.getText(sourceFile))
 						.join(", ");
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `Destructuring to omit fields (${omittedFields}); use Struct.omit`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "potential",
-						suggestion:
-							"Use Struct.omit(obj, 'field1', 'field2') for clearer intent",
-					});
+					violations.push(
+						new NativeApisViolation({
+							category: "native-apis",
+							ruleId: meta.id,
+							message: `Destructuring to omit fields (${omittedFields}); use Struct.omit`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use Struct.omit(obj, 'field1', 'field2') for clearer intent",
+						}),
+					);
 				}
 			}
 		}

@@ -15,6 +15,7 @@
 import * as ts from "typescript";
 import {
 	SNIPPET_MAX_LENGTH,
+	TestingViolation,
 	type Violation,
 } from "../../../detectors/types.js";
 
@@ -53,19 +54,21 @@ export const detect = (
 		fullText.includes(".prop(");
 
 	if (hasDescribeLayer && !hasPropertyTests) {
-		violations.push({
-			ruleId: meta.id,
-			category: meta.category,
-			message:
-				"Test suite uses layer() but no property-based tests; consider it.effect.prop for fuller coverage",
-			filePath,
-			line: 1,
-			column: 1,
-			snippet: "layer() without property-based tests",
-			certainty: "potential",
-			suggestion:
-				"Combine layer() with it.effect.prop() for comprehensive integration testing with generated data",
-		});
+		violations.push(
+			new TestingViolation({
+				category: "testing",
+				ruleId: meta.id,
+				message:
+					"Test suite uses layer() but no property-based tests; consider it.effect.prop for fuller coverage",
+				filePath,
+				line: 1,
+				column: 1,
+				snippet: "layer() without property-based tests",
+				certainty: "potential",
+				suggestion:
+					"Combine layer() with it.effect.prop() for comprehensive integration testing with generated data",
+			}),
+		);
 	}
 
 	const visit = (node: ts.Node) => {
@@ -81,19 +84,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Stub with 'not implemented'; use Arbitrary-generated responses",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "definite",
-					suggestion:
-						"Use Arbitrary.make(Schema) to generate test responses: Effect.succeed(pipe(fc.sample(arb, 1), Array.head, Option.getOrThrow))",
-				});
+				violations.push(
+					new TestingViolation({
+						category: "testing",
+						ruleId: meta.id,
+						message:
+							"Stub with 'not implemented'; use Arbitrary-generated responses",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "definite",
+						suggestion:
+							"Use Arbitrary.make(Schema) to generate test responses: Effect.succeed(pipe(fc.sample(arb, 1), Array.head, Option.getOrThrow))",
+					}),
+				);
 			}
 		}
 
@@ -119,19 +124,21 @@ export const detect = (
 					) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"Effect stub with 'not implemented'; use Arbitrary-generated responses",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "definite",
-							suggestion:
-								"Generate proper test data with Arbitrary.make(Schema) instead of stubbing",
-						});
+						violations.push(
+							new TestingViolation({
+								category: "testing",
+								ruleId: meta.id,
+								message:
+									"Effect stub with 'not implemented'; use Arbitrary-generated responses",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "definite",
+								suggestion:
+									"Generate proper test data with Arbitrary.make(Schema) instead of stubbing",
+							}),
+						);
 					}
 				}
 			}
@@ -156,18 +163,20 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `fc.${method}() - use Schema with it.prop instead of raw fast-check`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion:
-							"Use it.prop({ value: Schema.Number }) or it.effect.prop({ value: Schema.String }) with Schema-defined types",
-					});
+					violations.push(
+						new TestingViolation({
+							category: "testing",
+							ruleId: meta.id,
+							message: `fc.${method}() - use Schema with it.prop instead of raw fast-check`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion:
+								"Use it.prop({ value: Schema.Number }) or it.effect.prop({ value: Schema.String }) with Schema-defined types",
+						}),
+					);
 				}
 
 				// === Check 5: fc.assert and fc.property (from rule-013) ===
@@ -175,18 +184,20 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						node.getStart(),
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message: `fc.${method}() - use it.prop or it.effect.prop instead`,
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion:
-							"Use it.effect.prop({ schema: MySchema }, ({ schema }) => Effect.gen(...)) from @effect/vitest",
-					});
+					violations.push(
+						new TestingViolation({
+							category: "testing",
+							ruleId: meta.id,
+							message: `fc.${method}() - use it.prop or it.effect.prop instead`,
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion:
+								"Use it.effect.prop({ schema: MySchema }, ({ schema }) => Effect.gen(...)) from @effect/vitest",
+						}),
+					);
 				}
 			}
 
@@ -208,19 +219,23 @@ export const detect = (
 						) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message:
-									"Test Layer uses hardcoded values; use Arbitrary-generated values",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								certainty: "potential",
-								suggestion:
-									"Use Layer.effect with Arbitrary.make(Schema): Effect.succeed(pipe(fc.sample(arb, 1), Array.head, Option.getOrThrow))",
-							});
+							violations.push(
+								new TestingViolation({
+									category: "testing",
+									ruleId: meta.id,
+									message:
+										"Test Layer uses hardcoded values; use Arbitrary-generated values",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
+									certainty: "potential",
+									suggestion:
+										"Use Layer.effect with Arbitrary.make(Schema): Effect.succeed(pipe(fc.sample(arb, 1), Array.head, Option.getOrThrow))",
+								}),
+							);
 						}
 					}
 				}
@@ -247,21 +262,23 @@ export const detect = (
 							if (bodyText.includes("it(") || bodyText.includes("it(`")) {
 								const { line, character } =
 									sourceFile.getLineAndCharacterOfPosition(node.getStart());
-								violations.push({
-									ruleId: meta.id,
-									category: meta.category,
-									message:
-										"forEach with hardcoded test data; use it.effect.prop for property-based testing",
-									filePath,
-									line: line + 1,
-									column: character + 1,
-									snippet: node
-										.getText(sourceFile)
-										.slice(0, SNIPPET_MAX_LENGTH),
-									certainty: "potential",
-									suggestion:
-										"Use it.effect.prop({ data: Schema }, ({ data }) => Effect.gen(...)) for generated test data",
-								});
+								violations.push(
+									new TestingViolation({
+										category: "testing",
+										ruleId: meta.id,
+										message:
+											"forEach with hardcoded test data; use it.effect.prop for property-based testing",
+										filePath,
+										line: line + 1,
+										column: character + 1,
+										snippet: node
+											.getText(sourceFile)
+											.slice(0, SNIPPET_MAX_LENGTH),
+										certainty: "potential",
+										suggestion:
+											"Use it.effect.prop({ data: Schema }, ({ data }) => Effect.gen(...)) for generated test data",
+									}),
+								);
 							}
 						}
 					}
@@ -285,19 +302,23 @@ export const detect = (
 						if (hasHardcodedArray || hasHardcodedObject) {
 							const { line, character } =
 								sourceFile.getLineAndCharacterOfPosition(node.getStart());
-							violations.push({
-								ruleId: meta.id,
-								category: meta.category,
-								message:
-									"it.effect with hardcoded test data; consider it.effect.prop for property-based testing",
-								filePath,
-								line: line + 1,
-								column: character + 1,
-								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-								certainty: "potential",
-								suggestion:
-									"Use it.effect.prop({ data: Schema }, ({ data }) => Effect.gen(...)) for generated test data",
-							});
+							violations.push(
+								new TestingViolation({
+									category: "testing",
+									ruleId: meta.id,
+									message:
+										"it.effect with hardcoded test data; consider it.effect.prop for property-based testing",
+									filePath,
+									line: line + 1,
+									column: character + 1,
+									snippet: node
+										.getText(sourceFile)
+										.slice(0, SNIPPET_MAX_LENGTH),
+									certainty: "potential",
+									suggestion:
+										"Use it.effect.prop({ data: Schema }, ({ data }) => Effect.gen(...)) for generated test data",
+								}),
+							);
 						}
 					}
 				}
@@ -324,19 +345,21 @@ export const detect = (
 					if (elements.length > 2) {
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(node.getStart());
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"Manual test data arrays should use Arbitrary.make(Schema)",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Use Arbitrary.make(YourSchema) to generate test data from schemas",
-						});
+						violations.push(
+							new TestingViolation({
+								category: "testing",
+								ruleId: meta.id,
+								message:
+									"Manual test data arrays should use Arbitrary.make(Schema)",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Use Arbitrary.make(YourSchema) to generate test data from schemas",
+							}),
+						);
 					}
 				}
 			}

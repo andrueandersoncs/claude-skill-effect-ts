@@ -13,6 +13,7 @@
 
 import * as ts from "typescript";
 import {
+	CodeStyleViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -103,19 +104,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						comment.pos,
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"Suppression comment used to bypass exhaustiveness check; use Match.exhaustive instead",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion:
-							"Replace switch with Match.type().pipe(..., Match.exhaustive) for compile-time exhaustiveness",
-					});
+					violations.push(
+						new CodeStyleViolation({
+							category: "code-style",
+							ruleId: meta.id,
+							message:
+								"Suppression comment used to bypass exhaustiveness check; use Match.exhaustive instead",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion:
+								"Replace switch with Match.type().pipe(..., Match.exhaustive) for compile-time exhaustiveness",
+						}),
+					);
 				}
 			}
 		}
@@ -145,19 +148,21 @@ export const detect = (
 						reportedPositions.add(comment.pos);
 						const { line, character } =
 							sourceFile.getLineAndCharacterOfPosition(comment.pos);
-						violations.push({
-							ruleId: meta.id,
-							category: meta.category,
-							message:
-								"Type suppression on switch statement may be bypassing exhaustiveness check",
-							filePath,
-							line: line + 1,
-							column: character + 1,
-							snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-							certainty: "potential",
-							suggestion:
-								"Consider using Match.type().pipe(..., Match.exhaustive) for type-safe exhaustive matching",
-						});
+						violations.push(
+							new CodeStyleViolation({
+								category: "code-style",
+								ruleId: meta.id,
+								message:
+									"Type suppression on switch statement may be bypassing exhaustiveness check",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Consider using Match.type().pipe(..., Match.exhaustive) for type-safe exhaustive matching",
+							}),
+						);
 					}
 				}
 			}

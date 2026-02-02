@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	CodeStyleViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -47,19 +48,21 @@ export const detect = (
 					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 						comment.pos,
 					);
-					violations.push({
-						ruleId: meta.id,
-						category: meta.category,
-						message:
-							"eslint-disable comment suppresses unused variable warning; fix the underlying issue instead",
-						filePath,
-						line: line + 1,
-						column: character + 1,
-						snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
-						certainty: "definite",
-						suggestion:
-							"Remove the unused variable or use it in your code; avoid suppressing lint errors",
-					});
+					violations.push(
+						new CodeStyleViolation({
+							category: "code-style",
+							ruleId: meta.id,
+							message:
+								"eslint-disable comment suppresses unused variable warning; fix the underlying issue instead",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: commentText.slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "definite",
+							suggestion:
+								"Remove the unused variable or use it in your code; avoid suppressing lint errors",
+						}),
+					);
 					break; // Only report once per comment
 				}
 			}

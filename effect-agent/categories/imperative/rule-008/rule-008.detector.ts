@@ -6,6 +6,7 @@
 
 import * as ts from "typescript";
 import {
+	ImperativeViolation,
 	SNIPPET_MAX_LENGTH,
 	type Violation,
 } from "../../../detectors/types.js";
@@ -42,19 +43,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Imperative tree traversal with stack/queue; use recursive Effect",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Use recursive Effect.gen with Effect.forEach for children: const traverse = (node) => Effect.gen(function* () { ... yield* Effect.forEach(node.children, traverse) })",
-				});
+				violations.push(
+					new ImperativeViolation({
+						category: "imperative",
+						ruleId: meta.id,
+						message:
+							"Imperative tree traversal with stack/queue; use recursive Effect",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use recursive Effect.gen with Effect.forEach for children: const traverse = (node) => Effect.gen(function* () { ... yield* Effect.forEach(node.children, traverse) })",
+					}),
+				);
 			}
 		}
 
@@ -68,19 +71,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Imperative tree iteration; use recursive Effect for tree traversal",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Define a recursive function returning Effect.gen and use Effect.forEach for children",
-				});
+				violations.push(
+					new ImperativeViolation({
+						category: "imperative",
+						ruleId: meta.id,
+						message:
+							"Imperative tree iteration; use recursive Effect for tree traversal",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Define a recursive function returning Effect.gen and use Effect.forEach for children",
+					}),
+				);
 			}
 		}
 
@@ -99,19 +104,21 @@ export const detect = (
 				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
 					node.getStart(),
 				);
-				violations.push({
-					ruleId: meta.id,
-					category: meta.category,
-					message:
-						"Imperative for-of loop for tree traversal; use recursive Effect",
-					filePath,
-					line: line + 1,
-					column: character + 1,
-					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
-					certainty: "potential",
-					suggestion:
-						"Use Effect.forEach(node.children, traverse) with a recursive Effect.gen function",
-				});
+				violations.push(
+					new ImperativeViolation({
+						category: "imperative",
+						ruleId: meta.id,
+						message:
+							"Imperative for-of loop for tree traversal; use recursive Effect",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use Effect.forEach(node.children, traverse) with a recursive Effect.gen function",
+					}),
+				);
 			}
 		}
 
