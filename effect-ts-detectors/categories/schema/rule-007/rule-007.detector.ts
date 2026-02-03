@@ -1,0 +1,152 @@
+/**
+ * rule-007: schema-filters
+ *
+ * Rule: Never use manual validation functions; use Schema filters
+ */
+
+import * as ts from "typescript";
+import {
+	SchemaViolation,
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../src/types.js";
+
+const meta = {
+	id: "rule-007",
+	category: "schema",
+	name: "schema-filters",
+};
+
+export const detect = (
+	filePath: string,
+	sourceFile: ts.SourceFile,
+): Violation[] => {
+	const violations: Violation[] = [];
+
+	const visit = (node: ts.Node) => {
+		// Detect typeof checks (should use Schema.is)
+		if (ts.isBinaryExpression(node) && ts.isTypeOfExpression(node.left)) {
+			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+				node.getStart(),
+			);
+			violations.push(
+				new SchemaViolation({
+					category: "schema",
+					ruleId: meta.id,
+					message: "typeof checks should use Schema.is() type guards",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "potential",
+					suggestion: "Use Schema.is(MySchema) for type-safe runtime checks",
+				}),
+			);
+		}
+
+		// Detect instanceof checks (should use Schema.is for Schema classes)
+		if (
+			ts.isBinaryExpression(node) &&
+			node.operatorToken.kind === ts.SyntaxKind.InstanceOfKeyword
+		) {
+			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+				node.getStart(),
+			);
+			violations.push(
+				new SchemaViolation({
+					category: "schema",
+					ruleId: meta.id,
+					message:
+						"instanceof checks may be replaced with Schema.is() for Schema classes",
+					filePath,
+					line: line + 1,
+					column: character + 1,
+					snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+					certainty: "potential",
+					suggestion:
+						"If checking Schema.Class, use Schema.is(MyClass) instead",
+				}),
+			);
+		}
+
+		// Detect manual validation functions that throw
+		if (
+			(ts.isFunctionDeclaration(node) || ts.isArrowFunction(node)) &&
+			node.body
+		) {
+			const funcName = ts.isFunctionDeclaration(node)
+				? node.name?.text || ""
+				: "";
+			const bodyText = node.body.getText(sourceFile);
+
+			// Check if function name suggests validation and body throws
+			const isValidationFunc =
+				funcName.toLowerCase().includes("validate") ||
+				funcName.toLowerCase().includes("check") ||
+				funcName.toLowerCase().includes("assert");
+
+			if (isValidationFunc && bodyText.includes("throw")) {
+				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+					node.getStart(),
+				);
+				violations.push(
+					new SchemaViolation({
+						category: "schema",
+						ruleId: meta.id,
+						message:
+							"Manual validation function with throw; use Schema.filter instead",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use Schema.String.pipe(Schema.filter((s) => s.includes('@') || 'Invalid email')) for declarative validation",
+					}),
+				);
+			}
+		}
+
+		// Detect const validation functions (arrow functions assigned to variables)
+		if (ts.isVariableDeclaration(node) && node.initializer) {
+			const varName = node.name.getText(sourceFile);
+			const isValidationName =
+				varName.toLowerCase().includes("validate") ||
+				varName.toLowerCase().includes("check") ||
+				varName.toLowerCase().includes("assert");
+
+			if (
+				isValidationName &&
+				(ts.isArrowFunction(node.initializer) ||
+					ts.isFunctionExpression(node.initializer))
+			) {
+				const bodyText = node.initializer.body?.getText(sourceFile) || "";
+				if (bodyText.includes("throw")) {
+					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+						node.getStart(),
+					);
+					violations.push(
+						new SchemaViolation({
+							category: "schema",
+							ruleId: meta.id,
+							message:
+								"Manual validation function with throw; use Schema.filter instead",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use Schema.String.pipe(Schema.filter(...)) for declarative validation",
+						}),
+					);
+				}
+			}
+		}
+
+		ts.forEachChild(node, visit);
+	};
+
+	visit(sourceFile);
+	return violations;
+};

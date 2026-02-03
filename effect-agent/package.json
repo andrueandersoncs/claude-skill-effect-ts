@@ -8,18 +8,19 @@
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
-		"detect": "bun run detectors/runner.ts",
-		"detect:all": "bun run detectors/runner.ts",
-		"detect:errors": "bun run detectors/runner.ts --no-potential",
-		"detect:json": "bun run detectors/runner.ts --json",
-		"detect:examples": "bun run detectors/runner.ts examples",
+		"detect": "bun run ../effect-ts-detectors/src/runner.ts",
+		"detect:all": "bun run ../effect-ts-detectors/src/runner.ts",
+		"detect:errors": "bun run ../effect-ts-detectors/src/runner.ts --no-potential",
+		"detect:json": "bun run ../effect-ts-detectors/src/runner.ts --json",
+		"detect:examples": "bun run ../effect-ts-detectors/src/runner.ts examples",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:ui": "vitest --ui"
 	},
 	"dependencies": {
 		"@effect/schema": "^0.75.5",
-		"effect": "^3.14.0"
+		"effect": "^3.14.0",
+		"effect-ts-detectors": "file:../effect-ts-detectors"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.13",

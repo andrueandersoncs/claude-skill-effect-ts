@@ -1,0 +1,133 @@
+/**
+ * rule-007: map-error
+ *
+ * Rule: Never rethrow transformed errors; use Effect.mapError
+ */
+
+import * as ts from "typescript";
+import {
+	ErrorsViolation,
+	SNIPPET_MAX_LENGTH,
+	type Violation,
+} from "../../../src/types.js";
+
+const meta = {
+	id: "rule-007",
+	category: "errors",
+	name: "map-error",
+};
+
+export const detect = (
+	filePath: string,
+	sourceFile: ts.SourceFile,
+): Violation[] => {
+	const violations: Violation[] = [];
+
+	const visit = (node: ts.Node) => {
+		// Detect catch blocks that throw new errors
+		if (ts.isCatchClause(node)) {
+			const blockText = node.block.getText(sourceFile);
+
+			if (
+				blockText.includes("throw new") ||
+				blockText.includes("throw Error")
+			) {
+				const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+					node.getStart(),
+				);
+				violations.push(
+					new ErrorsViolation({
+						category: "errors",
+						ruleId: meta.id,
+						message: "Catch and rethrow transformed error; use Effect.mapError",
+						filePath,
+						line: line + 1,
+						column: character + 1,
+						snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+						certainty: "potential",
+						suggestion:
+							"Use effect.pipe(Effect.mapError(e => new DomainError(e))) instead of catch-and-rethrow",
+					}),
+				);
+			}
+		}
+
+		// Detect Promise .catch() that throws a new error (transformation)
+		if (
+			ts.isCallExpression(node) &&
+			ts.isPropertyAccessExpression(node.expression) &&
+			node.expression.name.text === "catch"
+		) {
+			if (node.arguments.length > 0) {
+				const handlerText = node.arguments[0].getText(sourceFile);
+
+				if (
+					handlerText.includes("throw new") ||
+					handlerText.includes("throw Error")
+				) {
+					const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+						node.getStart(),
+					);
+					violations.push(
+						new ErrorsViolation({
+							category: "errors",
+							ruleId: meta.id,
+							message:
+								"Promise .catch() rethrows transformed error; use Effect.mapError",
+							filePath,
+							line: line + 1,
+							column: character + 1,
+							snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+							certainty: "potential",
+							suggestion:
+								"Use Effect.tryPromise with Effect.mapError instead of .catch() that rethrows",
+						}),
+					);
+				}
+			}
+		}
+
+		// Detect Effect.catchAll that just wraps and fails
+		if (
+			ts.isCallExpression(node) &&
+			ts.isPropertyAccessExpression(node.expression)
+		) {
+			const method = node.expression.name.text;
+
+			if (method === "catchAll" || method === "catchTag") {
+				if (node.arguments.length > 0) {
+					const handlerText =
+						node.arguments[node.arguments.length - 1].getText(sourceFile);
+
+					if (
+						handlerText.includes("Effect.fail") &&
+						!handlerText.includes("Effect.succeed")
+					) {
+						const { line, character } =
+							sourceFile.getLineAndCharacterOfPosition(node.getStart());
+						violations.push(
+							new ErrorsViolation({
+								category: "errors",
+								ruleId: meta.id,
+								message:
+									"catchAll/catchTag that only fails; use mapError instead",
+								filePath,
+								line: line + 1,
+								column: character + 1,
+								snippet: node.getText(sourceFile).slice(0, SNIPPET_MAX_LENGTH),
+								certainty: "potential",
+								suggestion:
+									"Use Effect.mapError(e => new TransformedError(e)) when just transforming error types",
+							}),
+						);
+					}
+				}
+			}
+		}
+
+		ts.forEachChild(node, visit);
+	};
+
+	visit(sourceFile);
+	return violations;
+};
