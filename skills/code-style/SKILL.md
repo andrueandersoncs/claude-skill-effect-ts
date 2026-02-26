@@ -135,6 +135,28 @@ const displayName = Option.match(maybeUser, {
   onSome: (user) => user.name
 })
 
+// ❌ FORBIDDEN: Nested Option.match (pyramid of doom)
+// Signal: every onNone returns the same default
+const name = pipe(
+  findUser(id),
+  Option.match({
+    onNone: () => "Unknown",
+    onSome: (user) =>
+      Option.match(user.profile, {
+        onNone: () => "Unknown",
+        onSome: (profile) => profile.displayName,
+      }),
+  }),
+)
+
+// ✅ REQUIRED: Option.flatMap chain for multiple optionals
+const name = pipe(
+  findUser(id),
+  Option.flatMap((user) => user.profile),
+  Option.map((profile) => profile.displayName),
+  Option.getOrElse(() => "Unknown"),
+)
+
 // ✅ REQUIRED: Either.match for results
 const result = Either.match(parseResult, {
   onLeft: (error) => `Error: ${error}`,
@@ -1118,6 +1140,7 @@ const program = getUser(id).pipe(
 - **NEVER use ternary operators** - use Match.value + Match.when, or simple if/else
 - **Prefer Match over `switch/case`** - but switch is acceptable as last resort
 - **NEVER use `if (x != null)`** - always use Option.match
+- **NEVER nest `Option.match` calls** - use `Option.flatMap` chains with `Option.getOrElse` when all `onNone` branches return the same default
 - **NEVER use for/while/do...while loops** - use Effect's `Array.map`/`Array.filter`/`Array.reduce` or `Effect.forEach`
 - **NEVER use for...of/for...in loops** - use Effect's `Array` module or `Effect` combinators
 - **NEVER mutate arrays** (push/pop/splice) - use `Array.append`, `Array.prepend`, spread, or immutable operations
