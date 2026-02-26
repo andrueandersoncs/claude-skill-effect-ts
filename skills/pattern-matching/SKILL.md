@@ -27,6 +27,7 @@ Effect's `Match` module provides:
 | `switch/case` statements | Prefer `Match.type` + `Match.tag` (switch acceptable) |
 | Ternary operators (`? :`) | `Match.value` + `Match.when` or simple `if/else` |
 | Single null check | `Option.match` |
+| Chained optionals | `Option.flatMap` + `Option.getOrElse` |
 | Error checks | `Either.match` or `Effect.match` |
 | Type guards | `Match.when` with `Schema.is()` |
 
@@ -447,6 +448,38 @@ const getArticleStatus = (article: Article) =>
   )
 ```
 
+## Option.match vs Option.flatMap
+
+`Option.match` is for **single** Option-to-value conversion. For **chaining** multiple optional operations, use `Option.flatMap`:
+
+```typescript
+// ✅ GOOD: Single Option.match (converting Option to different type)
+const greeting = Option.match(maybeUser, {
+  onNone: () => "Hello, guest!",
+  onSome: (user) => `Hello, ${user.name}!`
+})
+
+// ❌ BAD: Nested Option.match (every onNone returns same default)
+const result = Option.match(maybeA, {
+  onNone: () => fallback,
+  onSome: (a) =>
+    Option.match(maybeB(a), {
+      onNone: () => fallback,
+      onSome: (b) => transform(b),
+    }),
+})
+
+// ✅ GOOD: Option.flatMap chain (flat, readable, single fallback)
+const result = pipe(
+  maybeA,
+  Option.flatMap(maybeB),
+  Option.map(transform),
+  Option.getOrElse(() => fallback),
+)
+```
+
+**Rule:** When every `onNone` branch returns the same value, that's a signal to flatten with `Option.flatMap` + `Option.getOrElse`.
+
 ## Best Practices
 
 ### CRITICAL: No Imperative Code
@@ -459,6 +492,7 @@ const getArticleStatus = (article: Article) =>
 6. **NEVER check error flags** - Replace with Either.match or Effect.match
 7. **NEVER access `._tag` directly** - Replace with Match.tag or Schema.is()
 8. **Refactor imperative code immediately** - This is mandatory, not optional
+9. **NEVER nest Option.match calls** - Use `Option.flatMap` chains with `Option.getOrElse` when all `onNone` branches share the same fallback
 
 ### General Best Practices
 
