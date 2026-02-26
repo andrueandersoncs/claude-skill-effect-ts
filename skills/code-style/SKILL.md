@@ -27,7 +27,9 @@ Additional patterns include:
 
 **NEVER use imperative constructs.** All code must follow functional programming principles:
 
-- **No conditionals**: `if/else`, `switch/case`, ternary operators
+- **No complex conditionals**: `else if` chains, nested `if` statements, ternary operators
+- **Simple `if/else` is allowed**: A single `if` with optional `else` (no nesting, no `else if`)
+- **`switch/case` as last resort**: Prefer `Match.type`/`Match.value`, but `switch` is acceptable when Match doesn't fit
 - **No loops**: `for`, `while`, `do...while`, `for...of`, `for...in`
 - **No mutation**: Reassignment, push/pop/splice, property mutation
 
@@ -46,14 +48,30 @@ Additional patterns include:
 
 #### Conditionals - Use Pattern Matching
 
-- **`if/else` chains** → `Match.value` + `Match.when`
-- **`switch/case` statements** → `Match.type` + `Match.tag` or `Match.when`
-- **Ternary operators (`? :`)** → `Match.value` + `Match.when`
-- **Optional chaining conditionals** → `Option.match`
+- **Simple `if/else`** → Allowed (no nesting, no `else if`)
+- **`else if` chains** → `Match.value` + `Match.when` (FORBIDDEN as `else if`)
+- **Nested `if` statements** → Flatten with early return, or `Match.value` + `Match.when`
+- **`switch/case` statements** → Prefer `Match.type` + `Match.tag`, but `switch` is acceptable
+- **Ternary operators (`? :`)** → `Match.value` + `Match.when` or simple `if/else`
+- **Single optional value** → `Option.match`
+- **Chained optional operations** → `Option.flatMap` + `Option.getOrElse`
 - **Result/error conditionals** → `Either.match` or `Effect.match`
 
 ```typescript
-// ❌ FORBIDDEN: if/else
+// ✅ ALLOWED: Simple if/else (not nested, no else if)
+if (user.isAdmin) {
+  return grantFullAccess()
+}
+return grantLimitedAccess()
+
+// ✅ ALLOWED: Simple if with else
+if (isValid) {
+  process(data)
+} else {
+  handleError()
+}
+
+// ❌ FORBIDDEN: else if (use Match instead)
 if (user.role === "admin") {
   return "full access"
 } else if (user.role === "user") {
@@ -62,11 +80,11 @@ if (user.role === "admin") {
   return "no access"
 }
 
-// ❌ FORBIDDEN: switch/case
-switch (status) {
-  case "pending": return "waiting"
-  case "active": return "running"
-  default: return "unknown"
+// ❌ FORBIDDEN: Nested if
+if (user.isActive) {
+  if (user.isAdmin) {
+    return "active admin"
+  }
 }
 
 // ❌ FORBIDDEN: ternary
@@ -89,7 +107,7 @@ const hasConflict = conflicts.some(Schema.is(MergeConflict))
 const mergeConflicts = conflicts.filter(Schema.is(MergeConflict))
 const countMerge = conflicts.filter(Schema.is(MergeConflict)).length
 
-// ✅ REQUIRED: Match.value
+// ✅ REQUIRED: Match.value for else-if replacement
 const getAccess = (user: User) =>
   Match.value(user.role).pipe(
     Match.when("admin", () => "full access"),
@@ -97,14 +115,21 @@ const getAccess = (user: User) =>
     Match.orElse(() => "no access")
   )
 
-// ✅ REQUIRED: Match.type
+// ✅ REQUIRED: Match.type for multi-case
 const getStatusMessage = Match.type<Status>().pipe(
   Match.when("pending", () => "waiting"),
   Match.when("active", () => "running"),
   Match.exhaustive
 )
 
-// ✅ REQUIRED: Option.match for nullable/optional
+// ✅ ALLOWED: switch as last resort (prefer Match)
+switch (status) {
+  case "pending": return "waiting"
+  case "active": return "running"
+  default: return "unknown"
+}
+
+// ✅ REQUIRED: Option.match for single optional
 const displayName = Option.match(maybeUser, {
   onNone: () => "Guest",
   onSome: (user) => user.name
@@ -132,7 +157,7 @@ if (Schema.is(UserCreated)(event)) {
 // Always use Schema.TaggedError for domain errors.
 ```
 
-**When you encounter imperative conditionals in existing code, refactor them immediately.**
+**When you encounter `else if` chains, nested `if` statements, or ternary operators in existing code, refactor them immediately.** Simple `if/else` is acceptable.
 
 #### Loops - Use Effect's Array Module and Recursion
 
@@ -1064,7 +1089,7 @@ const program = getUser(id).pipe(
 
 ### Do
 
-- **ELIMINATE all imperative logic** - no if/else, switch/case, ternaries, for/while loops
+- **ELIMINATE complex imperative logic** - no `else if`, nested `if`, ternaries, for/while loops (simple `if/else` is OK)
 - **Use Effect's data modules** - `Array`, `Record`, `Struct`, `Tuple` for data manipulation
 - **Use Effect's Predicate module** - `Predicate.and`, `Predicate.or`, `Predicate.struct` for composing predicates
 - **Use Effect's Function module** - `pipe`, `flow`, `identity`, `constant`, `compose`
@@ -1072,7 +1097,7 @@ const program = getUser(id).pipe(
 - **Use Schema.Class/TaggedClass** - not Schema.Struct for domain entities
 - **Use tagged unions over optional properties** - make states explicit
 - **Use Schema.is() in Match.when patterns** - combine validation with matching
-- **Use Match for ALL conditional logic** - replace if/else, switch, ternaries
+- **Use Match for complex conditional logic** - replace `else if` chains, nested `if`, ternaries (simple `if/else` is OK)
 - **Wrap ALL external dependencies in Services** - API calls, databases, file I/O, third-party SDKs, email, caches, queues MUST go through `Context.Tag` services
 - **Create Test Layers for every Service** - `*Live` for production, `*Test` for testing. This is required for 100% test coverage.
 - **Use `@effect/vitest` for ALL tests** - `it.effect`, `it.scoped`, `it.live`, `it.layer`, `it.prop` (see [Testing Skill](../testing/SKILL.md))
@@ -1088,9 +1113,10 @@ const program = getUser(id).pipe(
 
 - **NEVER call external APIs/databases/file systems directly in business logic** - always go through a `Context.Tag` service. Direct external calls make code untestable.
 - **NEVER skip writing test Layers** - every service MUST have a test layer. Without test layers, coverage is incomplete.
-- **NEVER use if/else** - always use Match.value + Match.when
-- **NEVER use switch/case** - always use Match.type + Match.tag
-- **NEVER use ternary operators** - always use Match.value + Match.when
+- **NEVER use `else if`** - use Match.value + Match.when
+- **NEVER nest `if` statements** - flatten with early return, or use Match
+- **NEVER use ternary operators** - use Match.value + Match.when, or simple if/else
+- **Prefer Match over `switch/case`** - but switch is acceptable as last resort
 - **NEVER use `if (x != null)`** - always use Option.match
 - **NEVER use for/while/do...while loops** - use Effect's `Array.map`/`Array.filter`/`Array.reduce` or `Effect.forEach`
 - **NEVER use for...of/for...in loops** - use Effect's `Array` module or `Effect` combinators

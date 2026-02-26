@@ -8,7 +8,7 @@ version: 1.0.0
 
 ## Overview
 
-**Pattern matching replaces ALL imperative control flow in Effect code.** There should be ZERO `if/else` statements, `switch/case` blocks, or ternary operators in idiomatic Effect code.
+**Pattern matching replaces complex control flow in Effect code.** Simple `if/else` (no nesting, no `else if`) is allowed, but `else if` chains, nested conditionals, and ternary operators must use pattern matching.
 
 Effect's `Match` module provides:
 
@@ -21,10 +21,12 @@ Effect's `Match` module provides:
 
 | Imperative Pattern | Effect Replacement |
 |-------------------|-------------------|
-| `if/else` chains | `Match.value` + `Match.when` |
-| `switch/case` statements | `Match.type` + `Match.tag` |
-| Ternary operators (`? :`) | `Match.value` + `Match.when` |
-| Null checks | `Option.match` |
+| Simple `if/else` (no nesting) | Allowed as-is |
+| `else if` chains | `Match.value` + `Match.when` |
+| Nested `if` statements | `Match.value` + `Match.when` |
+| `switch/case` statements | Prefer `Match.type` + `Match.tag` (switch acceptable) |
+| Ternary operators (`? :`) | `Match.value` + `Match.when` or simple `if/else` |
+| Single null check | `Option.match` |
 | Error checks | `Either.match` or `Effect.match` |
 | Type guards | `Match.when` with `Schema.is()` |
 
@@ -449,13 +451,14 @@ const getArticleStatus = (article: Article) =>
 
 ### CRITICAL: No Imperative Code
 
-1. **NEVER use if/else** - Replace with Match.value + Match.when
-2. **NEVER use switch/case** - Replace with Match.type + Match.tag
-3. **NEVER use ternary operators** - Replace with Match.value + Match.when
-4. **NEVER use `if (x != null)`** - Replace with Option.match
-5. **NEVER check error flags** - Replace with Either.match or Effect.match
-6. **NEVER access `._tag` directly** - Replace with Match.tag or Schema.is()
-7. **Refactor imperative code immediately** - This is mandatory, not optional
+1. **NEVER use `else if`** - Replace with Match.value + Match.when
+2. **NEVER nest `if` statements** - Flatten or replace with Match
+3. **Prefer Match over `switch/case`** - But switch is acceptable as last resort
+4. **NEVER use ternary operators** - Replace with Match or simple if/else
+5. **NEVER use `if (x != null)`** - Replace with Option.match
+6. **NEVER check error flags** - Replace with Either.match or Effect.match
+7. **NEVER access `._tag` directly** - Replace with Match.tag or Schema.is()
+8. **Refactor imperative code immediately** - This is mandatory, not optional
 
 ### General Best Practices
 
