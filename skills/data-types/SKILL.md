@@ -67,6 +67,57 @@ const program = Effect.gen(function* () {
 })
 ```
 
+### Option Chaining - flatMap over Nested match
+
+**NEVER nest `Option.match` calls.** When chaining multiple optional operations that share the same fallback, use `Option.flatMap` with a single `Option.getOrElse`:
+
+```typescript
+// ❌ FORBIDDEN: Nested Option.match (pyramid of doom)
+// Every onNone returns the same default — this is the signal to use flatMap
+const result = pipe(
+  users,
+  Array.findFirst((u) => u.role === "admin"),
+  Option.match({
+    onNone: () => defaultName,
+    onSome: (admin) =>
+      Option.match(admin.department, {
+        onNone: () => defaultName,
+        onSome: (dept) =>
+          pipe(
+            departments,
+            Array.findFirst((d) => d.id === dept),
+            Option.match({
+              onNone: () => defaultName,
+              onSome: (d) => d.name,
+            }),
+          ),
+      }),
+  }),
+)
+
+// ✅ REQUIRED: Option.flatMap chain with single getOrElse
+const result = pipe(
+  users,
+  Array.findFirst((u) => u.role === "admin"),
+  Option.flatMap((admin) => admin.department),
+  Option.flatMap((dept) =>
+    pipe(departments, Array.findFirst((d) => d.id === dept))
+  ),
+  Option.map((d) => d.name),
+  Option.getOrElse(() => defaultName),
+)
+```
+
+**When to use which:**
+
+| Pattern | Use When |
+|---------|----------|
+| `Option.match` | Converting Option to a **different type** (single use) |
+| `Option.flatMap` chain | Chaining **multiple optional operations** with same fallback |
+| `Option.map` | Transforming the **inner value** without changing Option wrapper |
+| `Option.getOrElse` | Extracting the value with a **default** at the end of a chain |
+| `Option.filter` | Adding a **condition** that may turn Some into None |
+
 ## Either
 
 Represents a value that is either Left (failure) or Right (success):
