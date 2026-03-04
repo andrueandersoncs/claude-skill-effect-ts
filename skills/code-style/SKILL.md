@@ -1,5 +1,5 @@
 ---
-name: Code Style
+name: code-style
 description: This skill should be used EVERY TIME you're writing TypeScript with Effect, especially when the user asks about "Effect best practices", "Effect code style", "idiomatic Effect", "functional programming", "no loops", "no for loops", "avoid imperative", "Effect Array", "Effect Record", "Effect Struct", "Effect Tuple", "Effect Predicate", "Schema-first", "Match-first", "when to use Schema", "when to use Match", "branded types", "dual APIs", "Effect guidelines", "do notation", "Effect.gen", "pipe vs method chaining", "Effect naming conventions", "Effect project structure", "data modeling in Effect", or needs to understand idiomatic Effect-TS patterns and conventions.
 version: 1.1.0
 ---
@@ -197,175 +197,179 @@ if (Schema.is(UserCreated)(event)) {
 - Consistent dual API (data-first and data-last)
 
 ```typescript
-import { Array, pipe } from "effect"
+import { Array, pipe } from "effect";
 
 // ❌ FORBIDDEN: for loop
-const doubled = []
+const doubled = [];
 for (let i = 0; i < numbers.length; i++) {
-  doubled.push(numbers[i] * 2)
+  doubled.push(numbers[i] * 2);
 }
 
 // ❌ FORBIDDEN: for...of loop
-const results = []
+const results = [];
 for (const item of items) {
-  results.push(process(item))
+  results.push(process(item));
 }
 
 // ❌ FORBIDDEN: while loop
-let sum = 0
-let i = 0
+let sum = 0;
+let i = 0;
 while (i < numbers.length) {
-  sum += numbers[i]
-  i++
+  sum += numbers[i];
+  i++;
 }
 
 // ❌ FORBIDDEN: forEach with mutation
-const output = []
-items.forEach(item => output.push(transform(item)))
+const output = [];
+items.forEach((item) => output.push(transform(item)));
 
 // ✅ REQUIRED: Array.map for transformation
-const doubled = Array.map(numbers, (n) => n * 2)
+const doubled = Array.map(numbers, (n) => n * 2);
 // or with pipe
-const doubled = pipe(numbers, Array.map((n) => n * 2))
+const doubled = pipe(
+  numbers,
+  Array.map((n) => n * 2),
+);
 
 // ✅ REQUIRED: Array.filter for selection
-const adults = Array.filter(users, (u) => u.age >= 18)
+const adults = Array.filter(users, (u) => u.age >= 18);
 
 // ✅ REQUIRED: Array.reduce for accumulation
-const sum = Array.reduce(numbers, 0, (acc, n) => acc + n)
+const sum = Array.reduce(numbers, 0, (acc, n) => acc + n);
 
 // ✅ REQUIRED: Array.flatMap for one-to-many
-const allTags = Array.flatMap(posts, (post) => post.tags)
+const allTags = Array.flatMap(posts, (post) => post.tags);
 
 // ✅ REQUIRED: Array.findFirst for search (returns Option)
-const admin = Array.findFirst(users, (u) => u.role === "admin")
+const admin = Array.findFirst(users, (u) => u.role === "admin");
 
 // ✅ REQUIRED: Array.some/every for predicates
-const hasAdmin = Array.some(users, (u) => u.role === "admin")
-const allVerified = Array.every(users, (u) => u.verified)
+const hasAdmin = Array.some(users, (u) => u.role === "admin");
+const allVerified = Array.every(users, (u) => u.verified);
 
 // ✅ REQUIRED: Array.filterMap for filter + transform in one pass
-const validEmails = Array.filterMap(users, (u) =>
-  isValidEmail(u.email) ? Option.some(u.email) : Option.none()
-)
+const validEmails = Array.filterMap(users, (u) => (isValidEmail(u.email) ? Option.some(u.email) : Option.none()));
 
 // ✅ REQUIRED: Array.partition to split by predicate
-const [minors, adults] = Array.partition(users, (u) => u.age >= 18)
+const [minors, adults] = Array.partition(users, (u) => u.age >= 18);
 
 // ✅ REQUIRED: Array.groupBy for grouping
-const usersByRole = Array.groupBy(users, (u) => u.role)
+const usersByRole = Array.groupBy(users, (u) => u.role);
 
 // ✅ REQUIRED: Array.dedupe for removing duplicates
-const uniqueIds = Array.dedupe(ids)
+const uniqueIds = Array.dedupe(ids);
 
 // ✅ REQUIRED: Array.match for empty vs non-empty handling
 const message = Array.match(items, {
   onEmpty: () => "No items",
-  onNonEmpty: (items) => `${items.length} items`
-})
+  onNonEmpty: (items) => `${items.length} items`,
+});
 ```
 
 **Record operations - use Effect's Record module:**
 
 ```typescript
-import { Record, pipe } from "effect"
+import { Record, pipe } from "effect";
 
 // ✅ REQUIRED: Record.map for transforming values
-const doubled = Record.map(prices, (price) => price * 2)
+const doubled = Record.map(prices, (price) => price * 2);
 
 // ✅ REQUIRED: Record.filter for filtering entries
-const expensive = Record.filter(prices, (price) => price > 100)
+const expensive = Record.filter(prices, (price) => price > 100);
 
 // ✅ REQUIRED: Record.get for safe access (returns Option)
-const price = Record.get(prices, "item1")
+const price = Record.get(prices, "item1");
 
 // ✅ REQUIRED: Record.keys and Record.values
-const allKeys = Record.keys(config)
-const allValues = Record.values(config)
+const allKeys = Record.keys(config);
+const allValues = Record.values(config);
 
 // ✅ REQUIRED: Record.fromEntries and Record.toEntries
-const record = Record.fromEntries([["a", 1], ["b", 2]])
-const entries = Record.toEntries(record)
+const record = Record.fromEntries([
+  ["a", 1],
+  ["b", 2],
+]);
+const entries = Record.toEntries(record);
 
 // ✅ REQUIRED: Record.filterMap for filter + transform
 const validPrices = Record.filterMap(rawPrices, (value) =>
-  typeof value === "number" ? Option.some(value) : Option.none()
-)
+  typeof value === "number" ? Option.some(value) : Option.none(),
+);
 ```
 
 **Struct operations - use Effect's Struct module:**
 
 ```typescript
-import { Struct, pipe } from "effect"
+import { Struct, pipe } from "effect";
 
 // ✅ REQUIRED: Struct.pick for selecting properties
-const namePart = Struct.pick(user, "firstName", "lastName")
+const namePart = Struct.pick(user, "firstName", "lastName");
 
 // ✅ REQUIRED: Struct.omit for excluding properties
-const publicUser = Struct.omit(user, "password", "ssn")
+const publicUser = Struct.omit(user, "password", "ssn");
 
 // ✅ REQUIRED: Struct.evolve for transforming specific fields
 const updated = Struct.evolve(user, {
   age: (age) => age + 1,
-  name: (name) => name.toUpperCase()
-})
+  name: (name) => name.toUpperCase(),
+});
 
 // ✅ REQUIRED: Struct.get for property access
-const getName = Struct.get("name")
-const name = getName(user)
+const getName = Struct.get("name");
+const name = getName(user);
 ```
 
 **Tuple operations - use Effect's Tuple module:**
 
 ```typescript
-import { Tuple } from "effect"
+import { Tuple } from "effect";
 
 // ✅ REQUIRED: Tuple.make for creating tuples
-const pair = Tuple.make("key", 42)
+const pair = Tuple.make("key", 42);
 
 // ✅ REQUIRED: Tuple.getFirst/getSecond for access
-const key = Tuple.getFirst(pair)
-const value = Tuple.getSecond(pair)
+const key = Tuple.getFirst(pair);
+const value = Tuple.getSecond(pair);
 
 // ✅ REQUIRED: Tuple.mapFirst/mapSecond/mapBoth for transformation
-const upperKey = Tuple.mapFirst(pair, (s) => s.toUpperCase())
-const doubled = Tuple.mapSecond(pair, (n) => n * 2)
+const upperKey = Tuple.mapFirst(pair, (s) => s.toUpperCase());
+const doubled = Tuple.mapSecond(pair, (n) => n * 2);
 const both = Tuple.mapBoth(pair, {
   onFirst: (s) => s.toUpperCase(),
-  onSecond: (n) => n * 2
-})
+  onSecond: (n) => n * 2,
+});
 
 // ✅ REQUIRED: Tuple.at for indexed access
-const first = Tuple.at(tuple, 0)
+const first = Tuple.at(tuple, 0);
 ```
 
 **Predicate operations - use Effect's Predicate module:**
 
 ```typescript
-import { Predicate } from "effect"
+import { Predicate } from "effect";
 
 // ✅ REQUIRED: Predicate.and/or/not for combining predicates
-const isPositive = (n: number) => n > 0
-const isEven = (n: number) => n % 2 === 0
-const isPositiveAndEven = Predicate.and(isPositive, isEven)
-const isPositiveOrEven = Predicate.or(isPositive, isEven)
-const isNegative = Predicate.not(isPositive)
+const isPositive = (n: number) => n > 0;
+const isEven = (n: number) => n % 2 === 0;
+const isPositiveAndEven = Predicate.and(isPositive, isEven);
+const isPositiveOrEven = Predicate.or(isPositive, isEven);
+const isNegative = Predicate.not(isPositive);
 
 // ✅ REQUIRED: Predicate.struct for validating object shapes
 const isValidUser = Predicate.struct({
   name: Predicate.isString,
-  age: Predicate.isNumber
-})
+  age: Predicate.isNumber,
+});
 
 // ✅ REQUIRED: Predicate.tuple for validating tuple shapes
-const isStringNumberPair = Predicate.tuple(Predicate.isString, Predicate.isNumber)
+const isStringNumberPair = Predicate.tuple(Predicate.isString, Predicate.isNumber);
 
 // ✅ REQUIRED: Built-in type guards
-Predicate.isString(value)
-Predicate.isNumber(value)
-Predicate.isNullable(value)
-Predicate.isNotNullable(value)
-Predicate.isRecord(value)
+Predicate.isString(value);
+Predicate.isNumber(value);
+Predicate.isNullable(value);
+Predicate.isNotNullable(value);
+Predicate.isRecord(value);
 ```
 
 **Effect loops - use Effect combinators:**
@@ -373,33 +377,28 @@ Predicate.isRecord(value)
 ```typescript
 // ❌ FORBIDDEN: for...of with yield*
 const processAll = Effect.gen(function* () {
-  const results = []
+  const results = [];
   for (const item of items) {
-    const result = yield* processItem(item)
-    results.push(result)
+    const result = yield* processItem(item);
+    results.push(result);
   }
-  return results
-})
+  return results;
+});
 
 // ✅ REQUIRED: Effect.forEach for sequential
-const processAll = Effect.forEach(items, processItem)
+const processAll = Effect.forEach(items, processItem);
 
 // ✅ REQUIRED: Effect.all for parallel (when items are Effects)
-const results = Effect.all(effects)
+const results = Effect.all(effects);
 
 // ✅ REQUIRED: Effect.all with concurrency
-const results = Effect.all(effects, { concurrency: 10 })
+const results = Effect.all(effects, { concurrency: 10 });
 
 // ✅ REQUIRED: Effect.reduce for accumulation
-const total = Effect.reduce(items, 0, (acc, item) =>
-  getPrice(item).pipe(Effect.map((price) => acc + price))
-)
+const total = Effect.reduce(items, 0, (acc, item) => getPrice(item).pipe(Effect.map((price) => acc + price)));
 
 // ✅ REQUIRED: Stream for large/infinite sequences
-const processed = Stream.fromIterable(items).pipe(
-  Stream.mapEffect(processItem),
-  Stream.runCollect
-)
+const processed = Stream.fromIterable(items).pipe(Stream.mapEffect(processItem), Stream.runCollect);
 ```
 
 **Recursion for complex iteration:**
@@ -407,77 +406,65 @@ const processed = Stream.fromIterable(items).pipe(
 ```typescript
 // ❌ FORBIDDEN: while loop for tree traversal
 const collectLeaves = (node) => {
-  const leaves = []
-  const stack = [node]
+  const leaves = [];
+  const stack = [node];
   while (stack.length > 0) {
-    const current = stack.pop()
+    const current = stack.pop();
     if (current.children.length === 0) {
-      leaves.push(current)
+      leaves.push(current);
     } else {
-      stack.push(...current.children)
+      stack.push(...current.children);
     }
   }
-  return leaves
-}
+  return leaves;
+};
 
 // ✅ REQUIRED: Recursion for tree traversal
 const collectLeaves = (node: TreeNode): ReadonlyArray<TreeNode> =>
   Array.match(node.children, {
     onEmpty: () => [node],
-    onNonEmpty: (children) => Array.flatMap(children, collectLeaves)
-  })
+    onNonEmpty: (children) => Array.flatMap(children, collectLeaves),
+  });
 
 // ✅ REQUIRED: Recursion with Effect
 const processTree = (node: TreeNode): Effect.Effect<Result> =>
   node.children.length === 0
     ? processLeaf(node)
-    : Effect.forEach(node.children, processTree).pipe(
-        Effect.flatMap(combineResults)
-      )
+    : Effect.forEach(node.children, processTree).pipe(Effect.flatMap(combineResults));
 ```
 
 **First-class functions - use Effect's Function module:**
 
 ```typescript
-import { Array, Function, pipe, flow } from "effect"
+import { Array, Function, pipe, flow } from "effect";
 
 // ❌ BAD: Inline logic repeated
-const processUsers = (users: Array<User>) =>
-  users.filter((u) => u.active).map((u) => u.email)
-const processOrders = (orders: Array<Order>) =>
-  orders.filter((o) => o.active).map((o) => o.total)
+const processUsers = (users: Array<User>) => users.filter((u) => u.active).map((u) => u.email);
+const processOrders = (orders: Array<Order>) => orders.filter((o) => o.active).map((o) => o.total);
 
 // ✅ GOOD: Extract reusable predicates and transformers
-const isActive = <T extends { active: boolean }>(item: T) => item.active
-const getEmail = (user: User) => user.email
-const getTotal = (order: Order) => order.total
+const isActive = <T extends { active: boolean }>(item: T) => item.active;
+const getEmail = (user: User) => user.email;
+const getTotal = (order: Order) => order.total;
 
 // ✅ GOOD: Use pipe for data transformation pipelines
-const processUsers = (users: Array<User>) =>
-  pipe(users, Array.filter(isActive), Array.map(getEmail))
+const processUsers = (users: Array<User>) => pipe(users, Array.filter(isActive), Array.map(getEmail));
 
-const processOrders = (orders: Array<Order>) =>
-  pipe(orders, Array.filter(isActive), Array.map(getTotal))
+const processOrders = (orders: Array<Order>) => pipe(orders, Array.filter(isActive), Array.map(getTotal));
 
 // ✅ GOOD: Use flow to compose reusable pipelines
-const getActiveEmails = flow(
-  Array.filter(isActive<User>),
-  Array.map(getEmail)
-)
+const getActiveEmails = flow(Array.filter(isActive<User>), Array.map(getEmail));
 
-const getActiveTotals = flow(
-  Array.filter(isActive<Order>),
-  Array.map(getTotal)
-)
+const getActiveTotals = flow(Array.filter(isActive<Order>), Array.map(getTotal));
 
 // ✅ GOOD: Use Function.compose for simple composition
-const parseAndValidate = Function.compose(parse, validate)
+const parseAndValidate = Function.compose(parse, validate);
 
 // ✅ GOOD: Use Function.identity for pass-through
-const transform = shouldTransform ? myTransform : Function.identity
+const transform = shouldTransform ? myTransform : Function.identity;
 
 // ✅ GOOD: Use Function.constant for fixed values
-const getDefaultUser = Function.constant(defaultUser)
+const getDefaultUser = Function.constant(defaultUser);
 ```
 
 **When you encounter imperative loops in existing code, refactor them immediately.** This is not optional - imperative logic is a code smell that must be eliminated.
@@ -587,7 +574,7 @@ const toHttpStatus = Match.type<AppError>().pipe(
 const displayUser = (maybeUser: Option<User>) =>
   Option.match(maybeUser, {
     onNone: () => "Guest user",
-    onSome: (user) => `Welcome, ${user.name}`
+    onSome: (user) => `Welcome, ${user.name}`,
   });
 
 // Multi-condition logic - use Match.when
@@ -625,6 +612,7 @@ const calculateDiscount = (order: Order) =>
 #### Why Schema Constraints Over Fast-Check Filters
 
 Fast-check filters (`.filter()`) discard generated values that don't match the predicate. This is:
+
 - **Inefficient** — Generates and throws away invalid values
 - **Fragile** — Can fail to find valid values if filter is too restrictive
 - **Duplicative** — Your Schema already defines the constraints
@@ -632,33 +620,33 @@ Fast-check filters (`.filter()`) discard generated values that don't match the p
 The correct approach: **define constraints in your Schema**, then `Arbitrary.make()` generates valid values directly.
 
 ```typescript
-import { Schema, Arbitrary } from "effect"
-import * as fc from "fast-check"
+import { Schema, Arbitrary } from "effect";
+import * as fc from "fast-check";
 
 // ❌ FORBIDDEN: Using fast-check filter
-const badArbitrary = fc.integer().filter((n) => n >= 18 && n <= 100)
+const badArbitrary = fc.integer().filter((n) => n >= 18 && n <= 100);
 // Problem: Generates integers, throws away 99% of them
 
 // ❌ FORBIDDEN: Filter on Schema Arbitrary
-const UserArbitrary = Arbitrary.make(User)
-const badFiltered = UserArbitrary(fc).filter((u) => u.age >= 18)
+const UserArbitrary = Arbitrary.make(User);
+const badFiltered = UserArbitrary(fc).filter((u) => u.age >= 18);
 // Problem: Duplicates constraint logic, wasteful generation
 
 // ✅ REQUIRED: Constraints in Schema definition
 const Age = Schema.Number.pipe(
   Schema.int(),
-  Schema.between(18, 100)  // Constraint built into Schema
-)
+  Schema.between(18, 100), // Constraint built into Schema
+);
 
 class User extends Schema.Class<User>("User")({
   id: Schema.String.pipe(Schema.minLength(1)),
   name: Schema.String.pipe(Schema.nonEmptyString()),
-  age: Age  // Uses constrained Age schema
+  age: Age, // Uses constrained Age schema
 }) {}
 
 // ✅ REQUIRED: Arbitrary generates ONLY valid values
-const UserArbitrary = Arbitrary.make(User)
-fc.sample(UserArbitrary(fc), 5)
+const UserArbitrary = Arbitrary.make(User);
+fc.sample(UserArbitrary(fc), 5);
 // All 5 users have age between 18-100, guaranteed
 ```
 
@@ -667,34 +655,34 @@ fc.sample(UserArbitrary(fc), 5)
 Use these Schema combinators to constrain generation (never filter):
 
 ```typescript
-import { Schema } from "effect"
+import { Schema } from "effect";
 
 // Numeric constraints
-Schema.Number.pipe(Schema.int())                    // Integers only
-Schema.Number.pipe(Schema.positive())               // > 0
-Schema.Number.pipe(Schema.nonNegative())            // >= 0
-Schema.Number.pipe(Schema.between(1, 100))          // 1 <= n <= 100
-Schema.Number.pipe(Schema.greaterThan(0))           // > 0
-Schema.Number.pipe(Schema.lessThanOrEqualTo(100))   // <= 100
+Schema.Number.pipe(Schema.int()); // Integers only
+Schema.Number.pipe(Schema.positive()); // > 0
+Schema.Number.pipe(Schema.nonNegative()); // >= 0
+Schema.Number.pipe(Schema.between(1, 100)); // 1 <= n <= 100
+Schema.Number.pipe(Schema.greaterThan(0)); // > 0
+Schema.Number.pipe(Schema.lessThanOrEqualTo(100)); // <= 100
 
 // String constraints
-Schema.String.pipe(Schema.minLength(1))             // Non-empty
-Schema.String.pipe(Schema.maxLength(100))           // Max 100 chars
-Schema.String.pipe(Schema.length(10))               // Exactly 10 chars
-Schema.String.pipe(Schema.nonEmptyString())         // Non-empty (alias)
-Schema.String.pipe(Schema.pattern(/^[A-Z]{3}$/))    // Matches regex
+Schema.String.pipe(Schema.minLength(1)); // Non-empty
+Schema.String.pipe(Schema.maxLength(100)); // Max 100 chars
+Schema.String.pipe(Schema.length(10)); // Exactly 10 chars
+Schema.String.pipe(Schema.nonEmptyString()); // Non-empty (alias)
+Schema.String.pipe(Schema.pattern(/^[A-Z]{3}$/)); // Matches regex
 
 // Array constraints
-Schema.Array(Item).pipe(Schema.minItems(1))         // Non-empty array
-Schema.Array(Item).pipe(Schema.maxItems(10))        // Max 10 items
-Schema.Array(Item).pipe(Schema.itemsCount(5))       // Exactly 5 items
-Schema.NonEmptyArray(Item)                          // Non-empty array
+Schema.Array(Item).pipe(Schema.minItems(1)); // Non-empty array
+Schema.Array(Item).pipe(Schema.maxItems(10)); // Max 10 items
+Schema.Array(Item).pipe(Schema.itemsCount(5)); // Exactly 5 items
+Schema.NonEmptyArray(Item); // Non-empty array
 
 // Built-in constrained types
-Schema.NonEmptyString                               // String with minLength(1)
-Schema.Positive                                     // Number > 0
-Schema.NonNegative                                  // Number >= 0
-Schema.Int                                          // Integer
+Schema.NonEmptyString; // String with minLength(1)
+Schema.Positive; // Number > 0
+Schema.NonNegative; // Number >= 0
+Schema.Int; // Integer
 ```
 
 #### Custom Arbitrary Annotations (When Needed)
@@ -702,23 +690,23 @@ Schema.Int                                          // Integer
 For complex constraints that Schema combinators can't express, use `arbitrary` annotation:
 
 ```typescript
-import { Schema, Arbitrary } from "effect"
-import * as fc from "fast-check"
+import { Schema, Arbitrary } from "effect";
+import * as fc from "fast-check";
 
 // Custom email generation (pattern too complex for generation)
 const Email = Schema.String.pipe(
   Schema.pattern(/^[^@]+@[^@]+\.[^@]+$/),
   Schema.annotations({
-    arbitrary: () => (fc) => fc.emailAddress()  // Use fast-check's generator
-  })
-)
+    arbitrary: () => (fc) => fc.emailAddress(), // Use fast-check's generator
+  }),
+);
 
 // Custom UUID generation
 const UserId = Schema.String.pipe(
   Schema.annotations({
-    arbitrary: () => (fc) => fc.uuid()
-  })
-)
+    arbitrary: () => (fc) => fc.uuid(),
+  }),
+);
 
 // Custom date range
 const BirthDate = Schema.Date.pipe(
@@ -726,10 +714,10 @@ const BirthDate = Schema.Date.pipe(
     arbitrary: () => (fc) =>
       fc.date({
         min: new Date("1900-01-01"),
-        max: new Date("2010-01-01")
-      })
-  })
-)
+        max: new Date("2010-01-01"),
+      }),
+  }),
+);
 ```
 
 #### Property Testing with it.prop
@@ -737,36 +725,29 @@ const BirthDate = Schema.Date.pipe(
 Use `it.prop` from `@effect/vitest` for property-based tests (see [Testing Skill](../testing/SKILL.md) for full details):
 
 ```typescript
-import { it, expect } from "@effect/vitest"
-import { Schema, Arbitrary } from "effect"
+import { it, expect } from "@effect/vitest";
+import { Schema, Arbitrary } from "effect";
 
 // Array form
 it.prop("validates all generated users", [Arbitrary.make(User)], ([user]) => {
-  expect(user.age).toBeGreaterThanOrEqual(18)
-  expect(user.name.length).toBeGreaterThan(0)
-})
+  expect(user.age).toBeGreaterThanOrEqual(18);
+  expect(user.name.length).toBeGreaterThan(0);
+});
 
 // Object form
-it.prop(
-  "round-trip preserves data",
-  { user: Arbitrary.make(User) },
-  ({ user }) => {
-    const encoded = Schema.encodeSync(User)(user)
-    const decoded = Schema.decodeUnknownSync(User)(encoded)
-    expect(decoded).toEqual(user)
-  }
-)
+it.prop("round-trip preserves data", { user: Arbitrary.make(User) }, ({ user }) => {
+  const encoded = Schema.encodeSync(User)(user);
+  const decoded = Schema.decodeUnknownSync(User)(encoded);
+  expect(decoded).toEqual(user);
+});
 
 // Effect-based property test
-it.effect.prop(
-  "processes all order states",
-  [Arbitrary.make(Order)],
-  ([order]) =>
-    Effect.gen(function* () {
-      const result = yield* processOrder(order)
-      expect(result).toBeDefined()
-    })
-)
+it.effect.prop("processes all order states", [Arbitrary.make(Order)], ([order]) =>
+  Effect.gen(function* () {
+    const result = yield* processOrder(order);
+    expect(result).toBeDefined();
+  }),
+);
 ```
 
 ### 4. Schema + Match Together
@@ -1174,13 +1155,13 @@ This skill covers high-level patterns and conventions. For detailed API usage an
 
 > **CRITICAL: Always consult the [Testing Skill](../testing/SKILL.md) when writing tests.** It covers the full service-oriented testing pattern, `@effect/vitest` APIs (`it.effect`, `it.prop`, `it.layer`), test layers, and achieving 100% test coverage.
 
-| Skill | Purpose | Key Topics |
-|-------|---------|------------|
-| [Testing](../testing/SKILL.md) | **Effect testing patterns** | **@effect/vitest, it.effect, it.prop, test layers, service mocking, Arbitrary** |
-| [Effect Core](../effect-core/SKILL.md) | Core Effect type and APIs | Creating Effects, Effect.gen, pipe, map, flatMap, running Effects |
-| [Error Management](../error-management/SKILL.md) | Typed error handling | catchTag, catchAll, mapError, orElse, error accumulation |
-| [Pattern Matching](../pattern-matching/SKILL.md) | Match module APIs | Match.value, Match.type, Match.tag, Match.when, exhaustive matching |
-| [Schema](../schema/SKILL.md) | Data modeling and validation | Schema.Class, Schema.Struct, parsing, transformations, filters |
+| Skill                                            | Purpose                      | Key Topics                                                                      |
+| ------------------------------------------------ | ---------------------------- | ------------------------------------------------------------------------------- |
+| [Testing](../testing/SKILL.md)                   | **Effect testing patterns**  | **@effect/vitest, it.effect, it.prop, test layers, service mocking, Arbitrary** |
+| [Effect Core](../effect-core/SKILL.md)           | Core Effect type and APIs    | Creating Effects, Effect.gen, pipe, map, flatMap, running Effects               |
+| [Error Management](../error-management/SKILL.md) | Typed error handling         | catchTag, catchAll, mapError, orElse, error accumulation                        |
+| [Pattern Matching](../pattern-matching/SKILL.md) | Match module APIs            | Match.value, Match.type, Match.tag, Match.when, exhaustive matching             |
+| [Schema](../schema/SKILL.md)                     | Data modeling and validation | Schema.Class, Schema.Struct, parsing, transformations, filters                  |
 
 These skills work together: this Code Style skill defines the **what** (patterns to follow), while the specialized skills define the **how** (API details).
 

@@ -1,5 +1,5 @@
 ---
-name: Batching and Caching
+name: batching-caching
 description: This skill should be used when the user asks about "Effect batching", "request batching", "Effect caching", "Cache", "Request", "RequestResolver", "Effect.cached", "Effect.cachedWithTTL", "automatic batching", "N+1 problem", "data loader pattern", "deduplication", or needs to understand how Effect optimizes API calls through batching and caching.
 version: 1.0.0
 ---
@@ -20,14 +20,10 @@ This solves the N+1 query problem automatically.
 
 ```typescript
 const program = Effect.gen(function* () {
-  const todos = yield* getTodos()
+  const todos = yield* getTodos();
 
-  const owners = yield* Effect.forEach(
-    todos,
-    (todo) => getUserById(todo.ownerId),
-    { concurrency: "unbounded" }
-  )
-})
+  const owners = yield* Effect.forEach(todos, (todo) => getUserById(todo.ownerId), { concurrency: "unbounded" });
+});
 ```
 
 Effect's batching transforms this into optimized batch calls.
@@ -37,65 +33,54 @@ Effect's batching transforms this into optimized batch calls.
 ### Step 1: Define Request Types
 
 ```typescript
-import { Request } from "effect"
+import { Request } from "effect";
 
 // Define request shape
 interface GetUserById extends Request.Request<User, UserNotFound> {
-  readonly _tag: "GetUserById"
-  readonly id: number
+  readonly _tag: "GetUserById";
+  readonly id: number;
 }
 
 // Create tagged constructor
-const GetUserById = Request.tagged<GetUserById>("GetUserById")
+const GetUserById = Request.tagged<GetUserById>("GetUserById");
 ```
 
 ### Step 2: Create Resolver
 
 ```typescript
-import { RequestResolver, Effect } from "effect"
+import { RequestResolver, Effect } from "effect";
 
 // Batched resolver - handles multiple requests at once
-const GetUserByIdResolver = RequestResolver.makeBatched(
-  (requests: ReadonlyArray<GetUserById>) =>
-    Effect.gen(function* () {
-      // Single batch API call
-      const users = yield* Effect.tryPromise(() =>
-        fetch("/api/users/batch", {
-          method: "POST",
-          body: JSON.stringify({ ids: requests.map((r) => r.id) })
-        }).then((res) => res.json())
-      )
+const GetUserByIdResolver = RequestResolver.makeBatched((requests: ReadonlyArray<GetUserById>) =>
+  Effect.gen(function* () {
+    // Single batch API call
+    const users = yield* Effect.tryPromise(() =>
+      fetch("/api/users/batch", {
+        method: "POST",
+        body: JSON.stringify({ ids: requests.map((r) => r.id) }),
+      }).then((res) => res.json()),
+    );
 
-      // Complete each request with its result
-      yield* Effect.forEach(requests, (request, index) =>
-        Request.completeEffect(
-          request,
-          Effect.succeed(users[index])
-        )
-      )
-    })
-)
+    // Complete each request with its result
+    yield* Effect.forEach(requests, (request, index) => Request.completeEffect(request, Effect.succeed(users[index])));
+  }),
+);
 ```
 
 ### Step 3: Define Query
 
 ```typescript
-const getUserById = (id: number) =>
-  Effect.request(GetUserById({ id }), GetUserByIdResolver)
+const getUserById = (id: number) => Effect.request(GetUserById({ id }), GetUserByIdResolver);
 ```
 
 ### Step 4: Use with Automatic Batching
 
 ```typescript
 const program = Effect.gen(function* () {
-  const todos = yield* getTodos()
+  const todos = yield* getTodos();
 
-  const owners = yield* Effect.forEach(
-    todos,
-    (todo) => getUserById(todo.ownerId),
-    { concurrency: "unbounded" }
-  )
-})
+  const owners = yield* Effect.forEach(todos, (todo) => getUserById(todo.ownerId), { concurrency: "unbounded" });
+});
 ```
 
 ## Resolver Types
@@ -103,46 +88,39 @@ const program = Effect.gen(function* () {
 ### Standard Resolver (No Batching)
 
 ```typescript
-const SingleUserResolver = RequestResolver.fromEffect(
-  (request: GetUserById) =>
-    Effect.tryPromise(() =>
-      fetch(`/api/users/${request.id}`).then((r) => r.json())
-    )
-)
+const SingleUserResolver = RequestResolver.fromEffect((request: GetUserById) =>
+  Effect.tryPromise(() => fetch(`/api/users/${request.id}`).then((r) => r.json())),
+);
 ```
 
 ### Batched Resolver
 
 ```typescript
-const BatchedUserResolver = RequestResolver.makeBatched(
-  (requests: ReadonlyArray<GetUserById>) =>
-    // Handle all requests in one call
-    batchFetch(requests)
-)
+const BatchedUserResolver = RequestResolver.makeBatched((requests: ReadonlyArray<GetUserById>) =>
+  // Handle all requests in one call
+  batchFetch(requests),
+);
 ```
 
 ### Resolver with Context
 
 ```typescript
-const UserResolverWithContext = RequestResolver.makeBatched(
-  (requests: ReadonlyArray<GetUserById>) =>
-    Effect.gen(function* () {
-      // Access services from context
-      const httpClient = yield* HttpClient
-      const logger = yield* Logger
+const UserResolverWithContext = RequestResolver.makeBatched((requests: ReadonlyArray<GetUserById>) =>
+  Effect.gen(function* () {
+    // Access services from context
+    const httpClient = yield* HttpClient;
+    const logger = yield* Logger;
 
-      yield* logger.info(`Batching ${requests.length} user requests`)
+    yield* logger.info(`Batching ${requests.length} user requests`);
 
-      return yield* httpClient.post("/api/users/batch", {
-        ids: requests.map((r) => r.id)
-      })
-    })
-)
+    return yield* httpClient.post("/api/users/batch", {
+      ids: requests.map((r) => r.id),
+    });
+  }),
+);
 
 // Provide context to resolver
-const ContextualResolver = UserResolverWithContext.pipe(
-  RequestResolver.provideContext(context)
-)
+const ContextualResolver = UserResolverWithContext.pipe(RequestResolver.provideContext(context));
 ```
 
 ## Caching
@@ -150,42 +128,34 @@ const ContextualResolver = UserResolverWithContext.pipe(
 ### Effect.cached - Memoize Effect Result
 
 ```typescript
-import { Effect } from "effect"
+import { Effect } from "effect";
 
-const fetchConfig = Effect.promise(() =>
-  fetch("/api/config").then((r) => r.json())
-)
+const fetchConfig = Effect.promise(() => fetch("/api/config").then((r) => r.json()));
 
-const cachedConfig = yield* Effect.cached(fetchConfig)
+const cachedConfig = yield * Effect.cached(fetchConfig);
 
-const config1 = yield* cachedConfig
-const config2 = yield* cachedConfig
+const config1 = yield * cachedConfig;
+const config2 = yield * cachedConfig;
 ```
 
 ### Effect.cachedWithTTL - Time-Based Expiry
 
 ```typescript
-const cachedUser = yield* Effect.cachedWithTTL(
-  fetchCurrentUser,
-  "5 minutes"
-)
+const cachedUser = yield * Effect.cachedWithTTL(fetchCurrentUser, "5 minutes");
 
-const user1 = yield* cachedUser
-yield* Effect.sleep("6 minutes")
-const user2 = yield* cachedUser
+const user1 = yield * cachedUser;
+yield * Effect.sleep("6 minutes");
+const user2 = yield * cachedUser;
 ```
 
 ### Effect.cachedInvalidateWithTTL - Manual Invalidation
 
 ```typescript
-const [cachedUser, invalidate] = yield* Effect.cachedInvalidateWithTTL(
-  fetchCurrentUser,
-  "5 minutes"
-)
+const [cachedUser, invalidate] = yield * Effect.cachedInvalidateWithTTL(fetchCurrentUser, "5 minutes");
 
-const user = yield* cachedUser
-yield* invalidate
-const freshUser = yield* cachedUser
+const user = yield * cachedUser;
+yield * invalidate;
+const freshUser = yield * cachedUser;
 ```
 
 ## Cache Service
@@ -193,24 +163,24 @@ const freshUser = yield* cachedUser
 For more control, use the Cache service:
 
 ```typescript
-import { Cache } from "effect"
+import { Cache } from "effect";
 
 const program = Effect.gen(function* () {
   const cache = yield* Cache.make({
     capacity: 100,
     timeToLive: "10 minutes",
-    lookup: (userId: string) => fetchUser(userId)
-  })
+    lookup: (userId: string) => fetchUser(userId),
+  });
 
-  const user1 = yield* cache.get("user-1")
-  const user2 = yield* cache.get("user-1")
+  const user1 = yield* cache.get("user-1");
+  const user2 = yield* cache.get("user-1");
 
-  const isCached = yield* cache.contains("user-1")
+  const isCached = yield* cache.contains("user-1");
 
-  yield* cache.invalidate("user-1")
+  yield* cache.invalidate("user-1");
 
-  const stats = yield* cache.cacheStats
-})
+  const stats = yield* cache.cacheStats;
+});
 ```
 
 ## Request Caching
@@ -219,104 +189,88 @@ Requests are automatically cached within a query context:
 
 ```typescript
 const program = Effect.gen(function* () {
-  const user1 = yield* getUserById(1)
-  const user2 = yield* getUserById(1)
+  const user1 = yield* getUserById(1);
+  const user2 = yield* getUserById(1);
 
-  const user3 = yield* getUserById(2)
-})
+  const user3 = yield* getUserById(2);
+});
 ```
 
 ### Disabling Request Caching
 
 ```typescript
-const noCaching = getUserById(1).pipe(
-  Effect.withRequestCaching(false)
-)
+const noCaching = getUserById(1).pipe(Effect.withRequestCaching(false));
 ```
 
 ### Custom Cache for Requests
 
 ```typescript
-const customCache = yield* Request.makeCache({
-  capacity: 1000,
-  timeToLive: "30 minutes"
-})
+const customCache =
+  yield *
+  Request.makeCache({
+    capacity: 1000,
+    timeToLive: "30 minutes",
+  });
 
-const program = getUserById(1).pipe(
-  Effect.withRequestCache(customCache)
-)
+const program = getUserById(1).pipe(Effect.withRequestCache(customCache));
 ```
 
 ## Disabling Batching
 
 ```typescript
-const noBatching = program.pipe(
-  Effect.withRequestBatching(false)
-)
+const noBatching = program.pipe(Effect.withRequestBatching(false));
 ```
 
 ## Complete Example
 
 ```typescript
-import { Effect, Request, RequestResolver, Schema } from "effect"
+import { Effect, Request, RequestResolver, Schema } from "effect";
 
 // Error types
-class UserNotFound extends Schema.TaggedError<UserNotFound>()(
-  "UserNotFound",
-  { id: Schema.Number }
-) {}
+class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", { id: Schema.Number }) {}
 
 // Request type
 interface GetUserById extends Request.Request<User, UserNotFound> {
-  readonly _tag: "GetUserById"
-  readonly id: number
+  readonly _tag: "GetUserById";
+  readonly id: number;
 }
-const GetUserById = Request.tagged<GetUserById>("GetUserById")
+const GetUserById = Request.tagged<GetUserById>("GetUserById");
 
 // Batched resolver
-const UserResolver = RequestResolver.makeBatched(
-  (requests: ReadonlyArray<GetUserById>) =>
-    Effect.gen(function* () {
-      const ids = requests.map((r) => r.id)
+const UserResolver = RequestResolver.makeBatched((requests: ReadonlyArray<GetUserById>) =>
+  Effect.gen(function* () {
+    const ids = requests.map((r) => r.id);
 
-      const response = yield* Effect.tryPromise({
-        try: () =>
-          fetch("/api/users/batch", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ids })
-          }).then((r) => r.json() as Promise<User[]>),
-        catch: () => new Error("Batch fetch failed")
-      })
+    const response = yield* Effect.tryPromise({
+      try: () =>
+        fetch("/api/users/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids }),
+        }).then((r) => r.json() as Promise<User[]>),
+      catch: () => new Error("Batch fetch failed"),
+    });
 
-      yield* Effect.forEach(requests, (request, index) => {
-        const user = response[index]
-        return user
-          ? Request.completeEffect(request, Effect.succeed(user))
-          : Request.completeEffect(
-              request,
-              Effect.fail(new UserNotFound({ id: request.id }))
-            )
-      })
-    })
-)
+    yield* Effect.forEach(requests, (request, index) => {
+      const user = response[index];
+      return user
+        ? Request.completeEffect(request, Effect.succeed(user))
+        : Request.completeEffect(request, Effect.fail(new UserNotFound({ id: request.id })));
+    });
+  }),
+);
 
 // Query function
-const getUserById = (id: number) =>
-  Effect.request(GetUserById({ id }), UserResolver)
+const getUserById = (id: number) => Effect.request(GetUserById({ id }), UserResolver);
 
 // Usage - automatically batched
 const program = Effect.gen(function* () {
-  const todos = yield* getTodos()
+  const todos = yield* getTodos();
 
-  const owners = yield* Effect.forEach(
-    todos,
-    (todo) => getUserById(todo.ownerId),
-    { concurrency: "unbounded" }
-  )
+  const owners = yield* Effect.forEach(todos, (todo) => getUserById(todo.ownerId), { concurrency: "unbounded" });
 
-  return owners
-})
+  return owners;
+});
 ```
 
 ## Best Practices
@@ -332,6 +286,7 @@ const program = Effect.gen(function* () {
 For comprehensive batching and caching documentation, consult `${CLAUDE_PLUGIN_ROOT}/references/llms-full.txt`.
 
 Search for these sections:
+
 - "Batching" for complete batching guide
 - "Caching" for caching patterns
 - "Cache" for Cache service

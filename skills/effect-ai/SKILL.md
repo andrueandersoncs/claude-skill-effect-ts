@@ -1,5 +1,5 @@
 ---
-name: Effect AI
+name: effect-ai
 description: This skill should be used when the user asks about "Effect AI", "@effect/ai", "LLM integration", "AI tool use", "AI execution planning", "building AI agents", "AI providers", "structured AI output", "AI completions", "Effect OpenAI", "Effect Anthropic", or needs to understand how Effect integrates with AI/LLM services.
 version: 1.0.0
 ---
@@ -28,56 +28,54 @@ npm install @effect/ai @effect/ai-anthropic
 ### Creating a Provider
 
 ```typescript
-import { AiChat } from "@effect/ai"
-import { OpenAiChat } from "@effect/ai-openai"
-import { Effect, Layer } from "effect"
+import { AiChat } from "@effect/ai";
+import { OpenAiChat } from "@effect/ai-openai";
+import { Effect, Layer } from "effect";
 
 const OpenAiLive = OpenAiChat.layer({
   apiKey: Config.redacted("OPENAI_API_KEY"),
-  model: "gpt-4"
-})
+  model: "gpt-4",
+});
 
-import { AnthropicChat } from "@effect/ai-anthropic"
+import { AnthropicChat } from "@effect/ai-anthropic";
 
 const AnthropicLive = AnthropicChat.layer({
   apiKey: Config.redacted("ANTHROPIC_API_KEY"),
-  model: "claude-3-opus-20240229"
-})
+  model: "claude-3-opus-20240229",
+});
 ```
 
 ### Simple Completion
 
 ```typescript
 const program = Effect.gen(function* () {
-  const ai = yield* AiChat.AiChat
+  const ai = yield* AiChat.AiChat;
 
   const response = yield* ai.generateText({
-    prompt: "Explain functional programming in one sentence."
-  })
+    prompt: "Explain functional programming in one sentence.",
+  });
 
-  return response.text
-})
+  return response.text;
+});
 
-const result = yield* program.pipe(
-  Effect.provide(OpenAiLive)
-)
+const result = yield * program.pipe(Effect.provide(OpenAiLive));
 ```
 
 ### Chat with Messages
 
 ```typescript
 const chat = Effect.gen(function* () {
-  const ai = yield* AiChat.AiChat
+  const ai = yield* AiChat.AiChat;
 
   const response = yield* ai.generateText({
     messages: [
       { role: "system", content: "You are a helpful assistant." },
-      { role: "user", content: "What is Effect-TS?" }
-    ]
-  })
+      { role: "user", content: "What is Effect-TS?" },
+    ],
+  });
 
-  return response.text
-})
+  return response.text;
+});
 ```
 
 ## Tool Use
@@ -87,13 +85,13 @@ Define tools that AI can call:
 ### Defining Tools with Schema
 
 ```typescript
-import { AiTool } from "@effect/ai"
-import { Schema } from "effect"
+import { AiTool } from "@effect/ai";
+import { Schema } from "effect";
 
 const WeatherInput = Schema.Struct({
   city: Schema.String,
-  unit: Schema.optional(Schema.Literal("celsius", "fahrenheit"))
-})
+  unit: Schema.optional(Schema.Literal("celsius", "fahrenheit")),
+});
 
 const getWeather = AiTool.make({
   name: "get_weather",
@@ -104,24 +102,24 @@ const getWeather = AiTool.make({
       city: input.city,
       temperature: 22,
       unit: input.unit ?? "celsius",
-      conditions: "sunny"
-    })
-})
+      conditions: "sunny",
+    }),
+});
 ```
 
 ### Using Tools in Chat
 
 ```typescript
 const programWithTools = Effect.gen(function* () {
-  const ai = yield* AiChat.AiChat
+  const ai = yield* AiChat.AiChat;
 
   const response = yield* ai.generateText({
     prompt: "What's the weather in Tokyo?",
-    tools: [getWeather]
-  })
+    tools: [getWeather],
+  });
 
-  return response.text
-})
+  return response.text;
+});
 ```
 
 ### Multiple Tools
@@ -131,22 +129,24 @@ const searchTool = AiTool.make({
   name: "search",
   description: "Search the web",
   input: Schema.Struct({ query: Schema.String }),
-  handler: ({ query }) => performSearch(query)
-})
+  handler: ({ query }) => performSearch(query),
+});
 
 const calculatorTool = AiTool.make({
   name: "calculator",
   description: "Perform calculations",
   input: Schema.Struct({
-    expression: Schema.String
+    expression: Schema.String,
   }),
-  handler: ({ expression }) => evaluate(expression)
-})
+  handler: ({ expression }) => evaluate(expression),
+});
 
-const response = yield* ai.generateText({
-  prompt: "Search for Effect-TS and calculate 2+2",
-  tools: [searchTool, calculatorTool]
-})
+const response =
+  yield *
+  ai.generateText({
+    prompt: "Search for Effect-TS and calculate 2+2",
+    tools: [searchTool, calculatorTool],
+  });
 ```
 
 ## Structured Output
@@ -158,19 +158,19 @@ const ProductReview = Schema.Struct({
   sentiment: Schema.Literal("positive", "negative", "neutral"),
   score: Schema.Number.pipe(Schema.between(1, 5)),
   summary: Schema.String,
-  keywords: Schema.Array(Schema.String)
-})
+  keywords: Schema.Array(Schema.String),
+});
 
 const analyzeReview = Effect.gen(function* () {
-  const ai = yield* AiChat.AiChat
+  const ai = yield* AiChat.AiChat;
 
   const review = yield* ai.generateObject({
     prompt: "Analyze this product review: 'Great product, highly recommend!'",
-    schema: ProductReview
-  })
+    schema: ProductReview,
+  });
 
-  return review
-})
+  return review;
+});
 ```
 
 ## Execution Planning
@@ -178,7 +178,7 @@ const analyzeReview = Effect.gen(function* () {
 For complex multi-step AI workflows:
 
 ```typescript
-import { AiPlan } from "@effect/ai"
+import { AiPlan } from "@effect/ai";
 
 const researchPlan = AiPlan.make({
   name: "research",
@@ -187,55 +187,55 @@ const researchPlan = AiPlan.make({
     {
       name: "search",
       description: "Search for relevant information",
-      tool: searchTool
+      tool: searchTool,
     },
     {
       name: "analyze",
       description: "Analyze search results",
       handler: (context) =>
         Effect.gen(function* () {
-          const ai = yield* AiChat.AiChat
+          const ai = yield* AiChat.AiChat;
           return yield* ai.generateText({
-            prompt: `Analyze these results: ${context.previousResults}`
-          })
-        })
+            prompt: `Analyze these results: ${context.previousResults}`,
+          });
+        }),
     },
     {
       name: "summarize",
       description: "Create final summary",
       handler: (context) =>
         Effect.gen(function* () {
-          const ai = yield* AiChat.AiChat
+          const ai = yield* AiChat.AiChat;
           return yield* ai.generateObject({
             prompt: `Summarize: ${context.analysis}`,
-            schema: ResearchSummary
-          })
-        })
-    }
-  ]
-})
+            schema: ResearchSummary,
+          });
+        }),
+    },
+  ],
+});
 
-const result = yield* AiPlan.execute(researchPlan, {
-  topic: "Effect-TS benefits"
-})
+const result =
+  yield *
+  AiPlan.execute(researchPlan, {
+    topic: "Effect-TS benefits",
+  });
 ```
 
 ## Streaming Responses
 
 ```typescript
-import { Stream } from "effect"
+import { Stream } from "effect";
 
 const streamProgram = Effect.gen(function* () {
-  const ai = yield* AiChat.AiChat
+  const ai = yield* AiChat.AiChat;
 
   const stream = yield* ai.streamText({
-    prompt: "Write a short story about a robot."
-  })
+    prompt: "Write a short story about a robot.",
+  });
 
-  yield* Stream.runForEach(stream, (chunk) =>
-    Effect.sync(() => process.stdout.write(chunk))
-  )
-})
+  yield* Stream.runForEach(stream, (chunk) => Effect.sync(() => process.stdout.write(chunk)));
+});
 ```
 
 ## Provider Configuration
@@ -248,8 +248,8 @@ const OpenAiLive = OpenAiChat.layer({
   model: "gpt-4-turbo",
   temperature: 0.7,
   maxTokens: 1000,
-  organizationId: Config.string("OPENAI_ORG_ID").pipe(Config.option)
-})
+  organizationId: Config.string("OPENAI_ORG_ID").pipe(Config.option),
+});
 ```
 
 ### Anthropic Options
@@ -258,52 +258,42 @@ const OpenAiLive = OpenAiChat.layer({
 const AnthropicLive = AnthropicChat.layer({
   apiKey: Config.redacted("ANTHROPIC_API_KEY"),
   model: "claude-3-opus-20240229",
-  maxTokens: 4096
-})
+  maxTokens: 4096,
+});
 ```
 
 ## Error Handling
 
 ```typescript
-import { AiError } from "@effect/ai"
+import { AiError } from "@effect/ai";
 
 const safeChat = program.pipe(
   Effect.catchTag("AiRateLimitError", (error) =>
     Effect.gen(function* () {
-      yield* Effect.sleep(error.retryAfter)
-      return yield* program
-    })
+      yield* Effect.sleep(error.retryAfter);
+      return yield* program;
+    }),
   ),
-  Effect.catchTag("AiAuthenticationError", () =>
-    Effect.fail(new ConfigurationError())
-  ),
+  Effect.catchTag("AiAuthenticationError", () => Effect.fail(new ConfigurationError())),
   Effect.catchTag("AiError", (error) =>
     Effect.gen(function* () {
-      yield* Effect.logError("AI error", error)
-      return "Sorry, I couldn't process that request."
-    })
-  )
-)
+      yield* Effect.logError("AI error", error);
+      return "Sorry, I couldn't process that request.";
+    }),
+  ),
+);
 ```
 
 ## Testing
 
 ```typescript
-const MockAiLive = Layer.succeed(
-  AiChat.AiChat,
-  {
-    generateText: () =>
-      Effect.succeed({ text: "Mock response" }),
-    generateObject: (options) =>
-      Effect.succeed(mockData),
-    streamText: () =>
-      Effect.succeed(Stream.make("Mock", " ", "stream"))
-  }
-)
+const MockAiLive = Layer.succeed(AiChat.AiChat, {
+  generateText: () => Effect.succeed({ text: "Mock response" }),
+  generateObject: (options) => Effect.succeed(mockData),
+  streamText: () => Effect.succeed(Stream.make("Mock", " ", "stream")),
+});
 
-const testProgram = program.pipe(
-  Effect.provide(MockAiLive)
-)
+const testProgram = program.pipe(Effect.provide(MockAiLive));
 ```
 
 ## Best Practices
@@ -319,6 +309,7 @@ const testProgram = program.pipe(
 For comprehensive Effect AI documentation, consult `${CLAUDE_PLUGIN_ROOT}/references/llms-full.txt`.
 
 Search for these sections:
+
 - "Introduction to Effect AI" for overview
 - "Tool Use" for function calling
 - "Execution Planning" for multi-step workflows

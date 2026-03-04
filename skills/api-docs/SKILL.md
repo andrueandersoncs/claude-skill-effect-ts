@@ -1,5 +1,5 @@
 ---
-name: API Documentation Lookup
+name: api-doc-lookup
 description: This skill should be used when the user asks to "look up Effect API", "check the Effect docs", "find Effect function signature", "what does Effect.X do", "how to use Effect.X", "Effect API reference", "fetch Effect documentation", or needs to look up specific function signatures, parameters, or usage examples from the official Effect-TS API documentation.
 version: 1.0.0
 ---
@@ -83,6 +83,7 @@ https://effect-ts.github.io/effect/{package-name}/{Module}.ts.html
 ### Step 1: Identify the Module
 
 Determine which module contains the API:
+
 - `Effect.map` → Effect module
 - `Schema.Struct` → Schema module
 - `Stream.fromIterable` → Stream module
@@ -94,10 +95,10 @@ Use the URL pattern for the identified module:
 
 ```typescript
 // For Effect.retry
-const url = "https://effect-ts.github.io/effect/effect/Effect.ts.html"
+const url = "https://effect-ts.github.io/effect/effect/Effect.ts.html";
 
 // For Schema.transform
-const url = "https://effect-ts.github.io/effect/effect/Schema.ts.html"
+const url = "https://effect-ts.github.io/effect/effect/Schema.ts.html";
 ```
 
 ### Step 3: Fetch with Targeted Prompt
@@ -118,6 +119,7 @@ WebFetch(
 **User asks:** "What are the parameters for Effect.retry?"
 
 **Action:**
+
 ```
 WebFetch(
   url: "https://effect-ts.github.io/effect/effect/Effect.ts.html",
@@ -130,6 +132,7 @@ WebFetch(
 **User asks:** "What fields does Schedule have?"
 
 **Action:**
+
 ```
 WebFetch(
   url: "https://effect-ts.github.io/effect/effect/Schedule.ts.html",
@@ -142,6 +145,7 @@ WebFetch(
 **User asks:** "What functions are available in the Stream module?"
 
 **Action:**
+
 ```
 WebFetch(
   url: "https://effect-ts.github.io/effect/effect/Stream.ts.html",
@@ -151,9 +155,10 @@ WebFetch(
 
 ### Looking up related functions
 
-**User asks:** "What are all the catch* functions in Effect?"
+**User asks:** "What are all the catch\* functions in Effect?"
 
 **Action:**
+
 ```
 WebFetch(
   url: "https://effect-ts.github.io/effect/effect/Effect.ts.html",
@@ -166,26 +171,31 @@ WebFetch(
 Use these prompt patterns for effective documentation extraction:
 
 ### For function signatures:
+
 ```
 "Find the complete type signature for {functionName}. Include all overloads if they exist."
 ```
 
 ### For usage examples:
+
 ```
 "Find documentation and code examples for {functionName}. Focus on practical usage patterns."
 ```
 
 ### For understanding parameters:
+
 ```
 "Explain the parameters and options for {functionName}. What does each parameter do?"
 ```
 
 ### For finding related functions:
+
 ```
 "List all functions related to {topic} in this module. Include brief descriptions."
 ```
 
 ### For module overview:
+
 ```
 "Provide an overview of this module. What are the main categories of functions and types?"
 ```
@@ -201,6 +211,7 @@ Use these prompt patterns for effective documentation extraction:
 ## Documentation Site Index
 
 The main documentation index is at:
+
 ```
 https://effect-ts.github.io/effect/
 ```

@@ -1,5 +1,5 @@
 ---
-name: Runtime
+name: runtime
 description: This skill should be used when the user asks about "Effect Runtime", "ManagedRuntime", "Effect.Tag", "custom runtime", "runtime layers", "running effects", "runtime configuration", "runtime context", "Effect.runPromise", "Effect.runSync", "runtime scope", or needs to understand how Effect's runtime system executes effects.
 version: 1.0.0
 ---
@@ -19,41 +19,39 @@ The Runtime is Effect's execution engine:
 Effects run via the default runtime:
 
 ```typescript
-import { Effect } from "effect"
+import { Effect } from "effect";
 
-const program = Effect.succeed(42)
+const program = Effect.succeed(42);
 
-const result = await Effect.runPromise(program)
+const result = await Effect.runPromise(program);
 
-const syncResult = Effect.runSync(program)
+const syncResult = Effect.runSync(program);
 
-const exit = await Effect.runPromiseExit(program)
+const exit = await Effect.runPromiseExit(program);
 ```
 
 ### Run Methods
 
-| Method | Returns | Throws on Error |
-|--------|---------|-----------------|
-| `Effect.runPromise(e)` | `Promise<A>` | Yes |
-| `Effect.runPromiseExit(e)` | `Promise<Exit<A, E>>` | No |
-| `Effect.runSync(e)` | `A` | Yes |
-| `Effect.runSyncExit(e)` | `Exit<A, E>` | No |
+| Method                     | Returns               | Throws on Error |
+| -------------------------- | --------------------- | --------------- |
+| `Effect.runPromise(e)`     | `Promise<A>`          | Yes             |
+| `Effect.runPromiseExit(e)` | `Promise<Exit<A, E>>` | No              |
+| `Effect.runSync(e)`        | `A`                   | Yes             |
+| `Effect.runSyncExit(e)`    | `Exit<A, E>`          | No              |
 
 ## Locally Scoped Configuration
 
 Modify runtime behavior for specific effects:
 
 ```typescript
-import { Logger, LogLevel } from "effect"
+import { Logger, LogLevel } from "effect";
 
 const program = Effect.gen(function* () {
-  yield* Effect.log("This appears")
-  yield* Effect.logDebug("This may not appear")
-})
+  yield* Effect.log("This appears");
+  yield* Effect.logDebug("This may not appear");
+});
 
-const withDebug = program.pipe(
-  Logger.withMinimumLogLevel(LogLevel.Debug)
-)
+const withDebug = program.pipe(Logger.withMinimumLogLevel(LogLevel.Debug));
 ```
 
 ## Effect.Tag for Services
@@ -61,21 +59,21 @@ const withDebug = program.pipe(
 Create typed service tags for dependency injection:
 
 ```typescript
-import { Effect, Context } from "effect"
+import { Effect, Context } from "effect";
 
 class Database extends Context.Tag("Database")<
   Database,
   {
-    readonly query: (sql: string) => Effect.Effect<unknown[]>
-    readonly execute: (sql: string) => Effect.Effect<void>
+    readonly query: (sql: string) => Effect.Effect<unknown[]>;
+    readonly execute: (sql: string) => Effect.Effect<void>;
   }
 >() {}
 
 const program = Effect.gen(function* () {
-  const db = yield* Database
-  const users = yield* db.query("SELECT * FROM users")
-  return users
-})
+  const db = yield* Database;
+  const users = yield* db.query("SELECT * FROM users");
+  return users;
+});
 ```
 
 ## ManagedRuntime
@@ -83,22 +81,18 @@ const program = Effect.gen(function* () {
 For applications needing custom runtime configuration:
 
 ```typescript
-import { ManagedRuntime, Layer } from "effect"
+import { ManagedRuntime, Layer } from "effect";
 
-const AppLive = Layer.mergeAll(
-  DatabaseLive,
-  LoggerLive,
-  ConfigLive
-)
+const AppLive = Layer.mergeAll(DatabaseLive, LoggerLive, ConfigLive);
 
-const runtime = ManagedRuntime.make(AppLive)
+const runtime = ManagedRuntime.make(AppLive);
 
 const main = async () => {
-  const result = await runtime.runPromise(program)
-  console.log(result)
+  const result = await runtime.runPromise(program);
+  console.log(result);
 
-  await runtime.dispose()
-}
+  await runtime.dispose();
+};
 ```
 
 ### ManagedRuntime Benefits
@@ -113,29 +107,25 @@ const main = async () => {
 ### Express Integration
 
 ```typescript
-import express from "express"
-import { ManagedRuntime, Layer } from "effect"
+import express from "express";
+import { ManagedRuntime, Layer } from "effect";
 
-const AppLive = Layer.mergeAll(DatabaseLive, AuthLive)
-const runtime = ManagedRuntime.make(AppLive)
+const AppLive = Layer.mergeAll(DatabaseLive, AuthLive);
+const runtime = ManagedRuntime.make(AppLive);
 
-const app = express()
+const app = express();
 
 app.get("/users", async (req, res) => {
   const result = await runtime.runPromise(
-    getUsers().pipe(
-      Effect.catchAll((error) =>
-        Effect.succeed({ error: error.message })
-      )
-    )
-  )
-  res.json(result)
-})
+    getUsers().pipe(Effect.catchAll((error) => Effect.succeed({ error: error.message }))),
+  );
+  res.json(result);
+});
 
 // Cleanup on shutdown
 process.on("SIGTERM", () => {
-  runtime.dispose().then(() => process.exit(0))
-})
+  runtime.dispose().then(() => process.exit(0));
+});
 ```
 
 ### React Integration
@@ -187,13 +177,11 @@ function UserList() {
 ### Custom Execution Context
 
 ```typescript
-import { Runtime, FiberRef } from "effect"
+import { Runtime, FiberRef } from "effect";
 
-const customRuntime = Runtime.defaultRuntime.pipe(
-  Runtime.withFiberRef(FiberRef.currentLogLevel, LogLevel.Debug)
-)
+const customRuntime = Runtime.defaultRuntime.pipe(Runtime.withFiberRef(FiberRef.currentLogLevel, LogLevel.Debug));
 
-Runtime.runPromise(customRuntime)(program)
+Runtime.runPromise(customRuntime)(program);
 ```
 
 ### Providing Services to Runtime
@@ -201,8 +189,8 @@ Runtime.runPromise(customRuntime)(program)
 ```typescript
 const runtimeWithServices = Runtime.defaultRuntime.pipe(
   Runtime.provideService(Database, databaseImpl),
-  Runtime.provideService(Logger, loggerImpl)
-)
+  Runtime.provideService(Logger, loggerImpl),
+);
 ```
 
 ## Default Services
@@ -210,49 +198,47 @@ const runtimeWithServices = Runtime.defaultRuntime.pipe(
 Effect provides these services automatically:
 
 ```typescript
-import { Clock, Random, Tracer, Console } from "effect"
+import { Clock, Random, Tracer, Console } from "effect";
 
 const program = Effect.gen(function* () {
-  const now = yield* Clock.currentTimeMillis
+  const now = yield* Clock.currentTimeMillis;
 
-  const rand = yield* Random.next
+  const rand = yield* Random.next;
 
-  yield* Console.log("Hello")
-})
+  yield* Console.log("Hello");
+});
 ```
 
 ### Overriding Default Services
 
 ```typescript
-import { TestClock } from "effect"
+import { TestClock } from "effect";
 
-const testProgram = program.pipe(
-  Effect.provide(TestClock.layer)
-)
+const testProgram = program.pipe(Effect.provide(TestClock.layer));
 
 const testWithTime = Effect.gen(function* () {
-  const fiber = yield* Effect.fork(Effect.sleep("1 hour"))
-  yield* TestClock.adjust("1 hour")
-  yield* Fiber.join(fiber)
-})
+  const fiber = yield* Effect.fork(Effect.sleep("1 hour"));
+  yield* TestClock.adjust("1 hour");
+  yield* Fiber.join(fiber);
+});
 ```
 
 ## Interruption Handling
 
 ```typescript
 const program = Effect.gen(function* () {
-  const fiber = yield* Effect.fork(longRunningTask)
+  const fiber = yield* Effect.fork(longRunningTask);
 
-  yield* Fiber.interrupt(fiber)
-})
+  yield* Fiber.interrupt(fiber);
+});
 
 const critical = Effect.uninterruptible(
   Effect.gen(function* () {
-    yield* startTransaction()
-    yield* doWork()
-    yield* commitTransaction()
-  })
-)
+    yield* startTransaction();
+    yield* doWork();
+    yield* commitTransaction();
+  }),
+);
 ```
 
 ## Best Practices
@@ -268,6 +254,7 @@ const critical = Effect.uninterruptible(
 For comprehensive runtime documentation, consult `${CLAUDE_PLUGIN_ROOT}/references/llms-full.txt`.
 
 Search for these sections:
+
 - "Introduction to Runtime" for core concepts
 - "ManagedRuntime" for managed runtime
 - "Effect.Tag" for service tags

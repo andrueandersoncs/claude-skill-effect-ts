@@ -1,5 +1,5 @@
 ---
-name: Error Management
+name: error-management
 description: This skill should be used when the user asks about "Effect errors", "typed errors", "error handling", "Effect.catchAll", "Effect.catchTag", "Effect.mapError", "Effect.orElse", "error accumulation", "defects vs errors", "expected errors", "unexpected errors", "sandboxing", "retrying", "timeout", "Effect.cause", "TaggedError", "Schema.TaggedError", or needs to understand how Effect handles failures in the error channel.
 version: 1.0.0
 ---
@@ -14,7 +14,7 @@ Effect distinguishes between two types of failures:
 2. **Defects (Unexpected/Unrecoverable)** - Runtime exceptions, bugs, not in type signature
 
 ```typescript
-Effect<Success, Error, Requirements>
+Effect<Success, Error, Requirements>;
 //              ^^^^^ Expected errors live here
 ```
 
@@ -23,35 +23,26 @@ Effect<Success, Error, Requirements>
 ### Using Schema.TaggedError (Recommended)
 
 ```typescript
-import { Schema, Effect } from "effect"
+import { Schema, Effect } from "effect";
 
-class UserNotFound extends Schema.TaggedError<UserNotFound>()(
-  "UserNotFound",
-  { userId: Schema.String }
-) {}
+class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", { userId: Schema.String }) {}
 
 // Note: Schema.Unknown is semantically correct here because `cause` captures
 // arbitrary caught exceptions whose type is genuinely unknown at the domain level.
 // This is NOT type weakening - JavaScript exceptions can be any value.
-class NetworkError extends Schema.TaggedError<NetworkError>()(
-  "NetworkError",
-  { cause: Schema.Unknown }
-) {}
+class NetworkError extends Schema.TaggedError<NetworkError>()("NetworkError", { cause: Schema.Unknown }) {}
 
 const getUser = (id: string): Effect.Effect<User, UserNotFound | NetworkError> =>
   Effect.gen(function* () {
     // ...implementation
-    return yield* Effect.fail(new UserNotFound({ userId: id }))
-  })
+    return yield* Effect.fail(new UserNotFound({ userId: id }));
+  });
 ```
 
 ### Using Effect.fail
 
 ```typescript
-const divide = (a: number, b: number) =>
-  b === 0
-    ? Effect.fail(new DivisionByZero())
-    : Effect.succeed(a / b)
+const divide = (a: number, b: number) => (b === 0 ? Effect.fail(new DivisionByZero()) : Effect.succeed(a / b));
 ```
 
 ## Catching and Recovering from Errors
@@ -59,24 +50,16 @@ const divide = (a: number, b: number) =>
 ### catchAll - Catch All Errors
 
 ```typescript
-program.pipe(
-  Effect.catchAll((error) =>
-    Effect.succeed("fallback value")
-  )
-)
+program.pipe(Effect.catchAll((error) => Effect.succeed("fallback value")));
 ```
 
 ### catchTag - Catch Specific Error by Tag
 
 ```typescript
 const program = getUser(id).pipe(
-  Effect.catchTag("UserNotFound", (error) =>
-    Effect.succeed(defaultUser)
-  ),
-  Effect.catchTag("NetworkError", (error) =>
-    Effect.retry(Schedule.exponential("1 second"))
-  )
-)
+  Effect.catchTag("UserNotFound", (error) => Effect.succeed(defaultUser)),
+  Effect.catchTag("NetworkError", (error) => Effect.retry(Schedule.exponential("1 second"))),
+);
 ```
 
 ### catchTags - Handle Multiple Error Types
@@ -85,28 +68,24 @@ const program = getUser(id).pipe(
 const program = getUser(id).pipe(
   Effect.catchTags({
     UserNotFound: (error) => Effect.succeed(defaultUser),
-    NetworkError: (error) => Effect.fail(new ServiceUnavailable())
-  })
-)
+    NetworkError: (error) => Effect.fail(new ServiceUnavailable()),
+  }),
+);
 ```
 
 ### orElse - Provide Fallback Effect
 
 ```typescript
-const primary = fetchFromPrimary()
-const fallback = fetchFromBackup()
+const primary = fetchFromPrimary();
+const fallback = fetchFromBackup();
 
-const resilient = primary.pipe(
-  Effect.orElse(() => fallback)
-)
+const resilient = primary.pipe(Effect.orElse(() => fallback));
 ```
 
 ### orElseSucceed - Provide Fallback Value
 
 ```typescript
-const program = fetchConfig().pipe(
-  Effect.orElseSucceed(() => defaultConfig)
-)
+const program = fetchConfig().pipe(Effect.orElseSucceed(() => defaultConfig));
 ```
 
 ## Transforming Errors
@@ -114,9 +93,7 @@ const program = fetchConfig().pipe(
 ### mapError - Transform Error Type
 
 ```typescript
-const program = rawApiCall().pipe(
-  Effect.mapError((error) => new ApiError({ cause: error }))
-)
+const program = rawApiCall().pipe(Effect.mapError((error) => new ApiError({ cause: error })));
 ```
 
 ### mapBoth - Transform Both Success and Error
@@ -125,9 +102,9 @@ const program = rawApiCall().pipe(
 const program = effect.pipe(
   Effect.mapBoth({
     onError: (e) => new WrappedError({ cause: e }),
-    onSuccess: (a) => a.toUpperCase()
-  })
-)
+    onSuccess: (a) => a.toUpperCase(),
+  }),
+);
 ```
 
 ## Error Accumulation
@@ -137,28 +114,19 @@ When running multiple effects, collect all errors instead of failing fast:
 ### Using Effect.all with mode: "either"
 
 ```typescript
-const results = yield* Effect.all(
-  [effect1, effect2, effect3],
-  { mode: "either" }
-)
+const results = yield * Effect.all([effect1, effect2, effect3], { mode: "either" });
 ```
 
 ### Using Effect.partition
 
 ```typescript
-const [failures, successes] = yield* Effect.partition(
-  items,
-  (item) => processItem(item)
-)
+const [failures, successes] = yield * Effect.partition(items, (item) => processItem(item));
 ```
 
 ### Using Effect.validate
 
 ```typescript
-const result = yield* Effect.validate(
-  [check1, check2, check3],
-  { concurrency: "unbounded" }
-)
+const result = yield * Effect.validate([check1, check2, check3], { concurrency: "unbounded" });
 ```
 
 ## Defects (Unexpected Errors)
@@ -166,11 +134,11 @@ const result = yield* Effect.validate(
 Defects are bugs/unexpected failures not tracked in types:
 
 ```typescript
-const defect = Effect.die(new Error("Unexpected!"))
+const defect = Effect.die(new Error("Unexpected!"));
 
-const program = effect.pipe(Effect.orDie)
+const program = effect.pipe(Effect.orDie);
 
-const sandboxed = Effect.sandbox(program)
+const sandboxed = Effect.sandbox(program);
 ```
 
 ### Cause - Full Error Information
@@ -178,7 +146,7 @@ const sandboxed = Effect.sandbox(program)
 The `Cause` type contains complete failure information:
 
 ```typescript
-import { Cause, Match } from "effect"
+import { Cause, Match } from "effect";
 
 // In sandbox, you get full Cause - use Match for handling
 const handled = Effect.sandbox(program).pipe(
@@ -186,35 +154,30 @@ const handled = Effect.sandbox(program).pipe(
     Match.value(cause).pipe(
       Match.when(Cause.isFailure, () => {
         // Expected error
-        return Effect.succeed(fallback)
+        return Effect.succeed(fallback);
       }),
       Match.when(Cause.isDie, () => {
         // Defect - log and recover
-        return Effect.succeed(fallback)
+        return Effect.succeed(fallback);
       }),
       Match.when(Cause.isInterrupt, () => {
         // Interruption
-        return Effect.succeed(fallback)
+        return Effect.succeed(fallback);
       }),
-      Match.orElse(() => Effect.succeed(fallback))
-    )
-  )
-)
+      Match.orElse(() => Effect.succeed(fallback)),
+    ),
+  ),
+);
 ```
 
 ## Retrying
 
 ```typescript
-import { Schedule } from "effect"
+import { Schedule } from "effect";
 
 const resilient = effect.pipe(
-  Effect.retry(
-    Schedule.exponential("100 millis").pipe(
-      Schedule.jittered,
-      Schedule.compose(Schedule.recurs(5))
-    )
-  )
-)
+  Effect.retry(Schedule.exponential("100 millis").pipe(Schedule.jittered, Schedule.compose(Schedule.recurs(5)))),
+);
 
 // Retry with condition - use Match.tag for error type checking
 const conditional = effect.pipe(
@@ -223,25 +186,23 @@ const conditional = effect.pipe(
     while: (error) =>
       Match.value(error).pipe(
         Match.tag("NetworkError", () => true),
-        Match.orElse(() => false)
-      )
-  })
-)
+        Match.orElse(() => false),
+      ),
+  }),
+);
 ```
 
 ## Timeouts
 
 ```typescript
-const withTimeout = effect.pipe(
-  Effect.timeout("5 seconds")
-)
+const withTimeout = effect.pipe(Effect.timeout("5 seconds"));
 
 const failOnTimeout = effect.pipe(
   Effect.timeoutFail({
     duration: "5 seconds",
-    onTimeout: () => new TimeoutError()
-  })
-)
+    onTimeout: () => new TimeoutError(),
+  }),
+);
 ```
 
 ## Error Matching Patterns
@@ -249,23 +210,27 @@ const failOnTimeout = effect.pipe(
 ### Using Effect.match
 
 ```typescript
-const result = yield* effect.pipe(
-  Effect.match({
-    onFailure: (error) => `Failed: ${error.message}`,
-    onSuccess: (value) => `Success: ${value}`
-  })
-)
+const result =
+  yield *
+  effect.pipe(
+    Effect.match({
+      onFailure: (error) => `Failed: ${error.message}`,
+      onSuccess: (value) => `Success: ${value}`,
+    }),
+  );
 ```
 
 ### Using Effect.matchEffect
 
 ```typescript
-const result = yield* effect.pipe(
-  Effect.matchEffect({
-    onFailure: (error) => logError(error).pipe(Effect.as("failed")),
-    onSuccess: (value) => logSuccess(value).pipe(Effect.as("success"))
-  })
-)
+const result =
+  yield *
+  effect.pipe(
+    Effect.matchEffect({
+      onFailure: (error) => logError(error).pipe(Effect.as("failed")),
+      onSuccess: (value) => logSuccess(value).pipe(Effect.as("success")),
+    }),
+  );
 ```
 
 ## Best Practices
@@ -282,6 +247,7 @@ const result = yield* effect.pipe(
 For comprehensive error management documentation, consult `${CLAUDE_PLUGIN_ROOT}/references/llms-full.txt`.
 
 Search for these sections:
+
 - "Expected Errors" for creating typed errors
 - "Error Accumulation" for collecting multiple errors
 - "Sandboxing" for handling defects

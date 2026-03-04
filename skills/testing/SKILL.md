@@ -1,5 +1,5 @@
 ---
-name: Testing
+name: testing
 description: This skill should be used when the user asks about "Effect testing", "@effect/vitest", "it.effect", "it.live", "it.scoped", "it.layer", "it.prop", "Schema Arbitrary", "property-based testing", "fast-check", "TestClock", "testing effects", "mocking services", "test layers", "TestContext", "Effect.provide test", "time testing", "Effect test utilities", "unit testing Effect", "generating test data", "flakyTest", "test coverage", "100% coverage", "service testing", "test doubles", "mock services", or needs to understand how to test Effect-based code.
 version: 1.3.0
 ---
@@ -43,15 +43,15 @@ Without services, your code is **untestable** because it directly depends on ext
 const getUser = (id: string) =>
   Effect.tryPromise({
     try: () => fetch(`/api/users/${id}`).then((r) => r.json()),
-    catch: (error) => new NetworkError({ cause: error })
-  })
+    catch: (error) => new NetworkError({ cause: error }),
+  });
 
 // ❌ UNTESTABLE: Direct database access
 const saveOrder = (order: Order) =>
   Effect.tryPromise({
     try: () => db.query("INSERT INTO orders ...", order),
-    catch: (error) => new DatabaseError({ cause: error })
-  })
+    catch: (error) => new DatabaseError({ cause: error }),
+  });
 ```
 
 With services, your business logic is **pure and fully testable**:
@@ -61,8 +61,8 @@ With services, your business logic is **pure and fully testable**:
 class UserApi extends Context.Tag("UserApi")<
   UserApi,
   {
-    readonly getUser: (id: string) => Effect.Effect<User, UserNotFound | NetworkError>
-    readonly saveUser: (user: User) => Effect.Effect<void, NetworkError>
+    readonly getUser: (id: string) => Effect.Effect<User, UserNotFound | NetworkError>;
+    readonly saveUser: (user: User) => Effect.Effect<void, NetworkError>;
   }
 >() {}
 
@@ -70,71 +70,70 @@ class UserApi extends Context.Tag("UserApi")<
 class OrderRepository extends Context.Tag("OrderRepository")<
   OrderRepository,
   {
-    readonly save: (order: Order) => Effect.Effect<void, DatabaseError>
-    readonly findById: (id: string) => Effect.Effect<Order, OrderNotFound>
+    readonly save: (order: Order) => Effect.Effect<void, DatabaseError>;
+    readonly findById: (id: string) => Effect.Effect<Order, OrderNotFound>;
   }
 >() {}
 
 // ✅ Business logic is pure — depends only on service interfaces
 const processOrder = (orderId: string) =>
   Effect.gen(function* () {
-    const userApi = yield* UserApi
-    const orderRepo = yield* OrderRepository
+    const userApi = yield* UserApi;
+    const orderRepo = yield* OrderRepository;
 
-    const order = yield* orderRepo.findById(orderId)
-    const user = yield* userApi.getUser(order.userId)
+    const order = yield* orderRepo.findById(orderId);
+    const user = yield* userApi.getUser(order.userId);
     // ... pure business logic using service abstractions
-  })
+  });
 ```
 
 ### What MUST Be a Service
 
 Every one of these MUST be wrapped in a `Context.Tag` service:
 
-| External Dependency | Service Example |
-|---|---|
-| REST/GraphQL API calls | `UserApi`, `PaymentGateway`, `NotificationService` |
-| Database operations | `UserRepository`, `OrderRepository` |
-| File system access | `FileStorage`, `ConfigReader` |
-| Third-party SDKs | `StripeClient`, `SendGridClient`, `AwsS3Client` |
-| Email/SMS sending | `EmailService`, `SmsService` |
-| Message queues | `EventPublisher`, `QueueConsumer` |
-| Caching systems | `CacheService`, `RedisClient` |
-| Authentication providers | `AuthProvider`, `TokenService` |
-| External clock/time | Use Effect's built-in `Clock` service |
-| Random values | Use Effect's built-in `Random` service |
+| External Dependency      | Service Example                                    |
+| ------------------------ | -------------------------------------------------- |
+| REST/GraphQL API calls   | `UserApi`, `PaymentGateway`, `NotificationService` |
+| Database operations      | `UserRepository`, `OrderRepository`                |
+| File system access       | `FileStorage`, `ConfigReader`                      |
+| Third-party SDKs         | `StripeClient`, `SendGridClient`, `AwsS3Client`    |
+| Email/SMS sending        | `EmailService`, `SmsService`                       |
+| Message queues           | `EventPublisher`, `QueueConsumer`                  |
+| Caching systems          | `CacheService`, `RedisClient`                      |
+| Authentication providers | `AuthProvider`, `TokenService`                     |
+| External clock/time      | Use Effect's built-in `Clock` service              |
+| Random values            | Use Effect's built-in `Random` service             |
 
 ### Complete Service + Test Layer Pattern
 
 ```typescript
-import { Context, Effect, Layer, Schema, Arbitrary } from "effect"
-import { it, expect, layer } from "@effect/vitest"
-import * as fc from "fast-check"
+import { Context, Effect, Layer, Schema, Arbitrary } from "effect";
+import { it, expect, layer } from "@effect/vitest";
+import * as fc from "fast-check";
 
 // 1. Define schemas for domain types
 const TransactionId = Schema.String.pipe(
   Schema.pattern(/^txn_[a-zA-Z0-9]{16}$/),
   Schema.annotations({
-    arbitrary: () => (fc) =>
-      fc.stringMatching(/^txn_[a-zA-Z0-9]{16}$/)
-  })
-)
+    arbitrary: () => (fc) => fc.stringMatching(/^txn_[a-zA-Z0-9]{16}$/),
+  }),
+);
 
-const PaymentStatus = Schema.Literal("succeeded", "pending", "failed")
+const PaymentStatus = Schema.Literal("succeeded", "pending", "failed");
 
 class PaymentResult extends Schema.Class<PaymentResult>("PaymentResult")({
   transactionId: TransactionId,
   amount: Schema.Number.pipe(Schema.positive()),
   currency: Schema.Literal("usd", "eur", "gbp"),
-  status: PaymentStatus
+  status: PaymentStatus,
 }) {}
 
 // 2. Define the service interface
 class PaymentGateway extends Context.Tag("PaymentGateway")<
   PaymentGateway,
   {
-    readonly charge: (amount: number, currency: string) => Effect.Effect<PaymentResult, PaymentError>
-    readonly refund: (transactionId: string) => Effect.Effect<void, RefundError>
+    readonly charge: (amount: number, currency: string) => Effect.Effect<PaymentResult, PaymentError>;
+    readonly refund: (transactionId: string) => Effect.Effect<void, RefundError>;
   }
 >() {}
 
@@ -143,14 +142,14 @@ const PaymentGatewayLive = Layer.succeed(PaymentGateway, {
   charge: (amount, currency) =>
     Effect.tryPromise({
       try: () => stripe.charges.create({ amount, currency }),
-      catch: (error) => new PaymentError({ cause: error })
+      catch: (error) => new PaymentError({ cause: error }),
     }),
   refund: (transactionId) =>
     Effect.tryPromise({
       try: () => stripe.refunds.create({ charge: transactionId }),
-      catch: (error) => new RefundError({ cause: error })
-    })
-})
+      catch: (error) => new RefundError({ cause: error }),
+    }),
+});
 
 // 4. Test implementation using Arbitrary — generates varied test data
 const PaymentGatewayTest = Layer.effect(
@@ -162,38 +161,32 @@ const PaymentGatewayTest = Layer.effect(
           transactionId: fc.sample(Arbitrary.make(TransactionId)(fc), 1)[0],
           amount,
           currency: currency as "usd" | "eur" | "gbp",
-          status: fc.sample(Arbitrary.make(PaymentStatus)(fc), 1)[0]
-        })
+          status: fc.sample(Arbitrary.make(PaymentStatus)(fc), 1)[0],
+        }),
       ),
-    refund: (_transactionId) => Effect.void
-  }))
-)
+    refund: (_transactionId) => Effect.void,
+  })),
+);
 
 // 5. Property test with the test layer — 100% coverage, zero external calls
 layer(PaymentGatewayTest)("PaymentService", (it) => {
-  it.effect.prop(
-    "should process payment for any valid amount",
-    [Schema.Number.pipe(Schema.positive())],
-    ([amount]) =>
-      Effect.gen(function* () {
-        const gateway = yield* PaymentGateway
-        const result = yield* gateway.charge(amount, "usd")
-        expect(result.amount).toBe(amount)
-        expect(["succeeded", "pending", "failed"]).toContain(result.status)
-      })
-  )
+  it.effect.prop("should process payment for any valid amount", [Schema.Number.pipe(Schema.positive())], ([amount]) =>
+    Effect.gen(function* () {
+      const gateway = yield* PaymentGateway;
+      const result = yield* gateway.charge(amount, "usd");
+      expect(result.amount).toBe(amount);
+      expect(["succeeded", "pending", "failed"]).toContain(result.status);
+    }),
+  );
 
-  it.effect.prop(
-    "should handle refund for any transaction",
-    [TransactionId],
-    ([txnId]) =>
-      Effect.gen(function* () {
-        const gateway = yield* PaymentGateway
-        yield* gateway.refund(txnId)
-        // No error = success
-      })
-  )
-})
+  it.effect.prop("should handle refund for any transaction", [TransactionId], ([txnId]) =>
+    Effect.gen(function* () {
+      const gateway = yield* PaymentGateway;
+      yield* gateway.refund(txnId);
+      // No error = success
+    }),
+  );
+});
 ```
 
 ### Stateful Test Layers (for Repository Testing)
@@ -201,31 +194,29 @@ layer(PaymentGatewayTest)("PaymentService", (it) => {
 For services that need to maintain state across operations within a test, use `Layer.effect` with `Ref`:
 
 ```typescript
-import { Effect, Layer, Ref, Option } from "effect"
+import { Effect, Layer, Ref, Option } from "effect";
 
 const OrderRepositoryTest = Layer.effect(
   OrderRepository,
   Effect.gen(function* () {
-    const store = yield* Ref.make<Map<string, Order>>(new Map())
+    const store = yield* Ref.make<Map<string, Order>>(new Map());
 
     return {
-      save: (order: Order) =>
-        Ref.update(store, (m) => new Map(m).set(order.id, order)),
+      save: (order: Order) => Ref.update(store, (m) => new Map(m).set(order.id, order)),
 
       findById: (id: string) =>
         Effect.gen(function* () {
-          const orders = yield* Ref.get(store)
+          const orders = yield* Ref.get(store);
           return yield* Option.match(Option.fromNullable(orders.get(id)), {
             onNone: () => Effect.fail(new OrderNotFound({ orderId: id })),
-            onSome: Effect.succeed
-          }).pipe(Effect.flatten)
+            onSome: Effect.succeed,
+          }).pipe(Effect.flatten);
         }),
 
-      findAll: () =>
-        Ref.get(store).pipe(Effect.map((m) => Array.from(m.values())))
-    }
-  })
-)
+      findAll: () => Ref.get(store).pipe(Effect.map((m) => Array.from(m.values()))),
+    };
+  }),
+);
 ```
 
 ### Composing Multiple Test Layers
@@ -233,32 +224,29 @@ const OrderRepositoryTest = Layer.effect(
 Real tests often need multiple services. Compose test layers with `Layer.merge` and use Arbitrary for all test data:
 
 ```typescript
-import { Schema, Arbitrary, Effect, Layer } from "effect"
-import { it, expect, layer } from "@effect/vitest"
-import * as fc from "fast-check"
+import { Schema, Arbitrary, Effect, Layer } from "effect";
+import { it, expect, layer } from "@effect/vitest";
+import * as fc from "fast-check";
 
 // Define schemas for all domain types
-const UserId = Schema.String.pipe(Schema.minLength(1))
-const OrderId = Schema.String.pipe(Schema.minLength(1))
+const UserId = Schema.String.pipe(Schema.minLength(1));
+const OrderId = Schema.String.pipe(Schema.minLength(1));
 
 class OrderItem extends Schema.Class<OrderItem>("OrderItem")({
   productId: Schema.String,
   price: Schema.Number.pipe(Schema.positive()),
-  quantity: Schema.Number.pipe(Schema.int(), Schema.positive())
+  quantity: Schema.Number.pipe(Schema.int(), Schema.positive()),
 }) {}
 
 class Order extends Schema.Class<Order>("Order")({
   id: OrderId,
   userId: UserId,
   items: Schema.NonEmptyArray(OrderItem),
-  total: Schema.Number.pipe(Schema.positive())
+  total: Schema.Number.pipe(Schema.positive()),
 }) {}
 
 // Compose all test layers
-const TestEnv = Layer.merge(
-  UserApiTest,
-  Layer.merge(OrderRepositoryTest, PaymentGatewayTest)
-)
+const TestEnv = Layer.merge(UserApiTest, Layer.merge(OrderRepositoryTest, PaymentGatewayTest));
 
 layer(TestEnv)("Order Processing", (it) => {
   it.effect.prop(
@@ -266,20 +254,20 @@ layer(TestEnv)("Order Processing", (it) => {
     [Arbitrary.make(UserId), Arbitrary.make(Order)],
     ([userId, order]) =>
       Effect.gen(function* () {
-        const userApi = yield* UserApi
-        const orderRepo = yield* OrderRepository
-        const gateway = yield* PaymentGateway
+        const userApi = yield* UserApi;
+        const orderRepo = yield* OrderRepository;
+        const gateway = yield* PaymentGateway;
 
         // Full integration test with ALL services mocked + generated data
-        const user = yield* userApi.getUser(userId)
-        yield* orderRepo.save(order)
-        const savedOrder = yield* orderRepo.findById(order.id)
-        const payment = yield* gateway.charge(savedOrder.total, "usd")
+        const user = yield* userApi.getUser(userId);
+        yield* orderRepo.save(order);
+        const savedOrder = yield* orderRepo.findById(order.id);
+        const payment = yield* gateway.charge(savedOrder.total, "usd");
 
-        expect(payment.amount).toBe(savedOrder.total)
-      })
-  )
-})
+        expect(payment.amount).toBe(savedOrder.total);
+      }),
+  );
+});
 ```
 
 ### Anti-Pattern: Hard-Coded Service Mocks in Property Tests
@@ -322,10 +310,11 @@ const defaultTestLayer = Layer.mergeAll(
   Layer.succeed(CodeExecutionService, {
     execute: () => Effect.fail(new CodeExecutionNotImplementedError()),
   }),
-)
+);
 ```
 
 **Why this is wrong:**
+
 1. **Hard-coded values** - Property tests run the same inputs every time, missing edge cases
 2. **`Effect.fail(new Error("Not implemented"))`** - These code paths are never exercised
 3. **No Arbitrary** - The whole point of property testing is generating varied data
@@ -333,55 +322,52 @@ const defaultTestLayer = Layer.mergeAll(
 **The correct approach:** Use `Arbitrary` inside `Layer.effect` to generate different values for each property test run:
 
 ```typescript
-import { Arbitrary, Schema, Effect, Layer, Ref } from "effect"
-import * as fc from "fast-check"
+import { Arbitrary, Schema, Effect, Layer, Ref } from "effect";
+import * as fc from "fast-check";
 
 // Define schemas for your service return types
 const WalletAddress = Schema.String.pipe(
   Schema.pattern(/^0x[a-fA-F0-9]{40}$/),
   Schema.annotations({
-    arbitrary: () => (fc) =>
-      fc.hexaString({ minLength: 40, maxLength: 40 }).map((hex) => `0x${hex}`)
-  })
-)
+    arbitrary: () => (fc) => fc.hexaString({ minLength: 40, maxLength: 40 }).map((hex) => `0x${hex}`),
+  }),
+);
 
 const HexData = Schema.String.pipe(
   Schema.pattern(/^0x[a-fA-F0-9]*$/),
   Schema.annotations({
-    arbitrary: () => (fc) =>
-      fc.hexaString({ minLength: 0, maxLength: 64 }).map((hex) => `0x${hex}`)
-  })
-)
+    arbitrary: () => (fc) => fc.hexaString({ minLength: 0, maxLength: 64 }).map((hex) => `0x${hex}`),
+  }),
+);
 
 // ✅ CORRECT: Use Arbitrary to generate test data in the layer
 const PropertyTestLayer = Layer.effect(
   UserWalletService,
   Effect.sync(() => {
     // Generate a random address for THIS test run
-    const address = fc.sample(Arbitrary.make(WalletAddress)(fc), 1)[0]
+    const address = fc.sample(Arbitrary.make(WalletAddress)(fc), 1)[0];
     return {
-      getAddress: () => Effect.succeed(address)
-    }
-  })
-)
+      getAddress: () => Effect.succeed(address),
+    };
+  }),
+);
 
 // ✅ CORRECT: For stateful services, combine Ref with Arbitrary
 const BlockchainClientTestLayer = Layer.effect(
   BlockchainClientService,
   Effect.gen(function* () {
     // Pre-generate test data for this test run
-    const callResultArb = Arbitrary.make(HexData)(fc)
-    const logsArb = Arbitrary.make(Schema.Array(EventLog))(fc)
+    const callResultArb = Arbitrary.make(HexData)(fc);
+    const logsArb = Arbitrary.make(Schema.Array(EventLog))(fc);
 
     return {
       call: () => Effect.succeed(fc.sample(callResultArb, 1)[0]),
       getLogs: () => Effect.succeed(fc.sample(logsArb, 1)[0]),
       // ✅ Generate valid trace data instead of failing
-      getTransactionTrace: () =>
-        Effect.succeed(fc.sample(Arbitrary.make(TransactionTrace)(fc), 1)[0])
-    }
-  })
-)
+      getTransactionTrace: () => Effect.succeed(fc.sample(Arbitrary.make(TransactionTrace)(fc), 1)[0]),
+    };
+  }),
+);
 
 // ✅ CORRECT: Full test layer with Arbitrary-generated data
 const FullPropertyTestLayer = Layer.mergeAll(
@@ -396,15 +382,14 @@ const FullPropertyTestLayer = Layer.mergeAll(
         // ✅ Either succeed with generated data OR fail with generated error
         fc.sample(fc.boolean(), 1)[0]
           ? Effect.succeed(fc.sample(Arbitrary.make(ImportResult)(fc), 1)[0])
-          : Effect.fail(
-              fc.sample(Arbitrary.make(HalImportError)(fc), 1)[0]
-            )
-    }))
-  )
-)
+          : Effect.fail(fc.sample(Arbitrary.make(HalImportError)(fc), 1)[0]),
+    })),
+  ),
+);
 ```
 
 **Key principles:**
+
 1. **Every service method should return Arbitrary-generated data** - Not hard-coded strings
 2. **Generate errors with Arbitrary too** - Error schemas should produce varied error cases
 3. **Use `Layer.effect` + `Effect.sync`** - So each test run gets fresh generated values
@@ -415,33 +400,27 @@ const FullPropertyTestLayer = Layer.mergeAll(
 The ultimate testing pattern: **service test layers + Schema Arbitrary.** This lets you test business logic across thousands of generated inputs with all external dependencies controlled:
 
 ```typescript
-import { it, expect, layer } from "@effect/vitest"
-import { Schema, Arbitrary, Effect } from "effect"
+import { it, expect, layer } from "@effect/vitest";
+import { Schema, Arbitrary, Effect } from "effect";
 
 layer(TestEnv)("Order Processing Properties", (it) => {
-  it.effect.prop(
-    "should calculate correct total for any valid order",
-    [Arbitrary.make(Order)],
-    ([order]) =>
-      Effect.gen(function* () {
-        const orderRepo = yield* OrderRepository
-        yield* orderRepo.save(order)
-        const saved = yield* orderRepo.findById(order.id)
-        expect(saved.total).toBe(order.items.reduce((sum, i) => sum + i.price, 0))
-      })
-  )
+  it.effect.prop("should calculate correct total for any valid order", [Arbitrary.make(Order)], ([order]) =>
+    Effect.gen(function* () {
+      const orderRepo = yield* OrderRepository;
+      yield* orderRepo.save(order);
+      const saved = yield* orderRepo.findById(order.id);
+      expect(saved.total).toBe(order.items.reduce((sum, i) => sum + i.price, 0));
+    }),
+  );
 
-  it.effect.prop(
-    "should never charge negative amounts",
-    [Arbitrary.make(Order)],
-    ([order]) =>
-      Effect.gen(function* () {
-        const gateway = yield* PaymentGateway
-        const result = yield* gateway.charge(order.total, "usd")
-        expect(result.amount).toBeGreaterThanOrEqual(0)
-      })
-  )
-})
+  it.effect.prop("should never charge negative amounts", [Arbitrary.make(Order)], ([order]) =>
+    Effect.gen(function* () {
+      const gateway = yield* PaymentGateway;
+      const result = yield* gateway.charge(order.total, "usd");
+      expect(result.amount).toBeGreaterThanOrEqual(0);
+    }),
+  );
+});
 ```
 
 ## Setup
@@ -456,9 +435,9 @@ Enable Effect-aware equality in your test setup:
 
 ```typescript
 // vitest.setup.ts (or at top of test files)
-import { addEqualityTesters } from "@effect/vitest"
+import { addEqualityTesters } from "@effect/vitest";
 
-addEqualityTesters()
+addEqualityTesters();
 ```
 
 ## @effect/vitest - Core Test Functions
@@ -468,45 +447,39 @@ addEqualityTesters()
 **Use `it.effect` for all Effect tests.** It automatically provides `TestContext` (including `TestClock`) and runs the Effect to completion. No `async`/`await` or `Effect.runPromise` needed.
 
 ```typescript
-import { it, expect } from "@effect/vitest"
-import { Effect, Schema, Arbitrary } from "effect"
+import { it, expect } from "@effect/vitest";
+import { Effect, Schema, Arbitrary } from "effect";
 
 // Use it.effect.prop for property-based testing with generated data
-it.effect.prop(
-  "should return user for any valid id",
-  [Schema.String.pipe(Schema.minLength(1))],
-  ([userId]) =>
-    Effect.gen(function* () {
-      const user = yield* getUser(userId)
-      expect(user.id).toBe(userId)
-    })
-)
+it.effect.prop("should return user for any valid id", [Schema.String.pipe(Schema.minLength(1))], ([userId]) =>
+  Effect.gen(function* () {
+    const user = yield* getUser(userId);
+    expect(user.id).toBe(userId);
+  }),
+);
 ```
 
 **NEVER use plain vitest `it` with `Effect.runPromise` when `it.effect` is available:**
 
 ```typescript
 // ❌ FORBIDDEN: manual Effect.runPromise in async test
-import { it, expect } from "vitest"
+import { it, expect } from "vitest";
 
 it("should return user", async () => {
-  const result = await Effect.runPromise(getUser(userId))
-  expect(result).toBeDefined()
-})
+  const result = await Effect.runPromise(getUser(userId));
+  expect(result).toBeDefined();
+});
 
 // ✅ REQUIRED: it.effect.prop handles execution + data generation automatically
-import { it, expect } from "@effect/vitest"
-import { Effect, Schema } from "effect"
+import { it, expect } from "@effect/vitest";
+import { Effect, Schema } from "effect";
 
-it.effect.prop(
-  "should return user for any valid id",
-  [Schema.String.pipe(Schema.minLength(1))],
-  ([userId]) =>
-    Effect.gen(function* () {
-      const user = yield* getUser(userId)
-      expect(user.id).toBe(userId)
-    })
-)
+it.effect.prop("should return user for any valid id", [Schema.String.pipe(Schema.minLength(1))], ([userId]) =>
+  Effect.gen(function* () {
+    const user = yield* getUser(userId);
+    expect(user.id).toBe(userId);
+  }),
+);
 ```
 
 ### it.scoped - Tests with Resource Management
@@ -514,17 +487,17 @@ it.effect.prop(
 Use `it.scoped` when your test needs a `Scope` (e.g., acquireRelease resources). The scope is automatically closed when the test ends.
 
 ```typescript
-import { it, expect } from "@effect/vitest"
-import { Effect } from "effect"
+import { it, expect } from "@effect/vitest";
+import { Effect } from "effect";
 
 it.scoped("should manage database connection", () =>
   Effect.gen(function* () {
-    const conn = yield* acquireDbConnection  // acquireRelease resource
-    const result = yield* conn.query("SELECT 1")
-    expect(result).toBeDefined()
+    const conn = yield* acquireDbConnection; // acquireRelease resource
+    const result = yield* conn.query("SELECT 1");
+    expect(result).toBeDefined();
     // Connection is automatically released when test ends
-  })
-)
+  }),
+);
 ```
 
 ### it.live - Tests with Live Environment
@@ -532,17 +505,17 @@ it.scoped("should manage database connection", () =>
 Use `it.live` when you need the real runtime environment (real clock, real logger) instead of test services.
 
 ```typescript
-import { it, expect } from "@effect/vitest"
-import { Effect } from "effect"
+import { it, expect } from "@effect/vitest";
+import { Effect } from "effect";
 
 it.live("should measure real time", () =>
   Effect.gen(function* () {
-    const start = Date.now()
-    yield* Effect.sleep("10 millis")
-    const elapsed = Date.now() - start
-    expect(elapsed).toBeGreaterThanOrEqual(10)
-  })
-)
+    const start = Date.now();
+    yield* Effect.sleep("10 millis");
+    const elapsed = Date.now() - start;
+    expect(elapsed).toBeGreaterThanOrEqual(10);
+  }),
+);
 ```
 
 - `it.scopedLive` combines scoped resources with the live environment.
@@ -552,26 +525,26 @@ it.live("should measure real time", () =>
 Use `it.layer` to provide dependencies to a group of tests. The layer is constructed once and shared across all tests in the block. Always use `Layer.effect` with `Ref` for stateful services and Arbitrary for test data.
 
 ```typescript
-import { it, expect, layer } from "@effect/vitest"
-import { Effect, Layer, Context, Ref, Option, Schema, Arbitrary } from "effect"
-import * as fc from "fast-check"
+import { it, expect, layer } from "@effect/vitest";
+import { Effect, Layer, Context, Ref, Option, Schema, Arbitrary } from "effect";
+import * as fc from "fast-check";
 
 // Define User schema for Arbitrary generation
 class User extends Schema.Class<User>("User")({
   id: Schema.String.pipe(Schema.minLength(1)),
   name: Schema.String.pipe(Schema.minLength(1)),
-  email: Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\.[^@]+$/))
+  email: Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\.[^@]+$/)),
 }) {}
 
 class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", {
-  userId: Schema.String
+  userId: Schema.String,
 }) {}
 
 class UserRepository extends Context.Tag("UserRepository")<
   UserRepository,
   {
-    readonly findById: (id: string) => Effect.Effect<User, UserNotFound>
-    readonly save: (user: User) => Effect.Effect<void>
+    readonly findById: (id: string) => Effect.Effect<User, UserNotFound>;
+    readonly save: (user: User) => Effect.Effect<void>;
   }
 >() {}
 
@@ -579,65 +552,55 @@ class UserRepository extends Context.Tag("UserRepository")<
 const TestUserRepo = Layer.effect(
   UserRepository,
   Effect.gen(function* () {
-    const store = yield* Ref.make<Map<string, User>>(new Map())
+    const store = yield* Ref.make<Map<string, User>>(new Map());
 
     return {
       findById: (id: string) =>
         Effect.gen(function* () {
-          const users = yield* Ref.get(store)
+          const users = yield* Ref.get(store);
           return yield* Option.match(Option.fromNullable(users.get(id)), {
             onNone: () => Effect.fail(new UserNotFound({ userId: id })),
-            onSome: Effect.succeed
-          })
+            onSome: Effect.succeed,
+          });
         }).pipe(Effect.flatten),
-      save: (user: User) =>
-        Ref.update(store, (m) => new Map(m).set(user.id, user))
-    }
-  })
-)
+      save: (user: User) => Ref.update(store, (m) => new Map(m).set(user.id, user)),
+    };
+  }),
+);
 
 // Top-level layer wrapping a describe block
 layer(TestUserRepo)("UserService", (it) => {
-  it.effect.prop(
-    "should save and find any valid user",
-    [Arbitrary.make(User)],
-    ([user]) =>
-      Effect.gen(function* () {
-        const repo = yield* UserRepository
-        yield* repo.save(user)
-        const found = yield* repo.findById(user.id)
-        expect(found).toEqual(user)
-      })
-  )
+  it.effect.prop("should save and find any valid user", [Arbitrary.make(User)], ([user]) =>
+    Effect.gen(function* () {
+      const repo = yield* UserRepository;
+      yield* repo.save(user);
+      const found = yield* repo.findById(user.id);
+      expect(found).toEqual(user);
+    }),
+  );
 
-  it.effect.prop(
-    "should fail for any non-existent user id",
-    [Schema.String.pipe(Schema.minLength(1))],
-    ([userId]) =>
-      Effect.gen(function* () {
-        const repo = yield* UserRepository
-        const exit = yield* Effect.exit(repo.findById(userId))
-        expect(exit._tag).toBe("Failure")
-      })
-  )
-})
+  it.effect.prop("should fail for any non-existent user id", [Schema.String.pipe(Schema.minLength(1))], ([userId]) =>
+    Effect.gen(function* () {
+      const repo = yield* UserRepository;
+      const exit = yield* Effect.exit(repo.findById(userId));
+      expect(exit._tag).toBe("Failure");
+    }),
+  );
+});
 
 // Nested layers for composing dependencies
 layer(TestUserRepo)("nested layers", (it) => {
   it.layer(AnotherLayer)((it) => {
-    it.effect.prop(
-      "has both dependencies for any user",
-      [Arbitrary.make(User)],
-      ([user]) =>
-        Effect.gen(function* () {
-          const repo = yield* UserRepository
-          const other = yield* AnotherService
-          yield* repo.save(user)
-          // Both services available with generated data
-        })
-    )
-  })
-})
+    it.effect.prop("has both dependencies for any user", [Arbitrary.make(User)], ([user]) =>
+      Effect.gen(function* () {
+        const repo = yield* UserRepository;
+        const other = yield* AnotherService;
+        yield* repo.save(user);
+        // Both services available with generated data
+      }),
+    );
+  });
+});
 ```
 
 ### Test Modifiers
@@ -645,21 +608,21 @@ layer(TestUserRepo)("nested layers", (it) => {
 All test variants support standard Vitest modifiers:
 
 ```typescript
-it.effect.skip("temporarily disabled", () => Effect.sync(() => {}))
-it.effect.only("run only this test", () => Effect.sync(() => {}))
-it.effect.fails("expected to fail", () => Effect.fail(new Error("expected")))
+it.effect.skip("temporarily disabled", () => Effect.sync(() => {}));
+it.effect.only("run only this test", () => Effect.sync(() => {}));
+it.effect.fails("expected to fail", () => Effect.fail(new Error("expected")));
 
 // Conditional execution
-it.effect.skipIf(process.env.CI)("skip on CI", () => Effect.sync(() => {}))
-it.effect.runIf(process.env.CI)("only on CI", () => Effect.sync(() => {}))
+it.effect.skipIf(process.env.CI)("skip on CI", () => Effect.sync(() => {}));
+it.effect.runIf(process.env.CI)("only on CI", () => Effect.sync(() => {}));
 
 // Parameterized tests
 it.effect.each([1, 2, 3])("processes %d", (num) =>
   Effect.gen(function* () {
-    const result = yield* processNumber(num)
-    expect(result).toBeGreaterThan(0)
-  })
-)
+    const result = yield* processNumber(num);
+    expect(result).toBeGreaterThan(0);
+  }),
+);
 ```
 
 ### it.flakyTest - Retry Flaky Tests
@@ -667,15 +630,15 @@ it.effect.each([1, 2, 3])("processes %d", (num) =>
 Use `it.flakyTest` for tests that may not succeed on the first attempt due to timing, external dependencies, or randomness:
 
 ```typescript
-import { it } from "@effect/vitest"
-import { Effect } from "effect"
+import { it } from "@effect/vitest";
+import { Effect } from "effect";
 
 it.effect("should eventually succeed", () =>
   it.flakyTest(
     unreliableExternalCall(),
-    "5 seconds"  // Max retry duration
-  )
-)
+    "5 seconds", // Max retry duration
+  ),
+);
 ```
 
 ## Property-Based Testing
@@ -685,45 +648,44 @@ it.effect("should eventually succeed", () =>
 `it.prop` integrates property-based testing directly into `@effect/vitest`. It accepts Schema types or fast-check Arbitraries.
 
 ```typescript
-import { it, expect } from "@effect/vitest"
-import { Schema } from "effect"
+import { it, expect } from "@effect/vitest";
+import { Schema } from "effect";
 
 // Array form with positional arguments
 it.prop("addition is commutative", [Schema.Int, Schema.Int], ([a, b]) => {
-  expect(a + b).toBe(b + a)
-})
+  expect(a + b).toBe(b + a);
+});
 
 // Object form with named arguments
 it.prop(
   "validates user fields",
   {
     name: Schema.NonEmptyString,
-    age: Schema.Number.pipe(Schema.int(), Schema.between(0, 150))
+    age: Schema.Number.pipe(Schema.int(), Schema.between(0, 150)),
   },
   ({ name, age }) => {
-    expect(name.length).toBeGreaterThan(0)
-    expect(age).toBeGreaterThanOrEqual(0)
-  }
-)
+    expect(name.length).toBeGreaterThan(0);
+    expect(age).toBeGreaterThanOrEqual(0);
+  },
+);
 
 // Effect-based property test
-it.effect.prop(
-  "async property",
-  [Schema.String],
-  ([input]) =>
-    Effect.gen(function* () {
-      const result = yield* processInput(input)
-      expect(result).toBeDefined()
-    })
-)
+it.effect.prop("async property", [Schema.String], ([input]) =>
+  Effect.gen(function* () {
+    const result = yield* processInput(input);
+    expect(result).toBeDefined();
+  }),
+);
 
 // With fast-check options
 it.prop(
   "with custom runs",
   [Schema.Int],
-  ([n]) => { expect(n + 0).toBe(n) },
-  { fastCheck: { numRuns: 1000 } }
-)
+  ([n]) => {
+    expect(n + 0).toBe(n);
+  },
+  { fastCheck: { numRuns: 1000 } },
+);
 ```
 
 ### Schema.Arbitrary - Generating Test Data
@@ -731,22 +693,22 @@ it.prop(
 Every Schema can generate random valid test data. This is the foundation of Effect testing.
 
 ```typescript
-import { Schema, Arbitrary } from "effect"
-import * as fc from "fast-check"
+import { Schema, Arbitrary } from "effect";
+import * as fc from "fast-check";
 
 // Define your schema (you should already have this)
 class User extends Schema.Class<User>("User")({
   id: Schema.String.pipe(Schema.minLength(1)),
   name: Schema.String.pipe(Schema.minLength(1)),
   email: Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\.[^@]+$/)),
-  age: Schema.Number.pipe(Schema.int(), Schema.between(0, 150))
+  age: Schema.Number.pipe(Schema.int(), Schema.between(0, 150)),
 }) {}
 
 // Create an arbitrary from the schema
-const UserArbitrary = Arbitrary.make(User)
+const UserArbitrary = Arbitrary.make(User);
 
 // Generate test data
-fc.sample(UserArbitrary(fc), 3)
+fc.sample(UserArbitrary(fc), 3);
 // => [
 //   User { id: "a", name: "xyz", email: "foo@bar.com", age: 42 },
 //   User { id: "test", name: "b", email: "x@y.z", age: 0 },
@@ -757,35 +719,35 @@ fc.sample(UserArbitrary(fc), 3)
 ### With Schema.TaggedClass (Discriminated Unions)
 
 ```typescript
-import { Schema, Arbitrary, Match } from "effect"
-import * as fc from "fast-check"
+import { Schema, Arbitrary, Match } from "effect";
+import * as fc from "fast-check";
 
 class Pending extends Schema.TaggedClass<Pending>()("Pending", {
   orderId: Schema.String,
-  items: Schema.Array(Schema.String)
+  items: Schema.Array(Schema.String),
 }) {}
 
 class Shipped extends Schema.TaggedClass<Shipped>()("Shipped", {
   orderId: Schema.String,
   items: Schema.Array(Schema.String),
-  trackingNumber: Schema.String
+  trackingNumber: Schema.String,
 }) {}
 
 class Delivered extends Schema.TaggedClass<Delivered>()("Delivered", {
   orderId: Schema.String,
   items: Schema.Array(Schema.String),
-  deliveredAt: Schema.Date
+  deliveredAt: Schema.Date,
 }) {}
 
-const Order = Schema.Union(Pending, Shipped, Delivered)
-type Order = Schema.Schema.Type<typeof Order>
+const Order = Schema.Union(Pending, Shipped, Delivered);
+type Order = Schema.Schema.Type<typeof Order>;
 
 // Arbitrary for the entire union - generates all variants
-const OrderArbitrary = Arbitrary.make(Order)
+const OrderArbitrary = Arbitrary.make(Order);
 
 // Arbitrary for specific variants
-const PendingArbitrary = Arbitrary.make(Pending)
-const ShippedArbitrary = Arbitrary.make(Shipped)
+const PendingArbitrary = Arbitrary.make(Pending);
+const ShippedArbitrary = Arbitrary.make(Shipped);
 ```
 
 ### Customizing Arbitrary Generation
@@ -796,27 +758,24 @@ Use `Schema.annotations` to control generated values:
 const Email = Schema.String.pipe(
   Schema.pattern(/^[^@]+@[^@]+\.[^@]+$/),
   Schema.annotations({
-    arbitrary: () => (fc) =>
-      fc.emailAddress()  // Use fast-check's email generator
-  })
-)
+    arbitrary: () => (fc) => fc.emailAddress(), // Use fast-check's email generator
+  }),
+);
 
 const UserId = Schema.String.pipe(
   Schema.minLength(1),
   Schema.annotations({
-    arbitrary: () => (fc) =>
-      fc.uuid()  // Generate UUIDs
-  })
-)
+    arbitrary: () => (fc) => fc.uuid(), // Generate UUIDs
+  }),
+);
 
 const Age = Schema.Number.pipe(
   Schema.int(),
   Schema.between(18, 100),
   Schema.annotations({
-    arbitrary: () => (fc) =>
-      fc.integer({ min: 18, max: 100 })
-  })
-)
+    arbitrary: () => (fc) => fc.integer({ min: 18, max: 100 }),
+  }),
+);
 ```
 
 ## Property-Based Testing Patterns
@@ -826,24 +785,24 @@ const Age = Schema.Number.pipe(
 Every Schema should pass round-trip testing:
 
 ```typescript
-import { it, expect } from "@effect/vitest"
-import { Schema, Arbitrary } from "effect"
-import * as fc from "fast-check"
+import { it, expect } from "@effect/vitest";
+import { Schema, Arbitrary } from "effect";
+import * as fc from "fast-check";
 
 describe("User schema", () => {
-  const UserArbitrary = Arbitrary.make(User)
+  const UserArbitrary = Arbitrary.make(User);
 
   it.prop("should survive encode/decode round-trip", [UserArbitrary], ([user]) => {
-    const encoded = Schema.encodeSync(User)(user)
-    const decoded = Schema.decodeUnknownSync(User)(encoded)
+    const encoded = Schema.encodeSync(User)(user);
+    const decoded = Schema.decodeUnknownSync(User)(encoded);
 
     // Verify structural equality
-    expect(decoded).toEqual(user)
+    expect(decoded).toEqual(user);
 
     // Verify it's still a User instance
-    expect(decoded).toBeInstanceOf(User)
-  })
-})
+    expect(decoded).toBeInstanceOf(User);
+  });
+});
 ```
 
 ### Testing Discriminated Unions Exhaustively
@@ -856,12 +815,12 @@ describe("Order processing", () => {
       Match.when(Schema.is(Pending), (o) => `Pending: ${o.orderId}`),
       Match.when(Schema.is(Shipped), (o) => `Shipped: ${o.trackingNumber}`),
       Match.when(Schema.is(Delivered), (o) => `Delivered: ${o.deliveredAt}`),
-      Match.exhaustive
-    )
+      Match.exhaustive,
+    );
 
-    expect(typeof result).toBe("string")
-  })
-})
+    expect(typeof result).toBe("string");
+  });
+});
 ```
 
 ### Testing Invariants
@@ -870,41 +829,37 @@ describe("Order processing", () => {
 class BankAccount extends Schema.Class<BankAccount>("BankAccount")({
   id: Schema.String,
   balance: Schema.Number.pipe(Schema.nonNegative()),
-  transactions: Schema.Array(Schema.Number)
+  transactions: Schema.Array(Schema.Number),
 }) {
   get computedBalance() {
-    return this.transactions.reduce((sum, t) => sum + t, 0)
+    return this.transactions.reduce((sum, t) => sum + t, 0);
   }
 }
 
 describe("BankAccount invariants", () => {
   it.prop("should never have negative balance", [Arbitrary.make(BankAccount)], ([account]) => {
-    expect(account.balance).toBeGreaterThanOrEqual(0)
-  })
-})
+    expect(account.balance).toBeGreaterThanOrEqual(0);
+  });
+});
 ```
 
 ### Testing Transformations
 
 ```typescript
-const MoneyFromCents = Schema.transform(
-  Schema.Number.pipe(Schema.int()),
-  Schema.Number,
-  {
-    decode: (cents) => cents / 100,
-    encode: (dollars) => Math.round(dollars * 100)
-  }
-)
+const MoneyFromCents = Schema.transform(Schema.Number.pipe(Schema.int()), Schema.Number, {
+  decode: (cents) => cents / 100,
+  encode: (dollars) => Math.round(dollars * 100),
+});
 
 describe("Money transformation", () => {
   it.prop("should preserve value through transform", [Schema.Int.pipe(Schema.between(0, 1000000))], ([cents]) => {
-    const dollars = Schema.decodeSync(MoneyFromCents)(cents)
-    const backToCents = Schema.encodeSync(MoneyFromCents)(dollars)
+    const dollars = Schema.decodeSync(MoneyFromCents)(cents);
+    const backToCents = Schema.encodeSync(MoneyFromCents)(dollars);
 
     // Allow for floating point rounding
-    expect(backToCents).toBe(cents)
-  })
-})
+    expect(backToCents).toBe(cents);
+  });
+});
 ```
 
 ### Testing Idempotency
@@ -912,11 +867,11 @@ describe("Money transformation", () => {
 ```typescript
 describe("Normalization is idempotent", () => {
   it.prop("normalizing twice equals normalizing once", [Arbitrary.make(Email)], ([email]) => {
-    const once = normalizeEmail(email)
-    const twice = normalizeEmail(normalizeEmail(email))
-    expect(twice).toBe(once)
-  })
-})
+    const once = normalizeEmail(email);
+    const twice = normalizeEmail(normalizeEmail(email));
+    expect(twice).toBe(once);
+  });
+});
 ```
 
 ### Testing Commutativity
@@ -924,11 +879,11 @@ describe("Normalization is idempotent", () => {
 ```typescript
 describe("Order total calculation", () => {
   it.prop("total is independent of item order", { items: Schema.Array(OrderItem) }, ({ items }) => {
-    const total1 = calculateTotal(items)
-    const total2 = calculateTotal([...items].reverse())
-    expect(total1).toBe(total2)
-  })
-})
+    const total1 = calculateTotal(items);
+    const total2 = calculateTotal([...items].reverse());
+    expect(total1).toBe(total2);
+  });
+});
 ```
 
 ## Testing Services with Layers
@@ -936,26 +891,26 @@ describe("Order total calculation", () => {
 Combine `it.layer` with Arbitrary for service-level testing — **all test data comes from Schemas**:
 
 ```typescript
-import { it, expect, layer } from "@effect/vitest"
-import { Effect, Layer, Context, Ref, Option, Schema, Arbitrary } from "effect"
+import { it, expect, layer } from "@effect/vitest";
+import { Effect, Layer, Context, Ref, Option, Schema, Arbitrary } from "effect";
 
 // Define schemas for all domain types
 class User extends Schema.Class<User>("User")({
   id: Schema.String.pipe(Schema.minLength(1)),
   name: Schema.String.pipe(Schema.minLength(1)),
   email: Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\.[^@]+$/)),
-  age: Schema.Number.pipe(Schema.int(), Schema.between(0, 150))
+  age: Schema.Number.pipe(Schema.int(), Schema.between(0, 150)),
 }) {}
 
 class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", {
-  userId: Schema.String
+  userId: Schema.String,
 }) {}
 
 class UserRepository extends Context.Tag("UserRepository")<
   UserRepository,
   {
-    readonly save: (user: User) => Effect.Effect<void>
-    readonly findById: (id: string) => Effect.Effect<User, UserNotFound>
+    readonly save: (user: User) => Effect.Effect<void>;
+    readonly findById: (id: string) => Effect.Effect<User, UserNotFound>;
   }
 >() {}
 
@@ -963,81 +918,71 @@ class UserRepository extends Context.Tag("UserRepository")<
 const TestUserRepo = Layer.effect(
   UserRepository,
   Effect.gen(function* () {
-    const usersRef = yield* Ref.make<Map<string, User>>(new Map())
+    const usersRef = yield* Ref.make<Map<string, User>>(new Map());
 
     return {
-      save: (user: User) =>
-        Ref.update(usersRef, (users) => new Map(users).set(user.id, user)),
+      save: (user: User) => Ref.update(usersRef, (users) => new Map(users).set(user.id, user)),
 
       findById: (id: string) =>
         Effect.gen(function* () {
-          const users = yield* Ref.get(usersRef)
-          const user = users.get(id)
+          const users = yield* Ref.get(usersRef);
+          const user = users.get(id);
           return yield* Option.match(Option.fromNullable(user), {
             onNone: () => Effect.fail(new UserNotFound({ userId: id })),
-            onSome: Effect.succeed
-          })
-        }).pipe(Effect.flatten)
-    }
-  })
-)
+            onSome: Effect.succeed,
+          });
+        }).pipe(Effect.flatten),
+    };
+  }),
+);
 
 layer(TestUserRepo)("UserService", (it) => {
-  it.effect.prop(
-    "should save and retrieve any valid user",
-    [Arbitrary.make(User)],
-    ([user]) =>
-      Effect.gen(function* () {
-        const repo = yield* UserRepository
-        yield* repo.save(user)
-        const found = yield* repo.findById(user.id)
-        expect(found).toEqual(user)
-      })
-  )
+  it.effect.prop("should save and retrieve any valid user", [Arbitrary.make(User)], ([user]) =>
+    Effect.gen(function* () {
+      const repo = yield* UserRepository;
+      yield* repo.save(user);
+      const found = yield* repo.findById(user.id);
+      expect(found).toEqual(user);
+    }),
+  );
 
-  it.effect.prop(
-    "should fail for any non-existent user id",
-    [Schema.String.pipe(Schema.minLength(1))],
-    ([userId]) =>
-      Effect.gen(function* () {
-        const repo = yield* UserRepository
-        const exit = yield* Effect.exit(repo.findById(userId))
-        expect(exit._tag).toBe("Failure")
-      })
-  )
-})
+  it.effect.prop("should fail for any non-existent user id", [Schema.String.pipe(Schema.minLength(1))], ([userId]) =>
+    Effect.gen(function* () {
+      const repo = yield* UserRepository;
+      const exit = yield* Effect.exit(repo.findById(userId));
+      expect(exit._tag).toBe("Failure");
+    }),
+  );
+});
 ```
 
 ## Testing Error Handling
 
 ```typescript
-import { it, expect } from "@effect/vitest"
-import { Effect, Schema, Match, Arbitrary } from "effect"
+import { it, expect } from "@effect/vitest";
+import { Effect, Schema, Match, Arbitrary } from "effect";
 
-class ValidationError extends Schema.TaggedError<ValidationError>()(
-  "ValidationError",
-  { field: Schema.String, message: Schema.String }
-) {}
+class ValidationError extends Schema.TaggedError<ValidationError>()("ValidationError", {
+  field: Schema.String,
+  message: Schema.String,
+}) {}
 
-class NotFoundError extends Schema.TaggedError<NotFoundError>()(
-  "NotFoundError",
-  { resourceId: Schema.String }
-) {}
+class NotFoundError extends Schema.TaggedError<NotFoundError>()("NotFoundError", { resourceId: Schema.String }) {}
 
-const AppError = Schema.Union(ValidationError, NotFoundError)
-type AppError = Schema.Schema.Type<typeof AppError>
+const AppError = Schema.Union(ValidationError, NotFoundError);
+type AppError = Schema.Schema.Type<typeof AppError>;
 
 describe("Error handling", () => {
   it.prop("should handle all error types", [Arbitrary.make(AppError)], ([error]) => {
     const message = Match.value(error).pipe(
       Match.tag("ValidationError", (e) => `Validation: ${e.field}`),
       Match.tag("NotFoundError", (e) => `Not found: ${e.resourceId}`),
-      Match.exhaustive
-    )
+      Match.exhaustive,
+    );
 
-    expect(typeof message).toBe("string")
-  })
-})
+    expect(typeof message).toBe("string");
+  });
+});
 ```
 
 ## Testing with Exit
@@ -1045,35 +990,32 @@ describe("Error handling", () => {
 Use `Effect.exit` within `it.effect.prop` to inspect success/failure outcomes with generated error data:
 
 ```typescript
-import { it, expect } from "@effect/vitest"
-import { Effect, Exit, Cause, Option, Schema, Arbitrary } from "effect"
+import { it, expect } from "@effect/vitest";
+import { Effect, Exit, Cause, Option, Schema, Arbitrary } from "effect";
 
 class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", {
-  userId: Schema.String.pipe(Schema.minLength(1))
+  userId: Schema.String.pipe(Schema.minLength(1)),
 }) {}
 
-it.effect.prop(
-  "should fail with UserNotFound for any generated error",
-  [Arbitrary.make(UserNotFound)],
-  ([error]) =>
-    Effect.gen(function* () {
-      const exit = yield* Effect.exit(Effect.fail(error))
+it.effect.prop("should fail with UserNotFound for any generated error", [Arbitrary.make(UserNotFound)], ([error]) =>
+  Effect.gen(function* () {
+    const exit = yield* Effect.exit(Effect.fail(error));
 
-      expect(Exit.isFailure(exit)).toBe(true)
+    expect(Exit.isFailure(exit)).toBe(true);
 
-      Exit.match(exit, {
-        onFailure: (cause) => {
-          const failureError = Cause.failureOption(cause)
-          expect(Option.isSome(failureError)).toBe(true)
-          expect(Schema.is(UserNotFound)(Option.getOrThrow(failureError))).toBe(true)
-          expect(Option.getOrThrow(failureError).userId).toBe(error.userId)
-        },
-        onSuccess: () => {
-          throw new Error("Expected failure")
-        }
-      })
-    })
-)
+    Exit.match(exit, {
+      onFailure: (cause) => {
+        const failureError = Cause.failureOption(cause);
+        expect(Option.isSome(failureError)).toBe(true);
+        expect(Schema.is(UserNotFound)(Option.getOrThrow(failureError))).toBe(true);
+        expect(Option.getOrThrow(failureError).userId).toBe(error.userId);
+      },
+      onSuccess: () => {
+        throw new Error("Expected failure");
+      },
+    });
+  }),
+);
 ```
 
 ## TestClock - Controlling Time
@@ -1083,21 +1025,19 @@ it.effect.prop(
 ### Basic Time Control
 
 ```typescript
-import { it, expect } from "@effect/vitest"
-import { Effect, TestClock, Fiber } from "effect"
+import { it, expect } from "@effect/vitest";
+import { Effect, TestClock, Fiber } from "effect";
 
 it.effect("should complete after simulated delay", () =>
   Effect.gen(function* () {
-    const fiber = yield* Effect.fork(
-      Effect.sleep("1 hour").pipe(Effect.as("completed"))
-    )
+    const fiber = yield* Effect.fork(Effect.sleep("1 hour").pipe(Effect.as("completed")));
 
-    yield* TestClock.adjust("1 hour")
+    yield* TestClock.adjust("1 hour");
 
-    const result = yield* Fiber.join(fiber)
-    expect(result).toBe("completed")
-  })
-)
+    const result = yield* Fiber.join(fiber);
+    expect(result).toBe("completed");
+  }),
+);
 ```
 
 ### Testing Scheduled Operations
@@ -1105,64 +1045,66 @@ it.effect("should complete after simulated delay", () =>
 ```typescript
 it.effect("should retry 3 times", () =>
   Effect.gen(function* () {
-    let attempts = 0
+    let attempts = 0;
 
     const fiber = yield* Effect.fork(
-      Effect.sync(() => { attempts++ }).pipe(
+      Effect.sync(() => {
+        attempts++;
+      }).pipe(
         Effect.flatMap(() => Effect.fail("error")),
-        Effect.retry(Schedule.spaced("1 second").pipe(Schedule.recurs(3)))
-      )
-    )
+        Effect.retry(Schedule.spaced("1 second").pipe(Schedule.recurs(3))),
+      ),
+    );
 
-    yield* TestClock.adjust("1 second")
-    yield* TestClock.adjust("1 second")
-    yield* TestClock.adjust("1 second")
+    yield* TestClock.adjust("1 second");
+    yield* TestClock.adjust("1 second");
+    yield* TestClock.adjust("1 second");
 
-    yield* Fiber.join(fiber).pipe(Effect.ignore)
+    yield* Fiber.join(fiber).pipe(Effect.ignore);
 
-    expect(attempts).toBe(4) // Initial + 3 retries
-  })
-)
+    expect(attempts).toBe(4); // Initial + 3 retries
+  }),
+);
 ```
 
 ## Testing Configuration
 
 ```typescript
-import { it, expect } from "@effect/vitest"
-import { Effect, Config, ConfigProvider, Layer } from "effect"
+import { it, expect } from "@effect/vitest";
+import { Effect, Config, ConfigProvider, Layer } from "effect";
 
 const TestConfigProvider = ConfigProvider.fromMap(
   new Map([
     ["DATABASE_URL", "postgres://test:test@localhost/test"],
     ["API_KEY", "test-api-key"],
-    ["DEBUG", "true"]
-  ])
-)
+    ["DEBUG", "true"],
+  ]),
+);
 
-const TestConfig = Layer.setConfigProvider(TestConfigProvider)
+const TestConfig = Layer.setConfigProvider(TestConfigProvider);
 
 it.effect("should use test configuration", () =>
   Effect.gen(function* () {
-    const dbUrl = yield* Config.string("DATABASE_URL")
-    const debug = yield* Config.boolean("DEBUG")
-    expect(dbUrl).toContain("localhost/test")
-    expect(debug).toBe(true)
-  }).pipe(Effect.provide(TestConfig))
-)
+    const dbUrl = yield* Config.string("DATABASE_URL");
+    const debug = yield* Config.boolean("DEBUG");
+    expect(dbUrl).toContain("localhost/test");
+    expect(debug).toBe(true);
+  }).pipe(Effect.provide(TestConfig)),
+);
 ```
 
 ## @effect/vitest Quick Reference
 
-| Function | Environment | Scope | Use Case |
-|---|---|---|---|
-| `it.effect` | Test (TestClock, etc.) | No | Most common; deterministic tests |
-| `it.live` | Live (real clock) | No | Tests needing real environment |
-| `it.scoped` | Test | Auto-cleanup | Tests with acquireRelease resources |
-| `it.scopedLive` | Live | Auto-cleanup | Resources + real environment |
-| `it.layer` | Test | Shared layer | Providing dependencies to test groups |
-| `it.prop` | Sync | No | Property-based testing with Schema/Arbitrary |
-| `it.effect.prop` | Test | No | Effect-based property testing |
-| `it.flakyTest` | Test | No | Retry flaky tests with timeout |
+| Function         | Environment            | Scope        | Use Case                                     |
+| ---------------- | ---------------------- | ------------ | -------------------------------------------- |
+| `it.effect`      | Test (TestClock, etc.) | No           | Most common; deterministic tests             |
+| `it.live`        | Live (real clock)      | No           | Tests needing real environment               |
+| `it.scoped`      | Test                   | Auto-cleanup | Tests with acquireRelease resources          |
+| `it.scopedLive`  | Live                   | Auto-cleanup | Resources + real environment                 |
+| `it.layer`       | Test                   | Shared layer | Providing dependencies to test groups        |
+| `it.prop`        | Sync                   | No           | Property-based testing with Schema/Arbitrary |
+| `it.effect.prop` | Test                   | No           | Effect-based property testing                |
+| `it.flakyTest`   | Test                   | No           | Retry flaky tests with timeout               |
 
 ## Best Practices
 
@@ -1213,6 +1155,7 @@ This combination guarantees full coverage: services control all side effects, Ar
 For comprehensive testing documentation, consult `${CLAUDE_PLUGIN_ROOT}/references/llms-full.txt`.
 
 Search for these sections:
+
 - "Arbitrary" for test data generation
 - "TestClock" for time control
 - "Testability" for testing patterns

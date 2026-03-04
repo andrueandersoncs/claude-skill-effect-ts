@@ -1,5 +1,5 @@
 ---
-name: Schema
+name: schema
 description: This skill should be used when the user asks about "Effect Schema", "Schema.Struct", "Schema.decodeUnknown", "data validation", "parsing", "Schema.transform", "Schema filters", "Schema annotations", "JSON Schema", "Schema.Class", "Schema branded types", "encoding", "decoding", "Schema.parseJson", or needs to understand how Effect handles data validation and transformation.
 version: 1.0.0
 ---
@@ -29,8 +29,8 @@ const User = Schema.Struct({
   name: Schema.String,
   email: Schema.optional(Schema.String),
   verifiedAt: Schema.optional(Schema.Date),
-  suspendedReason: Schema.optional(Schema.String)
-})
+  suspendedReason: Schema.optional(Schema.String),
+});
 // Unclear: Can a user be both verified AND suspended? What if email is missing?
 
 // ✅ GOOD: Tagged union makes states explicit
@@ -38,27 +38,28 @@ const User = Schema.Union(
   Schema.Struct({
     _tag: Schema.Literal("Unverified"),
     id: Schema.String,
-    name: Schema.String
+    name: Schema.String,
   }),
   Schema.Struct({
     _tag: Schema.Literal("Active"),
     id: Schema.String,
     name: Schema.String,
     email: Schema.String,
-    verifiedAt: Schema.Date
+    verifiedAt: Schema.Date,
   }),
   Schema.Struct({
     _tag: Schema.Literal("Suspended"),
     id: Schema.String,
     name: Schema.String,
     email: Schema.String,
-    suspendedReason: Schema.String
-  })
-)
+    suspendedReason: Schema.String,
+  }),
+);
 // Clear: Each state has exactly the fields it needs
 ```
 
 **Why tagged unions:**
+
 - No impossible states (suspended user always has a reason)
 - Exhaustive matching catches missing cases
 - Self-documenting state machine
@@ -74,34 +75,34 @@ const UserStruct = Schema.Struct({
   id: Schema.String,
   firstName: Schema.String,
   lastName: Schema.String,
-  email: Schema.String
-})
-type User = Schema.Schema.Type<typeof UserStruct>
+  email: Schema.String,
+});
+type User = Schema.Schema.Type<typeof UserStruct>;
 
 // ✅ PREFER: Class-based Schema
 class User extends Schema.Class<User>("User")({
   id: Schema.String,
   firstName: Schema.String,
   lastName: Schema.String,
-  email: Schema.String
+  email: Schema.String,
 }) {
   get fullName() {
-    return `${this.firstName} ${this.lastName}`
+    return `${this.firstName} ${this.lastName}`;
   }
 
   get emailDomain() {
-    return this.email.split("@")[1]
+    return this.email.split("@")[1];
   }
 
   withEmail(email: string) {
-    return new User({ ...this, email })
+    return new User({ ...this, email });
   }
 }
 
 // Usage:
-const user = Schema.decodeUnknownSync(User)(data)
-console.log(user.fullName)        // "John Doe"
-console.log(Schema.is(User)(user)) // true - use Schema.is() for type checks
+const user = Schema.decodeUnknownSync(User)(data);
+console.log(user.fullName); // "John Doe"
+console.log(Schema.is(User)(user)); // true - use Schema.is() for type checks
 ```
 
 **For tagged unions with classes:**
@@ -109,28 +110,28 @@ console.log(Schema.is(User)(user)) // true - use Schema.is() for type checks
 ```typescript
 class Unverified extends Schema.TaggedClass<Unverified>()("Unverified", {
   id: Schema.String,
-  name: Schema.String
+  name: Schema.String,
 }) {}
 
 class Active extends Schema.TaggedClass<Active>()("Active", {
   id: Schema.String,
   name: Schema.String,
   email: Schema.String,
-  verifiedAt: Schema.Date
+  verifiedAt: Schema.Date,
 }) {
   get isRecent() {
-    return Date.now() - this.verifiedAt.getTime() < 86400000
+    return Date.now() - this.verifiedAt.getTime() < 86400000;
   }
 }
 
 class Suspended extends Schema.TaggedClass<Suspended>()("Suspended", {
   id: Schema.String,
   name: Schema.String,
-  suspendedReason: Schema.String
+  suspendedReason: Schema.String,
 }) {}
 
-const User = Schema.Union(Unverified, Active, Suspended)
-type User = Schema.Schema.Type<typeof User>
+const User = Schema.Union(Unverified, Active, Suspended);
+type User = Schema.Schema.Type<typeof User>;
 ```
 
 ### 3. Schema.is() with Match Patterns
@@ -138,39 +139,43 @@ type User = Schema.Schema.Type<typeof User>
 **USE Schema.is() as type guards in Match.when patterns.** This combines Schema validation with Match's exhaustive checking.
 
 ```typescript
-import { Schema, Match } from "effect"
+import { Schema, Match } from "effect";
 
 // Define schemas
 class Circle extends Schema.TaggedClass<Circle>()("Circle", {
-  radius: Schema.Number
+  radius: Schema.Number,
 }) {
-  get area() { return Math.PI * this.radius ** 2 }
+  get area() {
+    return Math.PI * this.radius ** 2;
+  }
 }
 
 class Rectangle extends Schema.TaggedClass<Rectangle>()("Rectangle", {
   width: Schema.Number,
-  height: Schema.Number
+  height: Schema.Number,
 }) {
-  get area() { return this.width * this.height }
+  get area() {
+    return this.width * this.height;
+  }
 }
 
-const Shape = Schema.Union(Circle, Rectangle)
-type Shape = Schema.Schema.Type<typeof Shape>
+const Shape = Schema.Union(Circle, Rectangle);
+type Shape = Schema.Schema.Type<typeof Shape>;
 
 // Use Schema.is() in Match patterns
 const describeShape = (shape: Shape) =>
   Match.value(shape).pipe(
     Match.when(Schema.is(Circle), (c) => `Circle with radius ${c.radius}`),
     Match.when(Schema.is(Rectangle), (r) => `${r.width}x${r.height} rectangle`),
-    Match.exhaustive
-  )
+    Match.exhaustive,
+  );
 
 // Schema.is() also works for runtime type checking
 const processUnknown = (input: unknown) => {
   if (Schema.is(Circle)(input)) {
-    console.log(`Circle area: ${input.area}`)
+    console.log(`Circle area: ${input.area}`);
   }
-}
+};
 ```
 
 **Schema.is() vs Match.tag:**
@@ -182,16 +187,16 @@ const handleUser = (user: User) =>
     Match.tag("Active", (u) => sendEmail(u.email)),
     Match.tag("Suspended", (u) => logSuspension(u.suspendedReason)),
     Match.tag("Unverified", () => sendVerificationReminder()),
-    Match.exhaustive
-  )
+    Match.exhaustive,
+  );
 
 // Schema.is() - when validating unknown data or need class features
 const handleUnknown = (input: unknown) =>
   Match.value(input).pipe(
-    Match.when(Schema.is(Active), (u) => u.isRecent),  // Can use class methods
+    Match.when(Schema.is(Active), (u) => u.isRecent), // Can use class methods
     Match.when(Schema.is(Suspended), () => false),
-    Match.orElse(() => false)
-  )
+    Match.orElse(() => false),
+  );
 ```
 
 **NEVER access `._tag` directly:**
@@ -233,20 +238,20 @@ if (isActive(user)) { ... }
 
 ```typescript
 // ✅ Error `cause` capturing arbitrary caught exceptions - the value is genuinely unknown
-class NetworkError extends Schema.TaggedError<NetworkError>()(
-  "NetworkError",
-  { url: Schema.String, cause: Schema.Unknown }
-) {}
+class NetworkError extends Schema.TaggedError<NetworkError>()("NetworkError", {
+  url: Schema.String,
+  cause: Schema.Unknown,
+}) {}
 
 // ✅ A generic container that truly accepts any value (e.g., a cache, event metadata)
 class CacheEntry extends Schema.Class<CacheEntry>("CacheEntry")({
   key: Schema.String,
-  value: Schema.Unknown,   // Cache genuinely stores arbitrary data
-  ttl: Schema.Number
+  value: Schema.Unknown, // Cache genuinely stores arbitrary data
+  ttl: Schema.Number,
 }) {}
 
 // ✅ Schema.parseJson without a target schema to get raw parsed JSON
-const RawJson = Schema.parseJson()  // Produces Schema<unknown>
+const RawJson = Schema.parseJson(); // Produces Schema<unknown>
 // This is fine as an intermediate step before further validation
 ```
 
@@ -255,22 +260,22 @@ const RawJson = Schema.parseJson()  // Produces Schema<unknown>
 ```typescript
 // ❌ FORBIDDEN: Lazy schema definition - write the actual shape
 const UserResponse = Schema.Struct({
-  data: Schema.Unknown  // What is "data"? Define it!
-})
+  data: Schema.Unknown, // What is "data"? Define it!
+});
 
 // ❌ FORBIDDEN: Avoiding nested schema definition
 const ApiResponse = Schema.Struct({
-  body: Schema.Any  // Write the actual body schema
-})
+  body: Schema.Any, // Write the actual body schema
+});
 
 // ❌ FORBIDDEN: Using Schema.Unknown for "I'll validate later"
-const input: Schema.Schema<unknown> = Schema.Unknown
+const input: Schema.Schema<unknown> = Schema.Unknown;
 // Define the correct schema upfront
 
 // ❌ FORBIDDEN: Using Schema.Any to bypass type checking
 const config = Schema.Struct({
-  settings: Schema.Any  // Define the settings shape!
-})
+  settings: Schema.Any, // Define the settings shape!
+});
 ```
 
 **How to fix type-weakened schemas:**
@@ -279,20 +284,20 @@ const config = Schema.Struct({
 // ❌ Before: type-weakened
 const ApiResponse = Schema.Struct({
   data: Schema.Unknown,
-  meta: Schema.Any
-})
+  meta: Schema.Any,
+});
 
 // ✅ After: properly typed
 class ApiResponse extends Schema.Class<ApiResponse>("ApiResponse")({
   data: Schema.Struct({
     users: Schema.Array(User),
-    total: Schema.Number
+    total: Schema.Number,
   }),
   meta: Schema.Struct({
     page: Schema.Number,
     perPage: Schema.Number,
-    requestId: Schema.String
-  })
+    requestId: Schema.String,
+  }),
 }) {}
 ```
 
@@ -301,20 +306,24 @@ class ApiResponse extends Schema.Class<ApiResponse>("ApiResponse")({
 ## Basic Schemas
 
 ```typescript
-import { Schema } from "effect"
+import { Schema } from "effect";
 
 // Primitives
-const str = Schema.String
-const num = Schema.Number
-const bool = Schema.Boolean
-const bigint = Schema.BigInt
+const str = Schema.String;
+const num = Schema.Number;
+const bool = Schema.Boolean;
+const bigint = Schema.BigInt;
 
 // Literals
-const status = Schema.Literal("pending", "active", "completed")
+const status = Schema.Literal("pending", "active", "completed");
 
 // Enums
-enum Color { Red, Green, Blue }
-const color = Schema.Enums(Color)
+enum Color {
+  Red,
+  Green,
+  Blue,
+}
+const color = Schema.Enums(Color);
 ```
 
 ## Decoding and Encoding
@@ -324,24 +333,24 @@ const color = Schema.Enums(Color)
 ```typescript
 const Person = Schema.Struct({
   name: Schema.String,
-  age: Schema.Number
-})
+  age: Schema.Number,
+});
 
 // Sync decode (throws on error)
-const person = Schema.decodeUnknownSync(Person)({ name: "Alice", age: 30 })
+const person = Schema.decodeUnknownSync(Person)({ name: "Alice", age: 30 });
 
 // Effect-based decode
-const person = yield* Schema.decodeUnknown(Person)(input)
+const person = yield * Schema.decodeUnknown(Person)(input);
 
 // Either result
-const result = Schema.decodeUnknownEither(Person)(input)
+const result = Schema.decodeUnknownEither(Person)(input);
 ```
 
 ### Encoding (Internal → External)
 
 ```typescript
-const encoded = Schema.encodeSync(Person)(person)
-const encoded = yield* Schema.encode(Person)(person)
+const encoded = Schema.encodeSync(Person)(person);
+const encoded = yield * Schema.encode(Person)(person);
 ```
 
 ## Struct Schemas
@@ -351,60 +360,58 @@ const User = Schema.Struct({
   id: Schema.Number,
   name: Schema.String,
   email: Schema.String,
-  createdAt: Schema.Date
-})
+  createdAt: Schema.Date,
+});
 
 // Optional fields
 const UserWithOptional = Schema.Struct({
   id: Schema.Number,
   name: Schema.String,
-  nickname: Schema.optional(Schema.String)
-})
+  nickname: Schema.optional(Schema.String),
+});
 
 // Optional with default
 const UserWithDefault = Schema.Struct({
   id: Schema.Number,
-  role: Schema.optional(Schema.String).pipe(
-    Schema.withDefault(() => "user")
-  )
-})
+  role: Schema.optional(Schema.String).pipe(Schema.withDefault(() => "user")),
+});
 ```
 
 ## Array and Record
 
 ```typescript
 // Array
-const Numbers = Schema.Array(Schema.Number)
-const Users = Schema.Array(User)
+const Numbers = Schema.Array(Schema.Number);
+const Users = Schema.Array(User);
 
 // Non-empty array
-const NonEmptyStrings = Schema.NonEmptyArray(Schema.String)
+const NonEmptyStrings = Schema.NonEmptyArray(Schema.String);
 
 // Record
 const StringRecord = Schema.Record({
   key: Schema.String,
-  value: Schema.Number
-})
+  value: Schema.Number,
+});
 ```
 
 ## Union and Discriminated Unions
 
 ```typescript
 // Simple union
-const StringOrNumber = Schema.Union(Schema.String, Schema.Number)
+const StringOrNumber = Schema.Union(Schema.String, Schema.Number);
 
 // Discriminated union (recommended)
 const Shape = Schema.Union(
   Schema.Struct({
     _tag: Schema.Literal("Circle"),
-    radius: Schema.Number
+    radius: Schema.Number,
   }),
   Schema.Struct({
     _tag: Schema.Literal("Rectangle"),
     width: Schema.Number,
-    height: Schema.Number
-  })
-)
+    height: Schema.Number,
+  }),
+);
 ```
 
 ## Transformations
@@ -413,14 +420,10 @@ const Shape = Schema.Union(
 
 ```typescript
 // String ↔ Number
-const NumberFromString = Schema.transform(
-  Schema.String,
-  Schema.Number,
-  {
-    decode: (s) => parseFloat(s),
-    encode: (n) => String(n)
-  }
-)
+const NumberFromString = Schema.transform(Schema.String, Schema.Number, {
+  decode: (s) => parseFloat(s),
+  encode: (n) => String(n),
+});
 
 // Usage: "42" decodes to 42, 42 encodes to "42"
 ```
@@ -429,15 +432,17 @@ const NumberFromString = Schema.transform(
 
 ```typescript
 // String to Number
-const num = Schema.NumberFromString
+const num = Schema.NumberFromString;
 
 // String to Date
-const date = Schema.DateFromString
+const date = Schema.DateFromString;
 
 // Parse JSON string
-const jsonData = Schema.parseJson(Schema.Struct({
-  name: Schema.String
-}))
+const jsonData = Schema.parseJson(
+  Schema.Struct({
+    name: Schema.String,
+  }),
+);
 ```
 
 ## JSON Parsing with Schema.parseJson
@@ -448,23 +453,25 @@ const jsonData = Schema.parseJson(Schema.Struct({
 
 ```typescript
 // ❌ BAD: JSON.parse gives you `any` and can throw
-const data = JSON.parse(jsonString)  // type: any, throws on invalid JSON
+const data = JSON.parse(jsonString); // type: any, throws on invalid JSON
 
 // ❌ BAD: Even with Schema, this is two separate failure points
-const parsed = JSON.parse(jsonString)  // Can throw!
-const validated = Schema.decodeUnknownSync(MySchema)(parsed)
+const parsed = JSON.parse(jsonString); // Can throw!
+const validated = Schema.decodeUnknownSync(MySchema)(parsed);
 
 // ✅ GOOD: Schema.parseJson handles both in one type-safe step
-const MyData = Schema.parseJson(Schema.Struct({
-  name: Schema.String,
-  count: Schema.Number
-}))
+const MyData = Schema.parseJson(
+  Schema.Struct({
+    name: Schema.String,
+    count: Schema.Number,
+  }),
+);
 
 // Sync version - throws ParseError (not generic Error)
-const data = Schema.decodeUnknownSync(MyData)('{"name": "test", "count": 42}')
+const data = Schema.decodeUnknownSync(MyData)('{"name": "test", "count": 42}');
 
 // Effect version - typed error handling
-const program = Schema.decodeUnknown(MyData)(jsonString)
+const program = Schema.decodeUnknown(MyData)(jsonString);
 // Effect<{ name: string, count: number }, ParseError, never>
 ```
 
@@ -479,99 +486,89 @@ const program = Schema.decodeUnknown(MyData)(jsonString)
 
 ```typescript
 // API response parsing
-const ApiResponse = Schema.parseJson(Schema.Struct({
-  success: Schema.Boolean,
-  data: Schema.Struct({
-    id: Schema.String,
-    name: Schema.String
-  })
-}))
+const ApiResponse = Schema.parseJson(
+  Schema.Struct({
+    success: Schema.Boolean,
+    data: Schema.Struct({
+      id: Schema.String,
+      name: Schema.String,
+    }),
+  }),
+);
 
 // With optional reviver schema for complex decoding
-const WithDate = Schema.parseJson(Schema.Struct({
-  createdAt: Schema.Date  // Automatically handles ISO date strings
-}))
+const WithDate = Schema.parseJson(
+  Schema.Struct({
+    createdAt: Schema.Date, // Automatically handles ISO date strings
+  }),
+);
 
 // Nested JSON (JSON string containing JSON string)
-const NestedConfig = Schema.parseJson(Schema.Struct({
-  settings: Schema.parseJson(Schema.Struct({
-    theme: Schema.String
-  }))
-}))
+const NestedConfig = Schema.parseJson(
+  Schema.Struct({
+    settings: Schema.parseJson(
+      Schema.Struct({
+        theme: Schema.String,
+      }),
+    ),
+  }),
+);
 ```
 
 ### In Effect Programs
 
 ```typescript
-import { Effect, Schema } from "effect"
+import { Effect, Schema } from "effect";
 
-const ConfigSchema = Schema.parseJson(Schema.Struct({
-  apiKey: Schema.String,
-  endpoint: Schema.String,
-  retries: Schema.Number
-}))
+const ConfigSchema = Schema.parseJson(
+  Schema.Struct({
+    apiKey: Schema.String,
+    endpoint: Schema.String,
+    retries: Schema.Number,
+  }),
+);
 
 const loadConfig = (jsonString: string) =>
   Effect.gen(function* () {
-    const config = yield* Schema.decodeUnknown(ConfigSchema)(jsonString)
-    return config
-  })
+    const config = yield* Schema.decodeUnknown(ConfigSchema)(jsonString);
+    return config;
+  });
 
 // Errors are typed and can be handled with Effect.catchTag
 const program = loadConfig(rawJson).pipe(
-  Effect.catchTag("ParseError", (e) =>
-    Effect.fail(new ConfigurationError({ cause: e }))
-  )
-)
+  Effect.catchTag("ParseError", (e) => Effect.fail(new ConfigurationError({ cause: e }))),
+);
 ```
 
 ## Filters (Validation)
 
 ```typescript
 // String constraints
-const Email = Schema.String.pipe(
-  Schema.pattern(/^[^@]+@[^@]+\.[^@]+$/),
-  Schema.annotations({ identifier: "Email" })
-)
+const Email = Schema.String.pipe(Schema.pattern(/^[^@]+@[^@]+\.[^@]+$/), Schema.annotations({ identifier: "Email" }));
 
-const Username = Schema.String.pipe(
-  Schema.minLength(3),
-  Schema.maxLength(20),
-  Schema.pattern(/^[a-z0-9_]+$/)
-)
+const Username = Schema.String.pipe(Schema.minLength(3), Schema.maxLength(20), Schema.pattern(/^[a-z0-9_]+$/));
 
 // Number constraints
-const Age = Schema.Number.pipe(
-  Schema.int(),
-  Schema.between(0, 150)
-)
+const Age = Schema.Number.pipe(Schema.int(), Schema.between(0, 150));
 
-const PositiveNumber = Schema.Number.pipe(
-  Schema.positive()
-)
+const PositiveNumber = Schema.Number.pipe(Schema.positive());
 
 // Custom filter
 const EvenNumber = Schema.Number.pipe(
   Schema.filter((n) => n % 2 === 0, {
-    message: () => "Expected even number"
-  })
-)
+    message: () => "Expected even number",
+  }),
+);
 ```
 
 ## Branded Types
 
 ```typescript
-const UserId = Schema.String.pipe(
-  Schema.brand("UserId")
-)
-type UserId = Schema.Schema.Type<typeof UserId>
+const UserId = Schema.String.pipe(Schema.brand("UserId"));
+type UserId = Schema.Schema.Type<typeof UserId>;
 // type UserId = string & Brand<"UserId">
 
-const OrderId = Schema.Number.pipe(
-  Schema.int(),
-  Schema.positive(),
-  Schema.brand("OrderId")
-)
+const OrderId = Schema.Number.pipe(Schema.int(), Schema.positive(), Schema.brand("OrderId"));
 ```
 
 ## Class-Based Schemas
@@ -580,10 +577,10 @@ const OrderId = Schema.Number.pipe(
 class Person extends Schema.Class<Person>("Person")({
   id: Schema.Number,
   name: Schema.String,
-  email: Schema.String
+  email: Schema.String,
 }) {
   get displayName() {
-    return `${this.name} (${this.email})`
+    return `${this.name} (${this.email})`;
   }
 }
 
@@ -591,23 +588,19 @@ class Person extends Schema.Class<Person>("Person")({
 const person = Schema.decodeUnknownSync(Person)({
   id: 1,
   name: "Alice",
-  email: "alice@example.com"
-})
-console.log(person.displayName) // "Alice (alice@example.com)"
+  email: "alice@example.com",
+});
+console.log(person.displayName); // "Alice (alice@example.com)"
 ```
 
 ## Tagged Errors with Schema
 
 ```typescript
-class UserNotFound extends Schema.TaggedError<UserNotFound>()(
-  "UserNotFound",
-  { userId: Schema.String }
-) {}
+class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", { userId: Schema.String }) {}
 
-class ValidationError extends Schema.TaggedError<ValidationError>()(
-  "ValidationError",
-  { errors: Schema.Array(Schema.String) }
-) {}
+class ValidationError extends Schema.TaggedError<ValidationError>()("ValidationError", {
+  errors: Schema.Array(Schema.String),
+}) {}
 ```
 
 ## Annotations
@@ -619,16 +612,16 @@ const User = Schema.Struct({
       identifier: "UserId",
       title: "User ID",
       description: "Unique user identifier",
-      examples: [1, 2, 3]
-    })
+      examples: [1, 2, 3],
+    }),
   ),
   email: Schema.String.pipe(
     Schema.annotations({
       identifier: "Email",
-      description: "User email address"
-    })
-  )
-})
+      description: "User email address",
+    }),
+  ),
+});
 ```
 
 ## Error Messages
@@ -638,43 +631,43 @@ const User = Schema.Struct({
 ```typescript
 const Password = Schema.String.pipe(
   Schema.minLength(8, {
-    message: () => "Password must be at least 8 characters"
+    message: () => "Password must be at least 8 characters",
   }),
   Schema.pattern(/[A-Z]/, {
-    message: () => "Password must contain uppercase letter"
+    message: () => "Password must contain uppercase letter",
   }),
   Schema.pattern(/[0-9]/, {
-    message: () => "Password must contain a number"
-  })
-)
+    message: () => "Password must contain a number",
+  }),
+);
 ```
 
 ### Formatting Errors
 
 ```typescript
-import { TreeFormatter, ArrayFormatter } from "effect/ParseResult"
+import { TreeFormatter, ArrayFormatter } from "effect/ParseResult";
 
-const result = Schema.decodeUnknownEither(User)(input)
+const result = Schema.decodeUnknownEither(User)(input);
 Either.match(result, {
   onLeft: (error) => {
     // Tree format
-    console.log(TreeFormatter.formatErrorSync(error))
+    console.log(TreeFormatter.formatErrorSync(error));
 
     // Array format
-    console.log(ArrayFormatter.formatErrorSync(error))
+    console.log(ArrayFormatter.formatErrorSync(error));
   },
   onRight: () => {
     // Valid input, no errors to format
-  }
-})
+  },
+});
 ```
 
 ## JSON Schema Export
 
 ```typescript
-import { JSONSchema } from "effect"
+import { JSONSchema } from "effect";
 
-const jsonSchema = JSONSchema.make(User)
+const jsonSchema = JSONSchema.make(User);
 // Produces JSON Schema compatible output
 ```
 
@@ -687,44 +680,35 @@ const ApiResponse = <A>(dataSchema: Schema.Schema<A>) =>
   Schema.Struct({
     success: Schema.Boolean,
     data: dataSchema,
-    timestamp: Schema.DateFromString
-  })
+    timestamp: Schema.DateFromString,
+  });
 
-const UserResponse = ApiResponse(User)
+const UserResponse = ApiResponse(User);
 ```
 
 ### Form Validation
 
 ```typescript
 const RegistrationForm = Schema.Struct({
-  username: Schema.String.pipe(
-    Schema.minLength(3),
-    Schema.maxLength(20)
-  ),
+  username: Schema.String.pipe(Schema.minLength(3), Schema.maxLength(20)),
   email: Schema.String.pipe(Schema.pattern(emailRegex)),
   password: Schema.String.pipe(Schema.minLength(8)),
-  confirmPassword: Schema.String
-}).pipe(
-  Schema.filter((form) =>
-    form.password === form.confirmPassword
-      ? undefined
-      : "Passwords must match"
-  )
-)
+  confirmPassword: Schema.String,
+}).pipe(Schema.filter((form) => (form.password === form.confirmPassword ? undefined : "Passwords must match")));
 ```
 
 ### Recursive Schemas
 
 ```typescript
 interface Category {
-  name: string
-  subcategories: readonly Category[]
+  name: string;
+  subcategories: readonly Category[];
 }
 
 const Category: Schema.Schema<Category> = Schema.Struct({
   name: Schema.String,
-  subcategories: Schema.Array(Schema.suspend(() => Category))
-})
+  subcategories: Schema.Array(Schema.suspend(() => Category)),
+});
 ```
 
 ## Best Practices Summary
@@ -754,6 +738,7 @@ const Category: Schema.Schema<Category> = Schema.Struct({
 For comprehensive Schema documentation, consult `${CLAUDE_PLUGIN_ROOT}/references/llms-full.txt`.
 
 Search for these sections:
+
 - "Introduction to Effect Schema" for overview
 - "Basic Usage" for getting started
 - "Transformations" for bidirectional transforms

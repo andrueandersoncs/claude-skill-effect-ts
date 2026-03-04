@@ -1,5 +1,5 @@
 ---
-name: Effect Core
+name: effect-core
 description: This skill should be used ANY TIME you're writing TypeScript with Effect, especially when the user asks about "Effect type", "creating effects", "running effects", "Effect.gen", "Effect.succeed", "Effect.fail", "Effect.sync", "Effect.promise", "Effect.tryPromise", "Effect.runPromise", "Effect.runSync", "pipe", "andThen", "flatMap", "map", "Effect basics", or needs to understand the fundamental Effect<Success, Error, Requirements> type and how to create, compose, and run effects.
 version: 1.0.0
 ---

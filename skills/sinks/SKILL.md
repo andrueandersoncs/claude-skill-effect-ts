@@ -1,5 +1,5 @@
 ---
-name: Sinks
+name: sinks
 description: This skill should be used when the user asks about "Effect Sink", "Sink.collectAll", "Sink.sum", "Sink.fold", "stream consumers", "Sink.forEach", "creating sinks", "sink operations", "sink leftovers", "sink concurrency", "Stream.run with Sink", or needs to understand how Effect Sinks consume stream data.
 version: 1.0.0
 ---
@@ -11,7 +11,7 @@ version: 1.0.0
 A `Sink` is a consumer of stream elements that produces a result:
 
 ```typescript
-Sink<A, In, L, E, R>
+Sink<A, In, L, E, R>;
 // A  - Result type (what sink produces)
 // In - Input element type (what sink consumes)
 // L  - Leftover type (unconsumed elements)
@@ -26,87 +26,65 @@ Sinks are the counterpart to Streams - while Streams produce data, Sinks consume
 ### Collecting Elements
 
 ```typescript
-import { Stream, Sink } from "effect"
+import { Stream, Sink } from "effect";
 
-const all = yield* Stream.make(1, 2, 3, 4, 5).pipe(
-  Stream.run(Sink.collectAll())
-)
+const all = yield * Stream.make(1, 2, 3, 4, 5).pipe(Stream.run(Sink.collectAll()));
 
-const array = yield* Stream.make(1, 2, 3).pipe(
-  Stream.run(Sink.collectAllToArray())
-)
+const array = yield * Stream.make(1, 2, 3).pipe(Stream.run(Sink.collectAllToArray()));
 
-const firstThree = yield* Stream.range(1, 100).pipe(
-  Stream.run(Sink.collectAllN(3))
-)
+const firstThree = yield * Stream.range(1, 100).pipe(Stream.run(Sink.collectAllN(3)));
 
-const whileSmall = yield* Stream.iterate(1, (n) => n + 1).pipe(
-  Stream.run(Sink.collectAllWhile((n) => n < 5))
-)
+const whileSmall = yield * Stream.iterate(1, (n) => n + 1).pipe(Stream.run(Sink.collectAllWhile((n) => n < 5)));
 ```
 
 ### Aggregation Sinks
 
 ```typescript
-const total = yield* Stream.make(1, 2, 3, 4, 5).pipe(
-  Stream.run(Sink.sum)
-)
+const total = yield * Stream.make(1, 2, 3, 4, 5).pipe(Stream.run(Sink.sum));
 
-const count = yield* Stream.make("a", "b", "c").pipe(
-  Stream.run(Sink.count)
-)
+const count = yield * Stream.make("a", "b", "c").pipe(Stream.run(Sink.count));
 
-const first = yield* Stream.make(1, 2, 3).pipe(
-  Stream.run(Sink.head)
-)
+const first = yield * Stream.make(1, 2, 3).pipe(Stream.run(Sink.head));
 
-const last = yield* Stream.make(1, 2, 3).pipe(
-  Stream.run(Sink.last)
-)
+const last = yield * Stream.make(1, 2, 3).pipe(Stream.run(Sink.last));
 
-const taken = yield* Stream.make(1, 2, 3, 4, 5).pipe(
-  Stream.run(Sink.take(3))
-)
+const taken = yield * Stream.make(1, 2, 3, 4, 5).pipe(Stream.run(Sink.take(3)));
 ```
 
 ### Folding Sinks
 
 ```typescript
-const product = yield* Stream.make(1, 2, 3, 4, 5).pipe(
-  Stream.run(Sink.foldLeft(1, (acc, n) => acc * n))
-)
+const product = yield * Stream.make(1, 2, 3, 4, 5).pipe(Stream.run(Sink.foldLeft(1, (acc, n) => acc * n)));
 
-const sumUntil100 = yield* Stream.iterate(1, (n) => n + 1).pipe(
-  Stream.run(
-    Sink.fold(
-      0,
-      (sum) => sum < 100,
-      (sum, n) => sum + n
-    )
-  )
-)
+const sumUntil100 =
+  yield *
+  Stream.iterate(1, (n) => n + 1).pipe(
+    Stream.run(
+      Sink.fold(
+        0,
+        (sum) => sum < 100,
+        (sum, n) => sum + n,
+      ),
+    ),
+  );
 
 const foldWithLog = Sink.foldEffect(
   0,
   (sum) => sum < 100,
   (sum, n) =>
     Effect.gen(function* () {
-      yield* Effect.log(`Adding ${n} to ${sum}`)
-      return sum + n
-    })
-)
+      yield* Effect.log(`Adding ${n} to ${sum}`);
+      return sum + n;
+    }),
+);
 ```
 
 ### Side Effect Sinks
 
 ```typescript
-yield* Stream.make(1, 2, 3).pipe(
-  Stream.run(Sink.forEach((n) => Effect.log(`Got: ${n}`)))
-)
+yield * Stream.make(1, 2, 3).pipe(Stream.run(Sink.forEach((n) => Effect.log(`Got: ${n}`))));
 
-yield* Stream.make(1, 2, 3).pipe(
-  Stream.run(Sink.drain)
-)
+yield * Stream.make(1, 2, 3).pipe(Stream.run(Sink.drain));
 ```
 
 ## Creating Custom Sinks
@@ -118,14 +96,12 @@ const maxSink = Sink.make<number, number, never, never, never>(
   // Initial state
   Number.NEGATIVE_INFINITY,
   // Process each element
-  (max, n) => n > max ? n : max,
+  (max, n) => (n > max ? n : max),
   // Extract result
-  (max) => max
-)
+  (max) => max,
+);
 
-const max = yield* Stream.make(3, 1, 4, 1, 5, 9).pipe(
-  Stream.run(maxSink)
-) // 9
+const max = yield * Stream.make(3, 1, 4, 1, 5, 9).pipe(Stream.run(maxSink)); // 9
 ```
 
 ### Sink.fromEffect
@@ -134,10 +110,10 @@ const max = yield* Stream.make(3, 1, 4, 1, 5, 9).pipe(
 const logAndReturn = <A>(label: string) =>
   Sink.fromEffect(
     Effect.gen(function* () {
-      yield* Effect.log(`Starting ${label}`)
-      return [] as A[]
-    })
-  )
+      yield* Effect.log(`Starting ${label}`);
+      return [] as A[];
+    }),
+  );
 ```
 
 ### Sink.fromPush
@@ -148,15 +124,15 @@ For more control over the sink lifecycle:
 const customSink = Sink.fromPush<number, number, never, never>((input) =>
   Effect.sync(() =>
     Option.match(input, {
-      onNone: () => Either.left(finalResult),  // Stream ended
+      onNone: () => Either.left(finalResult), // Stream ended
       onSome: (chunk) => {
         // Process chunk
         // Return Either.right to continue, Either.left to finish
-        return Either.right(undefined)
-      }
-    })
-  )
-)
+        return Either.right(undefined);
+      },
+    }),
+  ),
+);
 ```
 
 ## Sink Operations
@@ -164,47 +140,34 @@ const customSink = Sink.fromPush<number, number, never, never>((input) =>
 ### Transforming Sinks
 
 ```typescript
-const doubledSum = Sink.sum.pipe(
-  Sink.map((sum) => sum * 2)
-)
+const doubledSum = Sink.sum.pipe(Sink.map((sum) => sum * 2));
 
-const lengthSum = Sink.sum.pipe(
-  Sink.contramap((s: string) => s.length)
-)
+const lengthSum = Sink.sum.pipe(Sink.contramap((s: string) => s.length));
 
 const processStrings = Sink.sum.pipe(
   Sink.dimap(
     (s: string) => s.length,
-    (sum) => `Total length: ${sum}`
-  )
-)
+    (sum) => `Total length: ${sum}`,
+  ),
+);
 ```
 
 ### Combining Sinks
 
 ```typescript
-const sumAndCount = Sink.zip(Sink.sum, Sink.count)
+const sumAndCount = Sink.zip(Sink.sum, Sink.count);
 
-const [sum, count] = yield* Stream.make(1, 2, 3, 4, 5).pipe(
-  Stream.run(sumAndCount)
-)
+const [sum, count] = yield * Stream.make(1, 2, 3, 4, 5).pipe(Stream.run(sumAndCount));
 
-const firstOrSum = Sink.race(
-  Sink.head,
-  Sink.sum.pipe(Sink.map(Option.some))
-)
+const firstOrSum = Sink.race(Sink.head, Sink.sum.pipe(Sink.map(Option.some)));
 ```
 
 ### Filtering
 
 ```typescript
-const sumPositive = Sink.sum.pipe(
-  Sink.filterInput((n: number) => n > 0)
-)
+const sumPositive = Sink.sum.pipe(Sink.filterInput((n: number) => n > 0));
 
-const result = yield* Stream.make(-1, 2, -3, 4, -5).pipe(
-  Stream.run(sumPositive)
-)
+const result = yield * Stream.make(-1, 2, -3, 4, -5).pipe(Stream.run(sumPositive));
 ```
 
 ## Leftovers
@@ -212,15 +175,10 @@ const result = yield* Stream.make(-1, 2, -3, 4, -5).pipe(
 Sinks can leave unconsumed elements:
 
 ```typescript
-const takeThree = Sink.take<number>(3)
+const takeThree = Sink.take<number>(3);
 
-const [first, rest] = yield* Stream.make(1, 2, 3, 4, 5).pipe(
-  Stream.run(
-    Sink.take<number>(3).pipe(
-      Sink.collectLeftover
-    )
-  )
-)
+const [first, rest] =
+  yield * Stream.make(1, 2, 3, 4, 5).pipe(Stream.run(Sink.take<number>(3).pipe(Sink.collectLeftover)));
 ```
 
 ## Sink Concurrency
@@ -228,15 +186,9 @@ const [first, rest] = yield* Stream.make(1, 2, 3, 4, 5).pipe(
 ### Parallel Sinks
 
 ```typescript
-const parallelSinks = Sink.zipPar(
-  Sink.sum,
-  Sink.count,
-  Sink.collectAll<number>()
-)
+const parallelSinks = Sink.zipPar(Sink.sum, Sink.count, Sink.collectAll<number>());
 
-const [sum, count, all] = yield* Stream.make(1, 2, 3, 4, 5).pipe(
-  Stream.run(parallelSinks)
-)
+const [sum, count, all] = yield * Stream.make(1, 2, 3, 4, 5).pipe(Stream.run(parallelSinks));
 ```
 
 ### Chunked Processing
@@ -245,9 +197,8 @@ const [sum, count, all] = yield* Stream.make(1, 2, 3, 4, 5).pipe(
 const chunkedSum = Sink.foldChunks(
   0,
   () => true,
-  (sum, chunk: Chunk.Chunk<number>) =>
-    sum + Chunk.reduce(chunk, 0, (a, b) => a + b)
-)
+  (sum, chunk: Chunk.Chunk<number>) => sum + Chunk.reduce(chunk, 0, (a, b) => a + b),
+);
 ```
 
 ## Common Patterns
@@ -257,31 +208,24 @@ const chunkedSum = Sink.foldChunks(
 ```typescript
 const batchInsert = (batchSize: number) =>
   Sink.collectAllN<Record>(batchSize).pipe(
-    Sink.mapEffect((batch) =>
-      Effect.tryPromise(() => db.insertMany(Chunk.toArray(batch)))
-    )
-  )
+    Sink.mapEffect((batch) => Effect.tryPromise(() => db.insertMany(Chunk.toArray(batch)))),
+  );
 
-yield* recordStream.pipe(
-  Stream.run(batchInsert(100))
-)
+yield * recordStream.pipe(Stream.run(batchInsert(100)));
 ```
 
 ### Aggregation Pipeline
 
 ```typescript
-const stats = Sink.zip(
-  Sink.sum,
-  Sink.zip(Sink.count, Sink.zip(Sink.head, Sink.last))
-).pipe(
+const stats = Sink.zip(Sink.sum, Sink.zip(Sink.count, Sink.zip(Sink.head, Sink.last))).pipe(
   Sink.map(([sum, [count, [first, last]]]) => ({
     sum,
     count,
     average: count > 0 ? sum / count : 0,
     first,
-    last
-  }))
-)
+    last,
+  })),
+);
 ```
 
 ### Write to File
@@ -290,10 +234,10 @@ const stats = Sink.zip(
 const writeToFile = (path: string) =>
   Sink.forEach((line: string) =>
     Effect.gen(function* () {
-      const fs = yield* FileSystem
-      yield* fs.appendFileString(path, line + "\n")
-    })
-  )
+      const fs = yield* FileSystem;
+      yield* fs.appendFileString(path, line + "\n");
+    }),
+  );
 ```
 
 ## Best Practices
@@ -309,6 +253,7 @@ const writeToFile = (path: string) =>
 For comprehensive sink documentation, consult `${CLAUDE_PLUGIN_ROOT}/references/llms-full.txt`.
 
 Search for these sections:
+
 - "Creating Sinks" for sink construction
 - "Sink Operations" for transformations
 - "Sink Concurrency" for parallel processing
